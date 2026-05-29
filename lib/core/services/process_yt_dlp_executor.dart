@@ -1,0 +1,282 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
+import '../models/app_models.dart';
+import 'embedded_tool_resolver.dart';
+import 'yt_dlp_progress_parser.dart';
+import 'yt_dlp_session.dart';
+import 'yt_dlp_executor.dart';
+
+class ProcessYtDlpExecutor implements YtDlpExecutor {
+  ProcessYtDlpExecutor({
+    EmbeddedToolResolver? toolResolver,
+    ProcessRunner? processRunner,
+  }) : _toolResolver = toolResolver ?? const EmbeddedToolResolver(),
+       _processRunner = processRunner ?? _defaultProcessRunner;
+
+  final EmbeddedToolResolver _toolResolver;
+  final ProcessRunner _processRunner;
+  final Map<String, YtDlpSession> _sessions = {};
+  final Map<String, Process> _processes = {};
+  final Set<String> _intentionalStops = {};
+
+  @override
+  Future<List<ResourceVariant>> inspect(Uri url) async {
+    final tools = _toolResolver.resolveBundle();
+    final process = await _processRunner(
+      tools.ytDlp.assetPath,
+      buildInspectArguments(url),
+    );
+
+    final outputLines = <String>[];
+    final session = YtDlpSession.forTesting(
+      task: DownloadTask(
+        id: 'inspect:${url.toString()}',
+        title: url.toString(),
+        source: url.toString(),
+        status: DownloadStatus.parsing,
+        progress: 0,
+        variants: const [],
+      ),
+    );
+
+    final stdoutFuture = _consumeLines(process.stdout, session, outputLines);
+    final stderrFuture = _consumeLines(process.stderr, session, outputLines);
+    final exitCode = await process.exitCode;
+    await Future.wait([stdoutFuture, stderrFuture]);
+
+    if (exitCode != 0 && session.status != DownloadStatus.failed) {
+      session.handleEvent(
+        const YtDlpProgressEvent(
+          type: YtDlpProgressEventType.error,
+          message: 'yt-dlp exited with a non-zero status',
+        ),
+      );
+    }
+
+    final variants = _parseInspectVariants(outputLines);
+    return variants.isEmpty
+        ? const [
+            ResourceVariant(
+              label: '推荐',
+              description: '适合大多数人',
+              isRecommended: true,
+            ),
+          ]
+        : variants;
+  }
+
+  @override
+  Future<void> startDownload({
+    required String taskId,
+    required Uri url,
+    required ResourceVariant variant,
+    required DownloadSettings settings,
+    DownloadTaskChanged? onTaskChanged,
+  }) async {
+    final tools = _toolResolver.resolveBundle();
+    final process = await _processRunner(
+      tools.ytDlp.assetPath,
+      buildDownloadArguments(
+        url: url,
+        variant: variant,
+        settings: settings,
+        ffmpegPath: tools.ffmpeg.assetPath,
+      ),
+    );
+
+    final task = DownloadTask(
+      id: taskId,
+      title: url.toString(),
+      source: url.toString(),
+      status: DownloadStatus.downloading,
+      progress: 0,
+      variants: [variant],
+    );
+    final session = YtDlpSession(task: task);
+    _sessions[task.id] = session;
+    _processes[task.id] = process;
+
+    unawaited(_streamProcess(process, session, onTaskChanged));
+  }
+
+  @override
+  Future<void> pause(String taskId) async {
+    final session = _sessions[taskId];
+    final process = _processes[taskId];
+    if (session == null || process == null) {
+      return;
+    }
+
+    _intentionalStops.add(taskId);
+    session.status = DownloadStatus.paused;
+    process.kill(ProcessSignal.sigterm);
+  }
+
+  @override
+  Future<void> resume(String taskId) async {
+    final session = _sessions[taskId];
+    if (session == null) {
+      return;
+    }
+
+    session.status = DownloadStatus.downloading;
+  }
+
+  @override
+  Future<void> cancel(String taskId) async {
+    final session = _sessions[taskId];
+    final process = _processes[taskId];
+    if (session == null) {
+      return;
+    }
+
+    _intentionalStops.add(taskId);
+    session.status = DownloadStatus.cancelled;
+    process?.kill(ProcessSignal.sigterm);
+  }
+
+  @override
+  Future<void> dispose() async {
+    _intentionalStops.addAll(_processes.keys);
+    for (final process in _processes.values) {
+      process.kill(ProcessSignal.sigterm);
+    }
+    _processes.clear();
+    _sessions.clear();
+  }
+
+  static List<String> buildInspectArguments(Uri url) {
+    return ['--dump-json', '--no-playlist', url.toString()];
+  }
+
+  static List<String> buildDownloadArguments({
+    required Uri url,
+    required ResourceVariant variant,
+    required DownloadSettings settings,
+    required String ffmpegPath,
+  }) {
+    return [
+      '--newline',
+      '--continue',
+      '--part',
+      '--ffmpeg-location',
+      ffmpegPath,
+      if (settings.downloadSubtitles) '--write-subs',
+      if (settings.downloadThumbnail) '--write-thumbnail',
+      '-f',
+      variant.formatId ?? settings.defaultQuality,
+      '-P',
+      settings.saveDirectory,
+      url.toString(),
+    ];
+  }
+
+  Future<void> _streamProcess(
+    Process process,
+    YtDlpSession session,
+    DownloadTaskChanged? onTaskChanged,
+  ) async {
+    final stdoutFuture = _consumeLines(process.stdout, session, onTaskChanged);
+    final stderrFuture = _consumeLines(process.stderr, session, onTaskChanged);
+    final exitCode = await process.exitCode;
+    await Future.wait([stdoutFuture, stderrFuture]);
+
+    if (_processes[session.task.id] == process) {
+      _processes.remove(session.task.id);
+    }
+
+    if (_sessions[session.task.id] == session) {
+      _sessions.remove(session.task.id);
+    }
+
+    if (_intentionalStops.remove(session.task.id)) {
+      return;
+    }
+
+    if (exitCode == 0 && session.status != DownloadStatus.failed) {
+      session.markCompleted();
+      onTaskChanged?.call(session.task);
+      return;
+    }
+
+    if (session.status != DownloadStatus.failed) {
+      session.handleEvent(
+        const YtDlpProgressEvent(
+          type: YtDlpProgressEventType.error,
+          message: 'yt-dlp exited with a non-zero status',
+        ),
+      );
+      onTaskChanged?.call(session.task);
+    }
+  }
+
+  Future<void> _consumeLines(
+    Stream<List<int>> stream,
+    YtDlpSession session, [
+    Object? thirdArgument,
+  ]) async {
+    final collectedLines = thirdArgument is List<String> ? thirdArgument : null;
+    final onTaskChanged = thirdArgument is DownloadTaskChanged
+        ? thirdArgument
+        : null;
+
+    await for (final line
+        in stream
+            .transform(SystemEncoding().decoder)
+            .transform(LineSplitter())) {
+      collectedLines?.add(line);
+      session.handleLine(line);
+      if (_intentionalStops.contains(session.task.id)) {
+        continue;
+      }
+      onTaskChanged?.call(session.task);
+    }
+  }
+
+  static List<ResourceVariant> _parseInspectVariants(List<String> lines) {
+    for (final line in lines) {
+      try {
+        final decoded = jsonDecode(line);
+        if (decoded is! Map<String, Object?>) {
+          continue;
+        }
+
+        final formats = decoded['formats'];
+        if (formats is! List) {
+          continue;
+        }
+
+        return formats.whereType<Map<String, Object?>>().map((format) {
+          final id = format['format_id']?.toString();
+          final height = format['height']?.toString();
+          final ext = format['ext']?.toString();
+          final label = height == null ? '格式 $id' : '清晰版 ${height}p';
+          final description = ext == null ? '可下载格式' : '$ext 格式';
+
+          return ResourceVariant(
+            label: label,
+            description: description,
+            isRecommended: false,
+            formatId: id,
+          );
+        }).toList();
+      } on FormatException {
+        continue;
+      }
+    }
+
+    return const [];
+  }
+}
+
+typedef ProcessRunner =
+    Future<Process> Function(String executable, List<String> arguments);
+
+Future<Process> _defaultProcessRunner(
+  String executable,
+  List<String> arguments,
+) {
+  return Process.start(executable, arguments, runInShell: false);
+}
