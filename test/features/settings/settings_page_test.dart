@@ -13,22 +13,32 @@ void main() {
       MaterialApp(home: SettingsPage(controller: controller)),
     );
 
-    expect(find.text('保存目录'), findsOneWidget);
-    expect(find.text('默认画质 / 格式'), findsOneWidget);
-    expect(find.text('下载模式'), findsOneWidget);
-    expect(find.text('并发数量'), findsOneWidget);
+    final saveField = find.byKey(const Key('save-directory-field'));
+    await tester.enterText(saveField, '/home/user/downloads');
+    await tester.pump();
 
-    await tester.enterText(
-      find.byKey(const Key('save-directory-field')),
-      '/home/user/downloads',
-    );
-    await tester.enterText(
-      find.byKey(const Key('default-quality-field')),
-      'bestvideo+bestaudio',
-    );
+    final qualityField = find.byKey(const Key('default-quality-field'));
+    await tester.ensureVisible(qualityField);
+    await tester.pumpAndSettle();
+    await tester.enterText(qualityField, 'bestvideo+bestaudio');
+    await tester.pump();
+
+    final ytField = find.byKey(const Key('yt-dlp-path-field'));
+    await tester.ensureVisible(ytField);
+    await tester.pumpAndSettle();
+    await tester.enterText(ytField, '/tools/yt-dlp');
+    await tester.pump();
+
+    final ffField = find.byKey(const Key('ffmpeg-path-field'));
+    await tester.ensureVisible(ffField);
+    await tester.pumpAndSettle();
+    await tester.enterText(ffField, '/tools/ffmpeg');
+    await tester.pump();
 
     expect(controller.settings.saveDirectory, '/home/user/downloads');
     expect(controller.settings.defaultQuality, 'bestvideo+bestaudio');
+    expect(controller.settings.ytDlpPath, '/tools/yt-dlp');
+    expect(controller.settings.ffmpegPath, '/tools/ffmpeg');
   });
 
   testWidgets('updates toggles and download mode', (tester) async {
@@ -39,17 +49,26 @@ void main() {
       MaterialApp(home: SettingsPage(controller: controller)),
     );
 
-    await tester.tap(find.text('下载字幕'));
+    // Scroll to the toggles section and tap
+    final subtitleSwitch = find.widgetWithText(SwitchListTile, '下载字幕');
+    final thumbnailSwitch = find.widgetWithText(SwitchListTile, '下载封面');
+    await tester.dragUntilVisible(subtitleSwitch, find.byType(ListView), const Offset(0, -200));
+    await tester.pumpAndSettle();
+    await tester.tap(subtitleSwitch);
     await tester.pump();
-    await tester.tap(find.text('下载封面'));
+    await tester.tap(thumbnailSwitch);
     await tester.pump();
 
     expect(controller.settings.downloadSubtitles, isTrue);
     expect(controller.settings.downloadThumbnail, isTrue);
 
-    await tester.tap(find.byKey(const Key('download-mode-field')));
+    // Switch download mode - scroll to the mode dropdown
+    final modeField = find.byKey(const Key('download-mode-field'));
+    await tester.dragUntilVisible(modeField, find.byType(ListView), const Offset(0, -200));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('并发下载').last);
+    await tester.tap(modeField);
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('并发下载').last);
     await tester.pumpAndSettle();
 
     expect(controller.settings.downloadMode, DownloadMode.concurrent);

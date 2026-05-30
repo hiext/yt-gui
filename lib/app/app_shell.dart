@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../core/controllers/download_controller.dart';
 import '../core/controllers/settings_controller.dart';
 import '../core/services/download_scheduler.dart';
 import '../core/services/process_yt_dlp_executor.dart';
+import '../core/services/settings_repository.dart';
 import '../features/downloads/downloads_page.dart';
 import '../features/help/help_page.dart';
 import '../features/history/history_page.dart';
@@ -14,7 +17,10 @@ import '../shared/widgets/section_card.dart';
 enum AppSection { home, downloads, history, settings, help }
 
 class AppShell extends StatefulWidget {
-  const AppShell({super.key});
+  const AppShell({super.key, this.settingsController, this.downloadController});
+
+  final SettingsController? settingsController;
+  final DownloadController? downloadController;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -28,14 +34,22 @@ class _AppShellState extends State<AppShell> {
   @override
   void initState() {
     super.initState();
-    _settingsController = SettingsController();
-    _downloadController = DownloadController(
-      scheduler: DownloadScheduler(
-        settingsProvider: () => _settingsController.settings,
-      ),
-      executor: ProcessYtDlpExecutor(),
-      settingsProvider: () => _settingsController.settings,
-    );
+    if (widget.settingsController != null) {
+      _settingsController = widget.settingsController!;
+    } else {
+      _settingsController = SettingsController(
+        repository: SettingsRepository(),
+      );
+      unawaited(_settingsController.load());
+    }
+    _downloadController = widget.downloadController ??
+        DownloadController(
+          scheduler: DownloadScheduler(
+            settingsProvider: () => _settingsController.settings,
+          ),
+          executor: ProcessYtDlpExecutor(),
+          settingsProvider: () => _settingsController.settings,
+        );
   }
 
   @override
@@ -53,7 +67,7 @@ class _AppShellState extends State<AppShell> {
         onShowDownloads: () => _selectSection(AppSection.downloads),
       ),
       DownloadsPage(controller: _downloadController),
-      const HistoryPage(),
+      HistoryPage(controller: _downloadController),
       SettingsPage(controller: _settingsController),
       const HelpPage(),
     ];
