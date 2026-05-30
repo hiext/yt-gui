@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hiext_yt_gui/core/models/app_models.dart';
 import 'package:hiext_yt_gui/core/services/embedded_tool_manifest.dart';
 import 'package:hiext_yt_gui/core/services/embedded_tool_resolver.dart';
 
@@ -28,6 +31,43 @@ void main() {
   });
 
   group('EmbeddedToolResolver', () {
+    test('resolves custom tool paths before embedded paths', () {
+      final tempDir = Directory.systemTemp.createTempSync('tool-resolver-');
+      addTearDown(() => tempDir.deleteSync(recursive: true));
+      final ytDlp = File('${tempDir.path}/yt-dlp')..writeAsStringSync('');
+      final ffmpeg = File('${tempDir.path}/ffmpeg')..writeAsStringSync('');
+      const resolver = EmbeddedToolResolver(
+        manifest: EmbeddedToolManifest.bundled,
+        platformOverride: EmbeddedToolPlatform.linux,
+      );
+
+      final bundle = resolver.resolveBundle(
+        settings: DownloadSettings.defaults.copyWith(
+          ytDlpPath: ytDlp.path,
+          ffmpegPath: ffmpeg.path,
+        ),
+      );
+
+      expect(bundle.ytDlp.path, ytDlp.path);
+      expect(bundle.ffmpeg.path, ffmpeg.path);
+    });
+
+    test('throws clear error for missing custom tool path', () {
+      const resolver = EmbeddedToolResolver(
+        manifest: EmbeddedToolManifest.bundled,
+        platformOverride: EmbeddedToolPlatform.linux,
+      );
+
+      expect(
+        () => resolver.resolveBundle(
+          settings: DownloadSettings.defaults.copyWith(
+            ytDlpPath: '/missing/yt-dlp',
+          ),
+        ),
+        throwsA(isA<EmbeddedToolResolutionException>()),
+      );
+    });
+
     test('resolves both required tools for a platform', () {
       const resolver = EmbeddedToolResolver(
         manifest: EmbeddedToolManifest.bundled,
@@ -36,8 +76,8 @@ void main() {
 
       final bundle = resolver.resolveBundle();
 
-      expect(bundle.ytDlp.assetPath, 'assets/bin/linux/yt-dlp');
-      expect(bundle.ffmpeg.assetPath, 'assets/bin/linux/ffmpeg');
+      expect(bundle.ytDlp.path, 'assets/bin/linux/yt-dlp');
+      expect(bundle.ffmpeg.path, 'assets/bin/linux/ffmpeg');
     });
   });
 }

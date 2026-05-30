@@ -20,6 +20,8 @@ class DownloadSettings {
     required this.defaultQuality,
     required this.downloadSubtitles,
     required this.downloadThumbnail,
+    this.ytDlpPath,
+    this.ffmpegPath,
   });
 
   static const defaults = DownloadSettings(
@@ -37,6 +39,8 @@ class DownloadSettings {
   final String defaultQuality;
   final bool downloadSubtitles;
   final bool downloadThumbnail;
+  final String? ytDlpPath;
+  final String? ffmpegPath;
 
   DownloadSettings copyWith({
     String? saveDirectory,
@@ -45,6 +49,8 @@ class DownloadSettings {
     String? defaultQuality,
     bool? downloadSubtitles,
     bool? downloadThumbnail,
+    Object? ytDlpPath = _unchanged,
+    Object? ffmpegPath = _unchanged,
   }) {
     return DownloadSettings(
       saveDirectory: saveDirectory ?? this.saveDirectory,
@@ -53,6 +59,12 @@ class DownloadSettings {
       defaultQuality: defaultQuality ?? this.defaultQuality,
       downloadSubtitles: downloadSubtitles ?? this.downloadSubtitles,
       downloadThumbnail: downloadThumbnail ?? this.downloadThumbnail,
+      ytDlpPath: ytDlpPath == _unchanged
+          ? this.ytDlpPath
+          : ytDlpPath as String?,
+      ffmpegPath: ffmpegPath == _unchanged
+          ? this.ffmpegPath
+          : ffmpegPath as String?,
     ).normalized();
   }
 
@@ -63,6 +75,8 @@ class DownloadSettings {
     final normalizedDefaultQuality = defaultQuality.trim().isEmpty
         ? defaults.defaultQuality
         : defaultQuality.trim();
+    final normalizedYtDlpPath = _normalizeOptionalPath(ytDlpPath);
+    final normalizedFfmpegPath = _normalizeOptionalPath(ffmpegPath);
 
     return DownloadSettings(
       saveDirectory: normalizedSaveDirectory,
@@ -71,7 +85,56 @@ class DownloadSettings {
       defaultQuality: normalizedDefaultQuality,
       downloadSubtitles: downloadSubtitles,
       downloadThumbnail: downloadThumbnail,
+      ytDlpPath: normalizedYtDlpPath,
+      ffmpegPath: normalizedFfmpegPath,
     );
+  }
+
+  String? _normalizeOptionalPath(String? path) {
+    final trimmed = path?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
+  }
+
+  Map<String, Object> toJson() {
+    final map = <String, Object>{
+      'saveDirectory': saveDirectory,
+      'downloadMode': downloadMode.name,
+      'concurrentCount': concurrentCount,
+      'defaultQuality': defaultQuality,
+      'downloadSubtitles': downloadSubtitles,
+      'downloadThumbnail': downloadThumbnail,
+    };
+    if (ytDlpPath != null) map['ytDlpPath'] = ytDlpPath!;
+    if (ffmpegPath != null) map['ffmpegPath'] = ffmpegPath!;
+    return map;
+  }
+
+  factory DownloadSettings.fromJson(Map<String, Object?> json) {
+    return DownloadSettings(
+      saveDirectory:
+          (json['saveDirectory'] as String?) ?? defaults.saveDirectory,
+      downloadMode: _parseDownloadMode(json['downloadMode']),
+      concurrentCount:
+          (json['concurrentCount'] as int?) ?? defaults.concurrentCount,
+      defaultQuality:
+          (json['defaultQuality'] as String?) ?? defaults.defaultQuality,
+      downloadSubtitles:
+          (json['downloadSubtitles'] as bool?) ?? defaults.downloadSubtitles,
+      downloadThumbnail:
+          (json['downloadThumbnail'] as bool?) ?? defaults.downloadThumbnail,
+      ytDlpPath: json['ytDlpPath'] as String?,
+      ffmpegPath: json['ffmpegPath'] as String?,
+    ).normalized();
+  }
+
+  static DownloadMode _parseDownloadMode(Object? value) {
+    if (value is String) {
+      return DownloadMode.values.firstWhere(
+        (m) => m.name == value,
+        orElse: () => defaults.downloadMode,
+      );
+    }
+    return defaults.downloadMode;
   }
 }
 

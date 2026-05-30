@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/services.dart' show rootBundle;
+
 import '../models/app_models.dart';
 import 'embedded_tool_resolver.dart';
 import 'yt_dlp_progress_parser.dart';
@@ -20,12 +22,35 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
   final Map<String, YtDlpSession> _sessions = {};
   final Map<String, Process> _processes = {};
   final Set<String> _intentionalStops = {};
+  final Map<String, String> _extractedPaths = {};
+
+  Future<String> _ensureExecutable(ResolvedEmbeddedTool tool) async {
+    if (tool.isCustom) return tool.path;
+    if (File(tool.path).existsSync()) return tool.path;
+    final cached = _extractedPaths[tool.path];
+    if (cached != null) return cached;
+
+    final data = await rootBundle.load(tool.path);
+    final dir = Directory.systemTemp.createTempSync('hiext-yt-tools-');
+    final fileName = tool.path.split('/').last;
+    final filePath = '${dir.path}/$fileName';
+    File(filePath).writeAsBytesSync(data.buffer.asUint8List());
+    await Process.run('chmod', ['+x', filePath]);
+    _extractedPaths[tool.path] = filePath;
+    return filePath;
+  }
 
   @override
-  Future<List<ResourceVariant>> inspect(Uri url) async {
-    final tools = _toolResolver.resolveBundle();
+  Future<List<ResourceVariant>> inspect(
+    Uri url, {
+    DownloadSettings? settings,
+  }) async {
+    final tools = _toolResolver.resolveBundle(
+      settings: settings ?? DownloadSettings.defaults,
+    );
+    final ytDlpPath = await _ensureExecutable(tools.ytDlp);
     final process = await _processRunner(
-      tools.ytDlp.assetPath,
+      ytDlpPath,
       buildInspectArguments(url),
     );
 
@@ -46,13 +71,10 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     final exitCode = await process.exitCode;
     await Future.wait([stdoutFuture, stderrFuture]);
 
-    if (exitCode != 0 && session.status != DownloadStatus.failed) {
-      session.handleEvent(
-        const YtDlpProgressEvent(
-          type: YtDlpProgressEventType.error,
-          message: 'yt-dlp exited with a non-zero status',
-        ),
-      );
+    if (exitCode != 0) {
+      final message =
+          session.errorMessage ?? 'yt-dlp exited with a non-zero status';
+      throw YtDlpExecutorException(message);
     }
 
     final variants = _parseInspectVariants(outputLines);
@@ -75,14 +97,16 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     required DownloadSettings settings,
     DownloadTaskChanged? onTaskChanged,
   }) async {
-    final tools = _toolResolver.resolveBundle();
+    final tools = _toolResolver.resolveBundle(settings: settings);
+    final ytDlpPath = await _ensureExecutable(tools.ytDlp);
+    final ffmpegPath = await _ensureExecutable(tools.ffmpeg);
     final process = await _processRunner(
-      tools.ytDlp.assetPath,
+      ytDlpPath,
       buildDownloadArguments(
         url: url,
         variant: variant,
         settings: settings,
-        ffmpegPath: tools.ffmpeg.assetPath,
+        ffmpegPath: ffmpegPath,
       ),
     );
 
@@ -273,6 +297,15 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
 
 typedef ProcessRunner =
     Future<Process> Function(String executable, List<String> arguments);
+
+class YtDlpExecutorException implements Exception {
+  const YtDlpExecutorException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
 
 Future<Process> _defaultProcessRunner(
   String executable,

@@ -1,12 +1,25 @@
 import 'dart:io';
 
+import '../models/app_models.dart';
 import 'embedded_tool_manifest.dart';
 
 class EmbeddedToolBundle {
   const EmbeddedToolBundle({required this.ytDlp, required this.ffmpeg});
 
-  final EmbeddedToolSpec ytDlp;
-  final EmbeddedToolSpec ffmpeg;
+  final ResolvedEmbeddedTool ytDlp;
+  final ResolvedEmbeddedTool ffmpeg;
+}
+
+class ResolvedEmbeddedTool {
+  const ResolvedEmbeddedTool({
+    required this.kind,
+    required this.path,
+    required this.isCustom,
+  });
+
+  final EmbeddedToolKind kind;
+  final String path;
+  final bool isCustom;
 }
 
 class EmbeddedToolResolver {
@@ -21,18 +34,46 @@ class EmbeddedToolResolver {
   EmbeddedToolPlatform get platform =>
       platformOverride ?? EmbeddedToolPlatformDetector.current();
 
-  EmbeddedToolBundle resolveBundle() {
+  EmbeddedToolBundle resolveBundle({
+    DownloadSettings settings = DownloadSettings.defaults,
+  }) {
+    final normalizedSettings = settings.normalized();
     final resolvedPlatform = platform;
 
     return EmbeddedToolBundle(
-      ytDlp: manifest.resolve(
+      ytDlp: _resolveTool(
         platform: resolvedPlatform,
         kind: EmbeddedToolKind.ytDlp,
+        customPath: normalizedSettings.ytDlpPath,
       ),
-      ffmpeg: manifest.resolve(
+      ffmpeg: _resolveTool(
         platform: resolvedPlatform,
         kind: EmbeddedToolKind.ffmpeg,
+        customPath: normalizedSettings.ffmpegPath,
       ),
+    );
+  }
+
+  ResolvedEmbeddedTool _resolveTool({
+    required EmbeddedToolPlatform platform,
+    required EmbeddedToolKind kind,
+    required String? customPath,
+  }) {
+    if (customPath != null) {
+      if (!File(customPath).existsSync()) {
+        throw EmbeddedToolResolutionException(
+          'Configured ${kind.baseExecutableName} path does not exist: $customPath',
+        );
+      }
+
+      return ResolvedEmbeddedTool(kind: kind, path: customPath, isCustom: true);
+    }
+
+    final spec = manifest.resolve(platform: platform, kind: kind);
+    return ResolvedEmbeddedTool(
+      kind: kind,
+      path: spec.assetPath,
+      isCustom: false,
     );
   }
 }
@@ -61,4 +102,13 @@ class UnsupportedEmbeddedToolPlatformException implements Exception {
 
   @override
   String toString() => 'Unsupported desktop platform: $operatingSystem';
+}
+
+class EmbeddedToolResolutionException implements Exception {
+  const EmbeddedToolResolutionException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
 }

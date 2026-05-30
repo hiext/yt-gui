@@ -3,7 +3,7 @@ import '../models/app_models.dart';
 typedef DownloadTaskChanged = void Function(DownloadTask task);
 
 abstract class YtDlpExecutor {
-  Future<List<ResourceVariant>> inspect(Uri url);
+  Future<List<ResourceVariant>> inspect(Uri url, {DownloadSettings? settings});
 
   Future<void> startDownload({
     required String taskId,

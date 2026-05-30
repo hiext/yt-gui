@@ -9,6 +9,8 @@ class _FakeExecutor implements YtDlpExecutor {
   final List<String> paused = [];
   final List<String> resumed = [];
   final List<String> cancelled = [];
+  final List<Uri> inspected = [];
+  List<ResourceVariant> inspectResult = const [];
   bool disposed = false;
 
   @override
@@ -22,7 +24,13 @@ class _FakeExecutor implements YtDlpExecutor {
   }
 
   @override
-  Future<List<ResourceVariant>> inspect(Uri url) async => const [];
+  Future<List<ResourceVariant>> inspect(
+    Uri url, {
+    DownloadSettings? settings,
+  }) async {
+    inspected.add(url);
+    return inspectResult;
+  }
 
   @override
   Future<void> pause(String taskId) async {
@@ -47,6 +55,35 @@ class _FakeExecutor implements YtDlpExecutor {
 }
 
 void main() {
+  test(
+    'inspect returns executor variants without enqueueing download',
+    () async {
+      final scheduler = DownloadScheduler(settingsProvider: _settings);
+      final executor = _FakeExecutor()
+        ..inspectResult = const [
+          ResourceVariant(
+            label: '清晰版 1080p',
+            description: 'mp4 格式',
+            isRecommended: false,
+            formatId: '137',
+          ),
+        ];
+      final controller = DownloadController(
+        scheduler: scheduler,
+        executor: executor,
+        settingsProvider: _settings,
+      );
+      final url = Uri.parse('https://example.com/video');
+
+      final variants = await controller.inspect(url);
+
+      expect(executor.inspected, [url]);
+      expect(variants.single.formatId, '137');
+      expect(controller.allTasks, isEmpty);
+      expect(executor.started, isEmpty);
+    },
+  );
+
   test('queue download starts executor and updates scheduler', () async {
     final scheduler = DownloadScheduler(settingsProvider: _settings);
     final executor = _FakeExecutor();

@@ -1,17 +1,33 @@
-import 'package:flutter/foundation.dart';
+import 'dart:async';
+
+import 'package:flutter/foundation.dart' show ChangeNotifier, debugPrint;
 
 import '../models/app_models.dart';
+import '../services/settings_repository.dart';
 
 class SettingsController extends ChangeNotifier {
-  SettingsController({DownloadSettings settings = DownloadSettings.defaults})
-    : _settings = settings.normalized();
+  SettingsController({
+    DownloadSettings settings = DownloadSettings.defaults,
+    this.repository,
+  }) : _settings = settings.normalized();
+
+  final SettingsRepository? repository;
 
   DownloadSettings _settings;
 
   DownloadSettings get settings => _settings;
 
+  Future<void> load() async {
+    final loaded = await repository?.load();
+    if (loaded != null) {
+      _settings = loaded.normalized();
+      notifyListeners();
+    }
+  }
+
   void updateSettings(DownloadSettings settings) {
     _settings = settings.normalized();
+    _save();
     notifyListeners();
   }
 
@@ -37,5 +53,23 @@ class SettingsController extends ChangeNotifier {
 
   void updateDownloadThumbnail(bool downloadThumbnail) {
     updateSettings(_settings.copyWith(downloadThumbnail: downloadThumbnail));
+  }
+
+  void updateYtDlpPath(String ytDlpPath) {
+    updateSettings(_settings.copyWith(ytDlpPath: ytDlpPath));
+  }
+
+  void updateFfmpegPath(String ffmpegPath) {
+    updateSettings(_settings.copyWith(ffmpegPath: ffmpegPath));
+  }
+
+  void _save() {
+    final repo = repository;
+    if (repo == null) return;
+    unawaited(
+      repo.save(_settings).onError((error, stackTrace) {
+        debugPrint('Failed to persist settings: $error');
+      }),
+    );
   }
 }

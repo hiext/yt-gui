@@ -8,6 +8,98 @@ import 'package:hiext_yt_gui/core/services/embedded_tool_resolver.dart';
 import 'package:hiext_yt_gui/core/services/process_yt_dlp_executor.dart';
 
 void main() {
+  test('inspect parses format variants from yt-dlp json output', () async {
+    final process = _FakeProcess(exitCodeValue: 0);
+    final executor = ProcessYtDlpExecutor(
+      toolResolver: _resolver(),
+      processRunner: (_, _) async => process,
+    );
+
+    final inspectFuture = executor.inspect(
+      Uri.parse('https://example.com/video'),
+    );
+    process.addStdout(
+      '''{"formats":[{"format_id":"137","height":1080,"ext":"mp4"},{"format_id":"140","ext":"m4a"}]}''',
+    );
+    await process.close();
+
+    final variants = await inspectFuture;
+
+    expect(variants, hasLength(2));
+    expect(variants.first.label, '清晰版 1080p');
+    expect(variants.first.description, 'mp4 格式');
+    expect(variants.first.formatId, '137');
+    expect(variants.last.label, '格式 140');
+    expect(variants.last.formatId, '140');
+  });
+
+  test('inspect throws when yt-dlp exits with a non-zero status', () async {
+    final process = _FakeProcess(exitCodeValue: 1);
+    final executor = ProcessYtDlpExecutor(
+      toolResolver: _resolver(),
+      processRunner: (_, _) async => process,
+    );
+
+    final inspectFuture = executor.inspect(
+      Uri.parse('https://example.com/video'),
+    );
+    await process.close();
+
+    await expectLater(inspectFuture, throwsA(isA<YtDlpExecutorException>()));
+  });
+
+  test('inspect uses custom yt-dlp path from settings', () async {
+    final ytDlp = _createToolFile('yt-dlp');
+    final process = _FakeProcess(exitCodeValue: 0);
+    String? executable;
+    final executor = ProcessYtDlpExecutor(
+      toolResolver: _resolver(),
+      processRunner: (path, _) async {
+        executable = path;
+        return process;
+      },
+    );
+
+    final inspectFuture = executor.inspect(
+      Uri.parse('https://example.com/video'),
+      settings: DownloadSettings.defaults.copyWith(ytDlpPath: ytDlp.path),
+    );
+    await process.close();
+    await inspectFuture;
+
+    expect(executable, ytDlp.path);
+  });
+
+  test('startDownload uses custom yt-dlp and ffmpeg paths', () async {
+    final ytDlp = _createToolFile('yt-dlp');
+    final ffmpeg = _createToolFile('ffmpeg');
+    String? executable;
+    List<String>? arguments;
+    final executor = ProcessYtDlpExecutor(
+      toolResolver: _resolver(),
+      processRunner: (path, args) async {
+        executable = path;
+        arguments = args;
+        return _FakeProcess(exitCodeValue: 0);
+      },
+    );
+
+    await executor.startDownload(
+      taskId: 'task-1',
+      url: Uri.parse('https://example.com/video'),
+      variant: const ResourceVariant(
+        label: '推荐',
+        description: '适合大多数人',
+        isRecommended: true,
+        formatId: 'best',
+      ),
+      settings: _settings(ytDlpPath: ytDlp.path, ffmpegPath: ffmpeg.path),
+    );
+
+    expect(executable, ytDlp.path);
+    expect(arguments, containsAll(['--ffmpeg-location', ffmpeg.path]));
+  });
+
   test('builds inspect arguments', () {
     final args = ProcessYtDlpExecutor.buildInspectArguments(
       Uri.parse('https://example.com/video'),
@@ -41,8 +133,14 @@ void main() {
       containsAll(['--newline', '--continue', '--part', '--ffmpeg-location']),
     );
     expect(args, containsAll(['/tools/ffmpeg', '--write-subs']));
-    expect(args, containsAll(['--write-thumbnail', '-f', 'bestvideo+bestaudio']));
-    expect(args, containsAll(['-P', '/downloads', 'https://example.com/video']));
+    expect(
+      args,
+      containsAll(['--write-thumbnail', '-f', 'bestvideo+bestaudio']),
+    );
+    expect(
+      args,
+      containsAll(['-P', '/downloads', 'https://example.com/video']),
+    );
     expect(args, isNot(contains('--no-continue')));
     expect(args, isNot(contains('--no-part')));
     expect(args, isNot(contains('--force-overwrites')));
@@ -73,7 +171,10 @@ void main() {
     await pumpEventQueue();
 
     expect(process.killedSignals, [ProcessSignal.sigterm]);
-    expect(changes.where((task) => task.status == DownloadStatus.failed), isEmpty);
+    expect(
+      changes.where((task) => task.status == DownloadStatus.failed),
+      isEmpty,
+    );
   });
 
   test('pause does not let old process clear new process tracking', () async {
@@ -159,15 +260,23 @@ void main() {
   });
 }
 
-DownloadSettings _settings() {
-  return const DownloadSettings(
+DownloadSettings _settings({String? ytDlpPath, String? ffmpegPath}) {
+  return DownloadSettings(
     saveDirectory: '/downloads',
     downloadMode: DownloadMode.serial,
     concurrentCount: 1,
     defaultQuality: 'best',
     downloadSubtitles: false,
     downloadThumbnail: false,
+    ytDlpPath: ytDlpPath,
+    ffmpegPath: ffmpegPath,
   );
+}
+
+File _createToolFile(String name) {
+  final tempDir = Directory.systemTemp.createTempSync('yt-dlp-executor-');
+  addTearDown(() => tempDir.deleteSync(recursive: true));
+  return File('${tempDir.path}/$name')..writeAsStringSync('');
 }
 
 EmbeddedToolResolver _resolver() {
@@ -198,6 +307,10 @@ class _FakeProcess implements Process {
   final _stdout = StreamController<List<int>>();
   final _stderr = StreamController<List<int>>();
   final _exit = Completer<int>();
+
+  void addStdout(String line) {
+    _stdout.add('$line\n'.codeUnits);
+  }
 
   Future<void> close() async {
     await _stdout.close();

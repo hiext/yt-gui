@@ -29,6 +29,10 @@ class DownloadController extends ChangeNotifier {
 
   bool _isDisposed = false;
 
+  Future<List<ResourceVariant>> inspect(Uri url) {
+    return executor.inspect(url, settings: settingsProvider());
+  }
+
   Future<void> queueDownload({
     required Uri url,
     required ResourceVariant variant,
