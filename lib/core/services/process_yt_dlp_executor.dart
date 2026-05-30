@@ -104,6 +104,7 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
         variant: variant,
         settings: settings,
         ffmpegPath: ffmpegPath,
+        cookieFile: _resolveCookieFile(url, settings),
       ),
     );
 
@@ -177,6 +178,7 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     required ResourceVariant variant,
     required DownloadSettings settings,
     required String ffmpegPath,
+    String? cookieFile,
   }) {
     return [
       '--newline',
@@ -186,6 +188,7 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       ffmpegPath,
       if (settings.downloadSubtitles) '--write-subs',
       if (settings.downloadThumbnail) '--write-thumbnail',
+      if (cookieFile != null) ...['--cookies', cookieFile],
       '-f',
       variant.formatId ?? settings.defaultQuality,
       '-P',
@@ -362,6 +365,17 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
 
     return const [];
   }
+}
+
+String? _resolveCookieFile(Uri url, DownloadSettings settings) {
+  final host = url.host;
+  for (final config in settings.cookieConfigs) {
+    if (!config.enabled) continue;
+    if (host.contains(config.domain) || config.domain.contains(host)) {
+      return config.cookieFile;
+    }
+  }
+  return null;
 }
 
 String _formatFileSize(int bytes) {

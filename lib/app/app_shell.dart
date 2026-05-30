@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../core/controllers/download_controller.dart';
 import '../core/controllers/settings_controller.dart';
+import '../core/services/cookie_service.dart';
 import '../core/services/download_scheduler.dart';
 import '../core/services/process_yt_dlp_executor.dart';
 import '../core/services/settings_repository.dart';
@@ -42,6 +43,7 @@ class _AppShellState extends State<AppShell> {
         repository: SettingsRepository(),
       );
       unawaited(_settingsController.load());
+      unawaited(_loadCookieConfigs());
     }
     _downloadController =
         widget.downloadController ??
@@ -54,6 +56,14 @@ class _AppShellState extends State<AppShell> {
           taskRepository: TaskRepository(),
         );
     unawaited(_downloadController.loadPendingTasks());
+  }
+
+  Future<void> _loadCookieConfigs() async {
+    final configs = await CookieService().loadConfigs();
+    final updated = _settingsController.settings.copyWith(
+      cookieConfigs: configs,
+    );
+    _settingsController.updateSettings(updated);
   }
 
   @override

@@ -24,6 +24,8 @@ class DownloadSettings {
     required this.downloadThumbnail,
     this.ytDlpPath,
     this.ffmpegPath,
+    this.cookieConfigs = const [],
+    this.defaultCookieBrowser,
   });
 
   static const defaults = DownloadSettings(
@@ -52,6 +54,8 @@ class DownloadSettings {
   final bool downloadThumbnail;
   final String? ytDlpPath;
   final String? ffmpegPath;
+  final List<CookieConfig> cookieConfigs;
+  final String? defaultCookieBrowser;
 
   DownloadSettings copyWith({
     String? saveDirectory,
@@ -62,6 +66,8 @@ class DownloadSettings {
     bool? downloadThumbnail,
     Object? ytDlpPath = _unchanged,
     Object? ffmpegPath = _unchanged,
+    Object? cookieConfigs = _unchanged,
+    Object? defaultCookieBrowser = _unchanged,
   }) {
     return DownloadSettings(
       saveDirectory: saveDirectory ?? this.saveDirectory,
@@ -76,6 +82,12 @@ class DownloadSettings {
       ffmpegPath: ffmpegPath == _unchanged
           ? this.ffmpegPath
           : ffmpegPath as String?,
+      cookieConfigs: cookieConfigs == _unchanged
+          ? this.cookieConfigs
+          : cookieConfigs as List<CookieConfig>,
+      defaultCookieBrowser: defaultCookieBrowser == _unchanged
+          ? this.defaultCookieBrowser
+          : defaultCookieBrowser as String?,
     ).normalized();
   }
 
@@ -98,6 +110,8 @@ class DownloadSettings {
       downloadThumbnail: downloadThumbnail,
       ytDlpPath: normalizedYtDlpPath,
       ffmpegPath: normalizedFfmpegPath,
+      cookieConfigs: cookieConfigs,
+      defaultCookieBrowser: defaultCookieBrowser,
     );
   }
 
@@ -117,6 +131,8 @@ class DownloadSettings {
     };
     if (ytDlpPath != null) map['ytDlpPath'] = ytDlpPath!;
     if (ffmpegPath != null) map['ffmpegPath'] = ffmpegPath!;
+    if (defaultCookieBrowser != null)
+      map['defaultCookieBrowser'] = defaultCookieBrowser!;
     return map;
   }
 
@@ -135,6 +151,7 @@ class DownloadSettings {
           (json['downloadThumbnail'] as bool?) ?? defaults.downloadThumbnail,
       ytDlpPath: json['ytDlpPath'] as String?,
       ffmpegPath: json['ffmpegPath'] as String?,
+      defaultCookieBrowser: json['defaultCookieBrowser'] as String?,
     ).normalized();
   }
 
@@ -203,6 +220,62 @@ class ResourceVariant {
       filesize: json['filesize'] as int?,
       videoId: json['videoId'] as String?,
       videoTitle: json['videoTitle'] as String?,
+    );
+  }
+}
+
+class CookieConfig {
+  const CookieConfig({
+    required this.domain,
+    required this.browser,
+    required this.cookieFile,
+    this.importedAt,
+    this.enabled = true,
+  });
+
+  final String domain;
+  final String browser;
+  final String cookieFile;
+  final DateTime? importedAt;
+  final bool enabled;
+
+  bool get isExpired =>
+      importedAt == null || DateTime.now().difference(importedAt!).inDays >= 7;
+
+  CookieConfig copyWith({
+    String? domain,
+    String? browser,
+    String? cookieFile,
+    Object? importedAt = _unchanged,
+    bool? enabled,
+  }) {
+    return CookieConfig(
+      domain: domain ?? this.domain,
+      browser: browser ?? this.browser,
+      cookieFile: cookieFile ?? this.cookieFile,
+      importedAt: importedAt == _unchanged
+          ? this.importedAt
+          : importedAt as DateTime?,
+      enabled: enabled ?? this.enabled,
+    );
+  }
+
+  Map<String, Object?> toJson() => {
+    'domain': domain,
+    'browser': browser,
+    'cookieFile': cookieFile,
+    if (importedAt != null) 'importedAt': importedAt!.toIso8601String(),
+    'enabled': enabled,
+  };
+
+  factory CookieConfig.fromJson(Map<String, Object?> json) {
+    final importedStr = json['importedAt'] as String?;
+    return CookieConfig(
+      domain: json['domain'] as String? ?? '',
+      browser: json['browser'] as String? ?? 'chrome',
+      cookieFile: json['cookieFile'] as String? ?? '',
+      importedAt: importedStr != null ? DateTime.tryParse(importedStr) : null,
+      enabled: json['enabled'] as bool? ?? true,
     );
   }
 }

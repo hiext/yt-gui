@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/controllers/settings_controller.dart';
 import '../../core/models/app_models.dart';
+import '../../core/services/cookie_service.dart';
 import '../../shared/widgets/section_card.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -225,6 +226,14 @@ class _SettingsPageState extends State<SettingsPage> {
                 ],
               ),
             ),
+            const SizedBox(height: 16),
+            _CookieSection(
+              configs: settings.cookieConfigs,
+              defaultBrowser: settings.defaultCookieBrowser,
+              onImport: (browser, domain) => _importCookies(browser, domain),
+              onRemove: (domain) => _removeCookie(domain),
+              onReimport: (config) => _reimportCookie(config),
+            ),
           ],
         );
       },
@@ -233,6 +242,59 @@ class _SettingsPageState extends State<SettingsPage> {
 
   void _resetToDefaults() {
     widget.controller.updateSettings(DownloadSettings.defaults);
+  }
+
+  Future<void> _importCookies(String browser, String domain) async {
+    final settings = widget.controller.settings;
+    final cookieFile =
+        '${settings.saveDirectory}/.cookies/${domain}_${browser}.txt';
+    final service = CookieService();
+    final ok = await service.importFromBrowser(
+      browser: browser,
+      domain: domain,
+      ytDlpPath: settings.ytDlpPath ?? 'yt-dlp',
+      outputFile: cookieFile,
+    );
+    if (!ok) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cookie 导入失败，请确认浏览器已安装且已登录')),
+        );
+      }
+      return;
+    }
+
+    final configs = List<CookieConfig>.from(settings.cookieConfigs)
+      ..removeWhere((c) => c.domain == domain)
+      ..add(
+        CookieConfig(
+          domain: domain,
+          browser: browser,
+          cookieFile: cookieFile,
+          importedAt: DateTime.now(),
+        ),
+      );
+    await service.saveConfigs(configs);
+    final updated = settings.copyWith(cookieConfigs: configs);
+    widget.controller.updateSettings(updated);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('已导入 $domain 的 cookies ($browser)')),
+      );
+    }
+  }
+
+  Future<void> _removeCookie(String domain) async {
+    final settings = widget.controller.settings;
+    final configs = List<CookieConfig>.from(settings.cookieConfigs)
+      ..removeWhere((c) => c.domain == domain);
+    await CookieService().saveConfigs(configs);
+    final updated = settings.copyWith(cookieConfigs: configs);
+    widget.controller.updateSettings(updated);
+  }
+
+  Future<void> _reimportCookie(CookieConfig config) async {
+    await _importCookies(config.browser, config.domain);
   }
 
   Future<void> _browseDirectory() async {
@@ -267,6 +329,160 @@ class _SettingsPageState extends State<SettingsPage> {
         }
       }
     }
+  }
+}
+
+class _CookieSection extends StatefulWidget {
+  const _CookieSection({
+    required this.configs,
+    required this.defaultBrowser,
+    required this.onImport,
+    required this.onRemove,
+    required this.onReimport,
+  });
+
+  final List<CookieConfig> configs;
+  final String? defaultBrowser;
+  final Future<void> Function(String browser, String domain) onImport;
+  final void Function(String domain) onRemove;
+  final void Function(CookieConfig config) onReimport;
+
+  @override
+  State<_CookieSection> createState() => _CookieSectionState();
+}
+
+class _CookieSectionState extends State<_CookieSection> {
+  String _browser = 'chrome';
+  final _domainCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _domainCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SectionCard(
+      title: 'Cookie 管理',
+      subtitle: '从浏览器导入登录态，解决 YouTube 等网站的验证问题。',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Import form
+          Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: DropdownButtonFormField<String>(
+                  value: _browser,
+                  decoration: const InputDecoration(
+                    labelText: '浏览器',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'chrome', child: Text('Chrome')),
+                    DropdownMenuItem(value: 'firefox', child: Text('Firefox')),
+                    DropdownMenuItem(value: 'edge', child: Text('Edge')),
+                    DropdownMenuItem(value: 'brave', child: Text('Brave')),
+                    DropdownMenuItem(value: 'opera', child: Text('Opera')),
+                  ],
+                  onChanged: (v) {
+                    if (v != null) setState(() => _browser = v);
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                flex: 3,
+                child: TextFormField(
+                  controller: _domainCtrl,
+                  decoration: const InputDecoration(
+                    labelText: '域名',
+                    hintText: 'youtube.com',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              FilledButton.tonalIcon(
+                onPressed: () {
+                  final domain = _domainCtrl.text.trim();
+                  if (domain.isNotEmpty) {
+                    widget.onImport(_browser, domain);
+                    _domainCtrl.clear();
+                  }
+                },
+                icon: const Icon(Icons.file_download_outlined, size: 18),
+                label: const Text('导入'),
+              ),
+            ],
+          ),
+          // List of imported cookies
+          if (widget.configs.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            const Divider(),
+            for (final config in widget.configs)
+              _CookieTile(
+                config: config,
+                onRemove: () => widget.onRemove(config.domain),
+                onReimport: () => widget.onReimport(config),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CookieTile extends StatelessWidget {
+  const _CookieTile({
+    required this.config,
+    required this.onRemove,
+    required this.onReimport,
+  });
+
+  final CookieConfig config;
+  final VoidCallback onRemove;
+  final VoidCallback onReimport;
+
+  @override
+  Widget build(BuildContext context) {
+    final expired = config.isExpired;
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(
+        expired ? Icons.cookie_outlined : Icons.cookie,
+        color: expired ? Colors.orange : Colors.green,
+        size: 20,
+      ),
+      title: Text(config.domain, style: const TextStyle(fontSize: 14)),
+      subtitle: Text(
+        '${config.browser} · ${expired
+            ? '已过期'
+            : config.importedAt != null
+            ? '${DateTime.now().difference(config.importedAt!).inDays} 天前'
+            : '刚导入'}',
+        style: TextStyle(fontSize: 12, color: expired ? Colors.orange : null),
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.refresh, size: 18),
+            tooltip: '重新导入',
+            onPressed: onReimport,
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline, size: 18),
+            tooltip: '删除',
+            onPressed: onRemove,
+          ),
+        ],
+      ),
+    );
   }
 }
 
