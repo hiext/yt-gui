@@ -355,10 +355,48 @@ class _CookieSectionState extends State<_CookieSection> {
   String _browser = 'chrome';
   final _domainCtrl = TextEditingController();
 
+  static const _presetSites = <String>[
+    'youtube.com',
+    'bilibili.com',
+    'twitter.com',
+    'x.com',
+    'instagram.com',
+    'tiktok.com',
+    'facebook.com',
+    'twitch.tv',
+    'reddit.com',
+    'nicovideo.jp',
+    'vimeo.com',
+    'dailymotion.com',
+    'pornhub.com',
+    'xvideos.com',
+    'pinterest.com',
+    'soundcloud.com',
+    'bandcamp.com',
+  ];
+
+  final List<String> _importedDomains = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _importedDomains.addAll(widget.configs.map((c) => c.domain));
+  }
+
   @override
   void dispose() {
     _domainCtrl.dispose();
     super.dispose();
+  }
+
+  List<String> get _availablePresets =>
+      _presetSites.where((d) => !_importedDomains.contains(d)).toList();
+
+  void _doImport(String domain) {
+    if (domain.isNotEmpty) {
+      widget.onImport(_browser, domain);
+      setState(() => _importedDomains.add(domain));
+    }
   }
 
   @override
@@ -369,7 +407,7 @@ class _CookieSectionState extends State<_CookieSection> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Import form
+          // Browser selector + import
           Row(
             children: [
               Expanded(
@@ -396,30 +434,50 @@ class _CookieSectionState extends State<_CookieSection> {
               const SizedBox(width: 12),
               Expanded(
                 flex: 3,
-                child: TextFormField(
-                  controller: _domainCtrl,
-                  decoration: const InputDecoration(
-                    labelText: '域名',
-                    hintText: 'youtube.com',
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _domainCtrl,
+                        decoration: const InputDecoration(
+                          labelText: '域名',
+                          hintText: '输入域名后点导入',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                        onFieldSubmitted: (v) => _doImport(v.trim()),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton.tonalIcon(
+                      onPressed: () => _doImport(_domainCtrl.text.trim()),
+                      icon: const Icon(Icons.file_download_outlined, size: 18),
+                      label: const Text('导入'),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(width: 12),
-              FilledButton.tonalIcon(
-                onPressed: () {
-                  final domain = _domainCtrl.text.trim();
-                  if (domain.isNotEmpty) {
-                    widget.onImport(_browser, domain);
-                    _domainCtrl.clear();
-                  }
-                },
-                icon: const Icon(Icons.file_download_outlined, size: 18),
-                label: const Text('导入'),
               ),
             ],
           ),
+          // Preset sites
+          if (_availablePresets.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text('常用网站', style: Theme.of(context).textTheme.labelMedium),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                for (final site in _availablePresets)
+                  ActionChip(
+                    avatar: Icon(_siteIcon(site), size: 16),
+                    label: Text(site, style: const TextStyle(fontSize: 12)),
+                    onPressed: () => _doImport(site),
+                    visualDensity: VisualDensity.compact,
+                  ),
+              ],
+            ),
+          ],
           // List of imported cookies
           if (widget.configs.isNotEmpty) ...[
             const SizedBox(height: 12),
@@ -435,6 +493,25 @@ class _CookieSectionState extends State<_CookieSection> {
       ),
     );
   }
+}
+
+IconData _siteIcon(String domain) {
+  if (domain.contains('youtube') || domain.contains('youtu.be'))
+    return Icons.play_circle_outline;
+  if (domain.contains('bilibili')) return Icons.tv_outlined;
+  if (domain.contains('twitter') || domain.contains('x.com'))
+    return Icons.alternate_email;
+  if (domain.contains('instagram')) return Icons.camera_alt_outlined;
+  if (domain.contains('tiktok')) return Icons.music_note_outlined;
+  if (domain.contains('facebook')) return Icons.people_outline;
+  if (domain.contains('twitch')) return Icons.live_tv_outlined;
+  if (domain.contains('reddit')) return Icons.forum_outlined;
+  if (domain.contains('nicovideo')) return Icons.videocam_outlined;
+  if (domain.contains('soundcloud')) return Icons.audiotrack_outlined;
+  if (domain.contains('vimeo')) return Icons.play_circle_outline;
+  if (domain.contains('pornhub') || domain.contains('xvideos'))
+    return Icons.visibility_off_outlined;
+  return Icons.language;
 }
 
 class _CookieTile extends StatelessWidget {
