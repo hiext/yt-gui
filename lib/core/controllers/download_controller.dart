@@ -52,6 +52,26 @@ class DownloadController extends ChangeNotifier {
     await _startPendingRunningTasks();
   }
 
+  Future<void> queueDownloads({
+    required Uri url,
+    required List<ResourceVariant> variants,
+  }) async {
+    for (final variant in variants) {
+      final task = DownloadTask(
+        id: _createTaskId(url),
+        title: url.toString(),
+        source: url.toString(),
+        status: DownloadStatus.ready,
+        progress: 0,
+        variants: [variant],
+      );
+      scheduler.enqueue(task);
+    }
+    scheduler.startNext();
+    notifyListeners();
+    await _startPendingRunningTasks();
+  }
+
   void handleProgress({
     required String taskId,
     required double? progress,

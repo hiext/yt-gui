@@ -49,10 +49,7 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       settings: settings ?? DownloadSettings.defaults,
     );
     final ytDlpPath = await _ensureExecutable(tools.ytDlp);
-    final process = await _processRunner(
-      ytDlpPath,
-      buildInspectArguments(url),
-    );
+    final process = await _processRunner(ytDlpPath, buildInspectArguments(url));
 
     final outputLines = <String>[];
     final session = YtDlpSession.forTesting(
@@ -192,7 +189,9 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       '-f',
       variant.formatId ?? settings.defaultQuality,
       '-P',
-      settings.saveDirectory,
+      variant.videoId != null
+          ? '${settings.saveDirectory}/${variant.videoId}'
+          : settings.saveDirectory,
       url.toString(),
     ];
   }
@@ -272,20 +271,90 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
           continue;
         }
 
-        return formats.whereType<Map<String, Object?>>().map((format) {
+        final videoId = decoded['id']?.toString();
+        final videoTitle = decoded['title']?.toString();
+
+        final variants = formats.whereType<Map<String, Object?>>().map((
+          format,
+        ) {
           final id = format['format_id']?.toString();
-          final height = format['height']?.toString();
+          final heightNum = format['height'] as int?;
+          final height = heightNum?.toString();
           final ext = format['ext']?.toString();
-          final label = height == null ? '格式 $id' : '清晰版 ${height}p';
-          final description = ext == null ? '可下载格式' : '$ext 格式';
+          final vcodec = format['vcodec']?.toString() ?? '';
+          final acodec = format['acodec']?.toString() ?? '';
+          final filesize = format['filesize'] as int?;
+          final tbr = (format['tbr'] as num?)?.toDouble();
+
+          final hasVideo =
+              (vcodec.isNotEmpty && vcodec != 'none') || heightNum != null;
+          final hasAudio = acodec.isNotEmpty && acodec != 'none';
+          final type = hasVideo ? ResourceType.video : ResourceType.audio;
+
+          final label = switch (type) {
+            ResourceType.video => height != null ? '${height}p 视频' : '视频 $id',
+            ResourceType.audio => '音频 $id',
+          };
+
+          final parts = <String>[];
+          if (ext != null) parts.add(ext);
+          if (hasVideo && hasAudio) {
+            parts.add('含音轨');
+          } else if (hasVideo && !hasAudio) {
+            parts.add('仅视频');
+          } else if (!hasVideo && hasAudio) {
+            parts.add(ext == 'm4a' ? 'AAC' : ext?.toUpperCase() ?? '');
+          }
+          if (filesize != null && filesize > 0) {
+            parts.add(_formatFileSize(filesize));
+          } else if (tbr != null && tbr > 0) {
+            parts.add('${tbr.toStringAsFixed(0)}kbps');
+          }
 
           return ResourceVariant(
             label: label,
-            description: description,
+            description: parts.join(' · '),
             isRecommended: false,
             formatId: id,
+            type: type,
+            height: heightNum,
+            filesize: filesize,
+            videoId: videoId,
+            videoTitle: videoTitle,
           );
         }).toList();
+
+        // Sort: video first (by height desc), then audio (by bitrate/filesize)
+        variants.sort((a, b) {
+          final aVideo = a.type == ResourceType.video;
+          final bVideo = b.type == ResourceType.video;
+          if (aVideo && !bVideo) return -1;
+          if (!aVideo && bVideo) return 1;
+          // Both video: higher resolution first
+          if (aVideo) return (b.height ?? 0).compareTo(a.height ?? 0);
+          // Both audio: larger file first (usually higher quality)
+          return (b.filesize ?? 0).compareTo(a.filesize ?? 0);
+        });
+
+        // Mark best quality video as recommended
+        final bestVideo = variants.firstWhere(
+          (v) => v.type == ResourceType.video,
+          orElse: () => variants.first,
+        );
+        final bestIdx = variants.indexOf(bestVideo);
+        if (bestIdx >= 0) {
+          variants[bestIdx] = ResourceVariant(
+            label: '${bestVideo.label} (推荐)',
+            description: bestVideo.description,
+            isRecommended: true,
+            formatId: bestVideo.formatId,
+            type: bestVideo.type,
+            height: bestVideo.height,
+            filesize: bestVideo.filesize,
+          );
+        }
+
+        return variants;
       } on FormatException {
         continue;
       }
@@ -293,6 +362,19 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
 
     return const [];
   }
+}
+
+String _formatFileSize(int bytes) {
+  if (bytes >= 1024 * 1024 * 1024) {
+    return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)}GB';
+  }
+  if (bytes >= 1024 * 1024) {
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)}MB';
+  }
+  if (bytes >= 1024) {
+    return '${(bytes / 1024).toStringAsFixed(1)}KB';
+  }
+  return '$bytes B';
 }
 
 typedef ProcessRunner =

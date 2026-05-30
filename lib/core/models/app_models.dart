@@ -138,18 +138,30 @@ class DownloadSettings {
   }
 }
 
+enum ResourceType { audio, video }
+
 class ResourceVariant {
   const ResourceVariant({
     required this.label,
     required this.description,
     required this.isRecommended,
     this.formatId,
+    this.type,
+    this.height,
+    this.filesize,
+    this.videoId,
+    this.videoTitle,
   });
 
   final String label;
   final String description;
   final bool isRecommended;
   final String? formatId;
+  final ResourceType? type;
+  final int? height;
+  final int? filesize;
+  final String? videoId;
+  final String? videoTitle;
 }
 
 const Object _unchanged = Object();

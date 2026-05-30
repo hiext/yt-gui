@@ -7,20 +7,22 @@ import 'package:hiext_yt_gui/core/services/yt_dlp_executor.dart';
 import 'package:hiext_yt_gui/features/home/home_page.dart';
 
 void main() {
-  testWidgets('inspects link and queues selected variant', (tester) async {
+  testWidgets('inspects link, selects variants and queues download', (tester) async {
     final executor = _FakeExecutor()
       ..inspectResult = const [
         ResourceVariant(
-          label: '清晰版 1080p',
-          description: 'mp4 格式',
-          isRecommended: false,
+          label: '1080p 视频',
+          description: 'mp4 · 含音轨',
+          isRecommended: true,
           formatId: '137',
+          type: ResourceType.video,
         ),
         ResourceVariant(
-          label: '音频 128k',
-          description: 'm4a 格式',
+          label: '音频 140',
+          description: 'm4a · AAC',
           isRecommended: false,
           formatId: '140',
+          type: ResourceType.audio,
         ),
       ];
     final controller = DownloadController(
@@ -45,14 +47,22 @@ void main() {
 
     expect(executor.inspected, [Uri.parse('https://example.com/video')]);
     expect(executor.started, isEmpty);
-    expect(find.text('清晰版 1080p'), findsOneWidget);
-    expect(find.text('音频 128k'), findsOneWidget);
+    expect(find.text('1080p 视频'), findsOneWidget);
+    expect(find.text('音频 140'), findsOneWidget);
 
-    await tester.tap(find.text('音频 128k'));
+    // Check the audio format checkbox and submit
+    await tester.tap(find.text('音频 140'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('下载所选格式'));
+    await tester.dragUntilVisible(
+      find.textContaining('下载所选'),
+      find.byType(ListView),
+      const Offset(0, -200),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('下载所选'));
     await tester.pumpAndSettle();
 
+    expect(executor.startedVariants.length, 1);
     expect(executor.startedVariants.single.formatId, '140');
     expect(showedDownloads, isTrue);
   });
@@ -63,10 +73,11 @@ void main() {
     final executor = _FakeExecutor()
       ..inspectResult = const [
         ResourceVariant(
-          label: '清晰版 1080p',
-          description: 'mp4 格式',
+          label: '1080p 视频',
+          description: 'mp4',
           isRecommended: false,
           formatId: '137',
+          type: ResourceType.video,
         ),
       ];
     final controller = DownloadController(
@@ -87,7 +98,7 @@ void main() {
     await tester.enterText(find.byType(TextField), 'https://example.com/new');
     await tester.pumpAndSettle();
 
-    expect(find.text('清晰版 1080p'), findsNothing);
+    expect(find.text('1080p 视频'), findsNothing);
     expect(find.text('请先粘贴链接并解析可下载格式。'), findsOneWidget);
   });
 

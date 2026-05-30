@@ -26,10 +26,9 @@ void main() {
     final variants = await inspectFuture;
 
     expect(variants, hasLength(2));
-    expect(variants.first.label, '清晰版 1080p');
-    expect(variants.first.description, 'mp4 格式');
+    expect(variants.first.label, '1080p 视频 (推荐)');
     expect(variants.first.formatId, '137');
-    expect(variants.last.label, '格式 140');
+    expect(variants.last.label, '音频 140');
     expect(variants.last.formatId, '140');
   });
 

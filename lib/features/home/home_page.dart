@@ -24,15 +24,22 @@ class _HomePageState extends State<HomePage> {
   bool _submitting = false;
   int _inspectToken = 0;
   String? _errorText;
-  Uri? _inspectedUrl;
+  String? _videoTitle;
+  String? _videoId;
   List<ResourceVariant> _variants = const [];
-  ResourceVariant? _selectedVariant;
+  final Set<String?> _selected = {};
 
   @override
   void dispose() {
     _linkController.dispose();
     super.dispose();
   }
+
+  List<ResourceVariant> get _videoVariants =>
+      _variants.where((v) => v.type == ResourceType.video).toList();
+
+  List<ResourceVariant> get _audioVariants =>
+      _variants.where((v) => v.type == ResourceType.audio).toList();
 
   @override
   Widget build(BuildContext context) {
@@ -74,62 +81,95 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
         ),
-        const SizedBox(height: 16),
-        SectionCard(
-          title: '选择格式',
-          subtitle: '解析成功后选择一个格式再开始下载。',
-          child: _variants.isEmpty
-              ? const Text('请先粘贴链接并解析可下载格式。')
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    ..._variants.map(
-                      (variant) => ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: Icon(
-                          identical(variant, _selectedVariant)
-                              ? Icons.radio_button_checked
-                              : Icons.radio_button_unchecked,
-                        ),
-                        title: Text(variant.label),
-                        subtitle: Text(variant.description),
-                        onTap: () {
-                          setState(() {
-                            _selectedVariant = variant;
-                          });
-                        },
-                      ),
+        if (_variants.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          if (_videoTitle != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  const Icon(Icons.movie_outlined, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _videoTitle!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
-                    const SizedBox(height: 12),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: FilledButton.icon(
-                        onPressed: _submitting || _selectedVariant == null
-                            ? null
-                            : _submit,
-                        icon: _submitting
-                            ? const SizedBox.square(
-                                dimension: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : const Icon(Icons.download),
-                        label: Text(_submitting ? '正在加入任务' : '下载所选格式'),
-                      ),
+                  ),
+                  if (_videoId != null)
+                    IconButton(
+                      icon: const Icon(Icons.folder_open_outlined, size: 20),
+                      tooltip: '打开下载目录',
+                      onPressed: () => _openDownloadFolder(context),
                     ),
-                  ],
-                ),
-        ),
+                ],
+              ),
+            ),
+          if (_videoVariants.isNotEmpty)
+            _VariantGroup(
+              title: '视频格式',
+              icon: Icons.videocam_outlined,
+              variants: _videoVariants,
+              selected: _selected,
+              onToggle: _toggle,
+            ),
+          if (_audioVariants.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _VariantGroup(
+              title: '音频格式',
+              icon: Icons.headphones_outlined,
+              variants: _audioVariants,
+              selected: _selected,
+              onToggle: _toggle,
+            ),
+          ],
+          const SizedBox(height: 16),
+          Align(
+            alignment: Alignment.centerRight,
+            child: FilledButton.icon(
+              onPressed: _submitting || _selected.isEmpty ? null : _submit,
+              icon: _submitting
+                  ? const SizedBox.square(
+                      dimension: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.download),
+              label: Text(_submitting ? '正在加入任务' : '下载所选 ($_selectedCount 项)'),
+            ),
+          ),
+        ] else if (!_inspecting && _errorText == null) ...[
+          const SizedBox(height: 16),
+          SectionCard(
+            title: '选择格式',
+            subtitle: '解析成功后在这里选择要下载的格式。',
+            child: const Text('请先粘贴链接并解析可下载格式。'),
+          ),
+        ],
       ],
     );
   }
 
+  int get _selectedCount => _selected.length;
+
+  void _toggle(String? formatId) {
+    setState(() {
+      if (_selected.contains(formatId)) {
+        _selected.remove(formatId);
+      } else {
+        _selected.add(formatId);
+      }
+    });
+  }
+
+  void _openDownloadFolder(BuildContext context) {
+    // No-op: folder opening is handled after download completes in downloads/history page
+  }
+
   Future<void> _inspect() async {
     final uri = _parseInputUrl();
-    if (uri == null) {
-      return;
-    }
+    if (uri == null) return;
 
     final token = ++_inspectToken;
 
@@ -137,8 +177,9 @@ class _HomePageState extends State<HomePage> {
       _inspecting = true;
       _errorText = null;
       _variants = const [];
-      _selectedVariant = null;
-      _inspectedUrl = null;
+      _selected.clear();
+      _videoTitle = null;
+      _videoId = null;
     });
 
     try {
@@ -149,9 +190,9 @@ class _HomePageState extends State<HomePage> {
         return;
       }
       setState(() {
-        _inspectedUrl = uri;
         _variants = variants;
-        _selectedVariant = variants.isEmpty ? null : variants.first;
+        _videoTitle = variants.isNotEmpty ? variants.first.videoTitle : null;
+        _videoId = variants.isNotEmpty ? variants.first.videoId : null;
       });
     } catch (error) {
       if (!mounted ||
@@ -172,11 +213,10 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _submit() async {
-    final url = _inspectedUrl;
-    final variant = _selectedVariant;
-    if (url == null || variant == null) {
-      return;
-    }
+    final selectedVariants = _variants
+        .where((v) => _selected.contains(v.formatId))
+        .toList();
+    if (selectedVariants.isEmpty) return;
 
     setState(() {
       _submitting = true;
@@ -184,7 +224,10 @@ class _HomePageState extends State<HomePage> {
     });
 
     try {
-      await widget.controller.queueDownload(url: url, variant: variant);
+      await widget.controller.queueDownloads(
+        url: Uri.parse(_linkController.text.trim()),
+        variants: selectedVariants,
+      );
       widget.onShowDownloads();
     } catch (error) {
       setState(() {
@@ -208,22 +251,63 @@ class _HomePageState extends State<HomePage> {
       });
       return null;
     }
-
     return uri;
   }
 
   void _clearInspectResult() {
-    if (!_inspecting && _variants.isEmpty && _errorText == null) {
-      return;
-    }
-
+    if (!_inspecting && _variants.isEmpty && _errorText == null) return;
     setState(() {
       _inspectToken += 1;
       _inspecting = false;
       _variants = const [];
-      _selectedVariant = null;
-      _inspectedUrl = null;
+      _selected.clear();
+      _videoTitle = null;
+      _videoId = null;
       _errorText = null;
     });
+  }
+}
+
+class _VariantGroup extends StatelessWidget {
+  const _VariantGroup({
+    required this.title,
+    required this.icon,
+    required this.variants,
+    required this.selected,
+    required this.onToggle,
+  });
+
+  final String title;
+  final IconData icon;
+  final List<ResourceVariant> variants;
+  final Set<String?> selected;
+  final ValueChanged<String?> onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    return SectionCard(
+      title: '$title (${variants.length})',
+      subtitle: '勾选要下载的格式，可以多选。',
+      child: Column(
+        children: [
+          for (final variant in variants)
+            CheckboxListTile(
+              contentPadding: EdgeInsets.zero,
+              value: selected.contains(variant.formatId),
+              onChanged: (_) => onToggle(variant.formatId),
+              title: Text(variant.label),
+              subtitle: Text(
+                variant.description,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              secondary: variant.isRecommended
+                  ? const Icon(Icons.star, color: Colors.amber, size: 20)
+                  : null,
+              controlAffinity: ListTileControlAffinity.leading,
+            ),
+        ],
+      ),
+    );
   }
 }

@@ -51,15 +51,15 @@ void main() {
 
     // Phase 3: Verify formats appear
     await tester.pump(const Duration(milliseconds: 100));
-    expect(find.text('清晰版 1080p'), findsOneWidget);
+    expect(find.text('1080p 视频'), findsOneWidget);
     expect(executor.inspected, isNotEmpty);
 
     // Phase 4: Select format and download
-    await tester.tap(find.text('清晰版 1080p'));
+    await tester.tap(find.text('1080p 视频'));
     await tester.pump();
-    await tester.ensureVisible(find.text('下载所选格式'));
+    await tester.ensureVisible(find.textContaining('下载所选'));
     await tester.pump();
-    await tester.tap(find.text('下载所选格式'));
+    await tester.tap(find.textContaining('下载所选'));
     await tester.pump();
 
     // Phase 5: Verify download started and navigated to downloads
@@ -122,7 +122,13 @@ class _ImmediateFake implements YtDlpExecutor {
   Future<List<ResourceVariant>> inspect(Uri url, {DownloadSettings? settings}) async {
     inspected.add(url);
     return const [
-      ResourceVariant(label: '清晰版 1080p', description: 'mp4 格式', isRecommended: false, formatId: '137'),
+      ResourceVariant(
+        label: '1080p 视频',
+        description: 'mp4 · 含音轨',
+        isRecommended: true,
+        formatId: '137',
+        type: ResourceType.video,
+      ),
     ];
   }
 
