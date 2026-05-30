@@ -227,6 +227,7 @@ class _HomePageState extends State<HomePage> {
       await widget.controller.queueDownloads(
         url: Uri.parse(_linkController.text.trim()),
         variants: selectedVariants,
+        title: _videoTitle,
       );
       widget.onShowDownloads();
     } catch (error) {

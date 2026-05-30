@@ -52,10 +52,11 @@ class DownloadController extends ChangeNotifier {
   Future<void> queueDownload({
     required Uri url,
     required ResourceVariant variant,
+    String? title,
   }) async {
     final task = DownloadTask(
       id: _createTaskId(url),
-      title: url.toString(),
+      title: title ?? url.toString(),
       source: url.toString(),
       status: DownloadStatus.ready,
       progress: 0,
@@ -71,11 +72,12 @@ class DownloadController extends ChangeNotifier {
   Future<void> queueDownloads({
     required Uri url,
     required List<ResourceVariant> variants,
+    String? title,
   }) async {
     for (final variant in variants) {
       final task = DownloadTask(
         id: _createTaskId(url),
-        title: url.toString(),
+        title: title ?? url.toString(),
         source: url.toString(),
         status: DownloadStatus.ready,
         progress: 0,
