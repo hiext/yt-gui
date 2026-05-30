@@ -76,7 +76,10 @@ class _FakeExecutor implements YtDlpExecutor {
   Future<void> dispose() async {}
 
   @override
-  Future<List<ResourceVariant>> inspect(Uri url) async => const [];
+  Future<List<ResourceVariant>> inspect(
+    Uri url, {
+    DownloadSettings? settings,
+  }) async => const [];
 
   @override
   Future<void> pause(String taskId) async {

@@ -20,8 +20,13 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final TextEditingController _linkController = TextEditingController();
+  bool _inspecting = false;
   bool _submitting = false;
+  int _inspectToken = 0;
   String? _errorText;
+  Uri? _inspectedUrl;
+  List<ResourceVariant> _variants = const [];
+  ResourceVariant? _selectedVariant;
 
   @override
   void dispose() {
@@ -49,42 +54,127 @@ class _HomePageState extends State<HomePage> {
                   border: const OutlineInputBorder(),
                   errorText: _errorText,
                 ),
-                onSubmitted: (_) => _submit(),
+                onChanged: (_) => _clearInspectResult(),
+                onSubmitted: (_) => _inspect(),
               ),
               const SizedBox(height: 12),
               Align(
                 alignment: Alignment.centerRight,
                 child: FilledButton.icon(
-                  onPressed: _submitting ? null : _submit,
-                  icon: _submitting
+                  onPressed: _inspecting ? null : _inspect,
+                  icon: _inspecting
                       ? const SizedBox.square(
                           dimension: 16,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(Icons.download),
-                  label: Text(_submitting ? '正在加入任务' : '开始下载推荐方案'),
+                      : const Icon(Icons.search),
+                  label: Text(_inspecting ? '正在解析' : '解析链接'),
                 ),
               ),
             ],
           ),
         ),
         const SizedBox(height: 16),
-        const SectionCard(
-          title: '推荐方案',
-          subtitle: '默认先给你最适合大多数人的下载方式。',
-          child: Text('当前会使用 yt-dlp 的 best 推荐格式，后续解析成功后可扩展为手动选择格式。'),
+        SectionCard(
+          title: '选择格式',
+          subtitle: '解析成功后选择一个格式再开始下载。',
+          child: _variants.isEmpty
+              ? const Text('请先粘贴链接并解析可下载格式。')
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ..._variants.map(
+                      (variant) => ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(
+                          identical(variant, _selectedVariant)
+                              ? Icons.radio_button_checked
+                              : Icons.radio_button_unchecked,
+                        ),
+                        title: Text(variant.label),
+                        subtitle: Text(variant.description),
+                        onTap: () {
+                          setState(() {
+                            _selectedVariant = variant;
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: FilledButton.icon(
+                        onPressed: _submitting || _selectedVariant == null
+                            ? null
+                            : _submit,
+                        icon: _submitting
+                            ? const SizedBox.square(
+                                dimension: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.download),
+                        label: Text(_submitting ? '正在加入任务' : '下载所选格式'),
+                      ),
+                    ),
+                  ],
+                ),
         ),
       ],
     );
   }
 
-  Future<void> _submit() async {
-    final raw = _linkController.text.trim();
-    final uri = Uri.tryParse(raw);
-    if (uri == null || !uri.hasScheme) {
+  Future<void> _inspect() async {
+    final uri = _parseInputUrl();
+    if (uri == null) {
+      return;
+    }
+
+    final token = ++_inspectToken;
+
+    setState(() {
+      _inspecting = true;
+      _errorText = null;
+      _variants = const [];
+      _selectedVariant = null;
+      _inspectedUrl = null;
+    });
+
+    try {
+      final variants = await widget.controller.inspect(uri);
+      if (!mounted ||
+          token != _inspectToken ||
+          _linkController.text.trim() != uri.toString()) {
+        return;
+      }
       setState(() {
-        _errorText = '请输入完整链接，例如 https://...';
+        _inspectedUrl = uri;
+        _variants = variants;
+        _selectedVariant = variants.isEmpty ? null : variants.first;
       });
+    } catch (error) {
+      if (!mounted ||
+          token != _inspectToken ||
+          _linkController.text.trim() != uri.toString()) {
+        return;
+      }
+      setState(() {
+        _errorText = '解析失败：$error';
+      });
+    } finally {
+      if (mounted && token == _inspectToken) {
+        setState(() {
+          _inspecting = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _submit() async {
+    final url = _inspectedUrl;
+    final variant = _selectedVariant;
+    if (url == null || variant == null) {
       return;
     }
 
@@ -94,15 +184,7 @@ class _HomePageState extends State<HomePage> {
     });
 
     try {
-      await widget.controller.queueDownload(
-        url: uri,
-        variant: const ResourceVariant(
-          label: '推荐',
-          description: '使用 yt-dlp 推荐格式',
-          isRecommended: true,
-          formatId: 'best',
-        ),
-      );
+      await widget.controller.queueDownload(url: url, variant: variant);
       widget.onShowDownloads();
     } catch (error) {
       setState(() {
@@ -115,5 +197,33 @@ class _HomePageState extends State<HomePage> {
         });
       }
     }
+  }
+
+  Uri? _parseInputUrl() {
+    final raw = _linkController.text.trim();
+    final uri = Uri.tryParse(raw);
+    if (uri == null || !uri.hasScheme) {
+      setState(() {
+        _errorText = '请输入完整链接，例如 https://...';
+      });
+      return null;
+    }
+
+    return uri;
+  }
+
+  void _clearInspectResult() {
+    if (!_inspecting && _variants.isEmpty && _errorText == null) {
+      return;
+    }
+
+    setState(() {
+      _inspectToken += 1;
+      _inspecting = false;
+      _variants = const [];
+      _selectedVariant = null;
+      _inspectedUrl = null;
+      _errorText = null;
+    });
   }
 }
