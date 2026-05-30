@@ -1,0 +1,3 @@
+tags:
+  smoke:
+    skip: "Requires real network access and yt-dlp/ffmpeg binaries"
