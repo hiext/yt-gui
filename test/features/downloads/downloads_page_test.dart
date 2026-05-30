@@ -7,9 +7,7 @@ import 'package:hiext_yt_gui/core/services/yt_dlp_executor.dart';
 import 'package:hiext_yt_gui/features/downloads/downloads_page.dart';
 
 void main() {
-  testWidgets('shows pause and resume actions for download tasks', (
-    tester,
-  ) async {
+  testWidgets('shows pause and resume actions for download tasks', (tester) async {
     final executor = _FakeExecutor();
     final controller = DownloadController(
       scheduler: DownloadScheduler(settingsProvider: _settings),
@@ -20,9 +18,11 @@ void main() {
     await controller.queueDownload(
       url: Uri.parse('https://example.com/video'),
       variant: const ResourceVariant(
-        label: '推荐',
-        description: '适合大多数人',
+        label: '1080p 视频',
+        description: 'mp4',
         isRecommended: true,
+        formatId: '137',
+        type: ResourceType.video,
       ),
     );
 
@@ -31,16 +31,22 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('暂停'), findsOneWidget);
-    expect(find.text('取消'), findsOneWidget);
+    // Group card shows source URL and task count
+    expect(find.textContaining('example.com'), findsWidgets);
+    // Task format label is shown
+    expect(find.textContaining('视频'), findsWidgets);
 
-    await tester.tap(find.text('暂停'));
+    // Pause and cancel use GestureDetector with icons
+    expect(find.byIcon(Icons.pause_outlined), findsOneWidget);
+    expect(find.byIcon(Icons.cancel_outlined), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.pause_outlined));
     await tester.pumpAndSettle();
 
     expect(executor.paused, ['https://example.com/video#1']);
-    expect(find.text('恢复'), findsOneWidget);
+    expect(find.byIcon(Icons.play_arrow_outlined), findsOneWidget);
 
-    await tester.tap(find.text('恢复'));
+    await tester.tap(find.byIcon(Icons.play_arrow_outlined));
     await tester.pumpAndSettle();
 
     expect(executor.started, [

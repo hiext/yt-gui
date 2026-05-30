@@ -27,6 +27,22 @@ class DownloadController extends ChangeNotifier {
   List<DownloadTask> get cancelledTasks => scheduler.cancelledTasks;
   List<DownloadTask> get allTasks => scheduler.allTasks;
 
+  List<TaskGroup> get taskGroups {
+    final groups = <String, List<DownloadTask>>{};
+    final order = <String>[];
+    for (final task in allTasks) {
+      if (!groups.containsKey(task.source)) {
+        groups[task.source] = [];
+        order.add(task.source);
+      }
+      groups[task.source]!.add(task);
+    }
+    return order.map((source) {
+      final tasks = groups[source]!;
+      return TaskGroup(source: source, tasks: tasks);
+    }).toList();
+  }
+
   bool _isDisposed = false;
 
   Future<List<ResourceVariant>> inspect(Uri url) {
@@ -214,4 +230,11 @@ class DownloadController extends ChangeNotifier {
     _taskSequence += 1;
     return '${url.toString()}#$_taskSequence';
   }
+}
+
+class TaskGroup {
+  const TaskGroup({required this.source, required this.tasks});
+
+  final String source;
+  final List<DownloadTask> tasks;
 }
