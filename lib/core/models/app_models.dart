@@ -173,6 +173,38 @@ class ResourceVariant {
   final int? filesize;
   final String? videoId;
   final String? videoTitle;
+
+  Map<String, Object?> toJson() => {
+    'label': label,
+    'description': description,
+    'isRecommended': isRecommended,
+    if (formatId != null) 'formatId': formatId,
+    if (type != null) 'type': type!.name,
+    if (height != null) 'height': height,
+    if (filesize != null) 'filesize': filesize,
+    if (videoId != null) 'videoId': videoId,
+    if (videoTitle != null) 'videoTitle': videoTitle,
+  };
+
+  factory ResourceVariant.fromJson(Map<String, Object?> json) {
+    final typeStr = json['type'] as String?;
+    return ResourceVariant(
+      label: json['label'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      isRecommended: json['isRecommended'] as bool? ?? false,
+      formatId: json['formatId'] as String?,
+      type: typeStr != null
+          ? ResourceType.values.firstWhere(
+              (t) => t.name == typeStr,
+              orElse: () => ResourceType.video,
+            )
+          : null,
+      height: json['height'] as int?,
+      filesize: json['filesize'] as int?,
+      videoId: json['videoId'] as String?,
+      videoTitle: json['videoTitle'] as String?,
+    );
+  }
 }
 
 const Object _unchanged = Object();
@@ -219,6 +251,44 @@ class DownloadTask {
           : errorMessage as String?,
       speed: speed == _unchanged ? this.speed : speed as String?,
       eta: eta == _unchanged ? this.eta : eta as String?,
+    );
+  }
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'title': title,
+    'source': source,
+    'status': status.name,
+    'progress': progress,
+    'variants': variants.map((v) => v.toJson()).toList(),
+    if (errorMessage != null) 'errorMessage': errorMessage,
+    if (speed != null) 'speed': speed,
+    if (eta != null) 'eta': eta,
+  };
+
+  factory DownloadTask.fromJson(Map<String, Object?> json) {
+    final variantsList =
+        (json['variants'] as List<Object?>?)
+            ?.whereType<Map<String, Object?>>()
+            .map(ResourceVariant.fromJson)
+            .toList() ??
+        const [];
+    final statusStr = json['status'] as String?;
+    return DownloadTask(
+      id: json['id'] as String? ?? '',
+      title: json['title'] as String? ?? '',
+      source: json['source'] as String? ?? '',
+      status: statusStr != null
+          ? DownloadStatus.values.firstWhere(
+              (s) => s.name == statusStr,
+              orElse: () => DownloadStatus.paused,
+            )
+          : DownloadStatus.paused,
+      progress: (json['progress'] as num?)?.toDouble() ?? 0,
+      variants: variantsList,
+      errorMessage: json['errorMessage'] as String?,
+      speed: json['speed'] as String?,
+      eta: json['eta'] as String?,
     );
   }
 }

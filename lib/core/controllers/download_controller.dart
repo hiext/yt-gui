@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../models/app_models.dart';
 import '../services/download_scheduler.dart';
 import '../services/notification_service.dart';
+import '../services/task_repository.dart';
 import '../services/yt_dlp_executor.dart';
 
 class DownloadController extends ChangeNotifier {
@@ -12,13 +13,51 @@ class DownloadController extends ChangeNotifier {
     required this.scheduler,
     required this.executor,
     required this.settingsProvider,
+    this.taskRepository,
   });
 
   final DownloadScheduler scheduler;
   final YtDlpExecutor executor;
   final DownloadSettings Function() settingsProvider;
+  final TaskRepository? taskRepository;
   final Set<String> _startedTaskIds = {};
   int _taskSequence = 0;
+
+  Future<void> loadPendingTasks() async {
+    final repo = taskRepository;
+    if (repo == null) return;
+    final tasks = await repo.loadPendingTasks();
+    if (tasks.isEmpty) return;
+    for (final task in tasks) {
+      scheduler.enqueue(
+        task.copyWith(
+          status: DownloadStatus.queued,
+          progress: 0,
+          speed: null,
+          eta: null,
+        ),
+      );
+    }
+    scheduler.startNext();
+    _notifyChanged();
+    unawaited(_startPendingRunningTasks());
+  }
+
+  void _persistTasks() {
+    final repo = taskRepository;
+    if (repo == null) return;
+    final active = <DownloadTask>[
+      ...scheduler.queuedTasks,
+      ...scheduler.runningTasks,
+      ...scheduler.pausedTasks,
+    ];
+    unawaited(repo.savePendingTasks(active));
+  }
+
+  void _notifyChanged() {
+    notifyListeners();
+    _persistTasks();
+  }
 
   List<DownloadTask> get queuedTasks => scheduler.queuedTasks;
   List<DownloadTask> get runningTasks => scheduler.runningTasks;
@@ -66,7 +105,7 @@ class DownloadController extends ChangeNotifier {
 
     scheduler.enqueue(task);
     scheduler.startNext();
-    notifyListeners();
+    _notifyChanged();
     await _startPendingRunningTasks();
   }
 
@@ -87,7 +126,7 @@ class DownloadController extends ChangeNotifier {
       scheduler.enqueue(task);
     }
     scheduler.startNext();
-    notifyListeners();
+    _notifyChanged();
     await _startPendingRunningTasks();
   }
 
@@ -120,7 +159,7 @@ class DownloadController extends ChangeNotifier {
     if (task.status == DownloadStatus.completed) {
       _startedTaskIds.remove(task.id);
       scheduler.complete(task.id);
-      notifyListeners();
+      _notifyChanged();
       unawaited(_startPendingRunningTasks());
       NotificationService().showDownloadComplete(title: task.title);
       return;
@@ -129,7 +168,7 @@ class DownloadController extends ChangeNotifier {
     if (task.status == DownloadStatus.failed) {
       _startedTaskIds.remove(task.id);
       scheduler.fail(task.id, message: task.errorMessage ?? '下载失败');
-      notifyListeners();
+      _notifyChanged();
       unawaited(_startPendingRunningTasks());
       NotificationService().showDownloadFailed(
         title: task.title,
@@ -139,20 +178,20 @@ class DownloadController extends ChangeNotifier {
     }
 
     scheduler.updateTask(task);
-    notifyListeners();
+    _notifyChanged();
   }
 
   void handleCompleted(String taskId) {
     _startedTaskIds.remove(taskId);
     scheduler.complete(taskId);
-    notifyListeners();
+    _notifyChanged();
     unawaited(_startPendingRunningTasks());
   }
 
   void handleFailed(String taskId, String message) {
     _startedTaskIds.remove(taskId);
     scheduler.fail(taskId, message: message);
-    notifyListeners();
+    _notifyChanged();
     unawaited(_startPendingRunningTasks());
   }
 
@@ -160,7 +199,7 @@ class DownloadController extends ChangeNotifier {
     await executor.pause(taskId);
     _startedTaskIds.remove(taskId);
     scheduler.pause(taskId);
-    notifyListeners();
+    _notifyChanged();
   }
 
   Future<void> resume(String taskId) async {
@@ -170,7 +209,7 @@ class DownloadController extends ChangeNotifier {
     }
 
     scheduler.resume(taskId);
-    notifyListeners();
+    _notifyChanged();
     await _startPendingRunningTasks();
   }
 
@@ -178,13 +217,13 @@ class DownloadController extends ChangeNotifier {
     await executor.cancel(taskId);
     _startedTaskIds.remove(taskId);
     scheduler.cancel(taskId);
-    notifyListeners();
+    _notifyChanged();
     await _startPendingRunningTasks();
   }
 
   Future<void> retry(String taskId) async {
     scheduler.retry(taskId);
-    notifyListeners();
+    _notifyChanged();
     await _startPendingRunningTasks();
   }
 

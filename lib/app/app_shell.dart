@@ -7,6 +7,7 @@ import '../core/controllers/settings_controller.dart';
 import '../core/services/download_scheduler.dart';
 import '../core/services/process_yt_dlp_executor.dart';
 import '../core/services/settings_repository.dart';
+import '../core/services/task_repository.dart';
 import '../features/downloads/downloads_page.dart';
 import '../features/help/help_page.dart';
 import '../features/history/history_page.dart';
@@ -42,14 +43,17 @@ class _AppShellState extends State<AppShell> {
       );
       unawaited(_settingsController.load());
     }
-    _downloadController = widget.downloadController ??
+    _downloadController =
+        widget.downloadController ??
         DownloadController(
           scheduler: DownloadScheduler(
             settingsProvider: () => _settingsController.settings,
           ),
           executor: ProcessYtDlpExecutor(),
           settingsProvider: () => _settingsController.settings,
+          taskRepository: TaskRepository(),
         );
+    unawaited(_downloadController.loadPendingTasks());
   }
 
   @override
