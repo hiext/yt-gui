@@ -8,7 +8,7 @@ void main() {
       final controller = SettingsController();
       addTearDown(controller.dispose);
 
-      expect(controller.settings.saveDirectory, '.');
+      expect(controller.settings.saveDirectory, isNotEmpty);
       expect(controller.settings.defaultQuality, 'best');
       expect(controller.settings.concurrentCount, 1);
       expect(controller.settings.ytDlpPath, isNull);
@@ -35,7 +35,7 @@ void main() {
       );
 
       expect(notifications, 1);
-      expect(controller.settings.saveDirectory, '.');
+      expect(controller.settings.saveDirectory, isNotEmpty);
       expect(controller.settings.downloadMode, DownloadMode.concurrent);
       expect(controller.settings.concurrentCount, 8);
       expect(controller.settings.defaultQuality, 'best');

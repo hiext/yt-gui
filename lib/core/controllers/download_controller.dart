@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/app_models.dart';
 import '../services/download_scheduler.dart';
+import '../services/notification_service.dart';
 import '../services/yt_dlp_executor.dart';
 
 class DownloadController extends ChangeNotifier {
@@ -121,6 +122,7 @@ class DownloadController extends ChangeNotifier {
       scheduler.complete(task.id);
       notifyListeners();
       unawaited(_startPendingRunningTasks());
+      NotificationService().showDownloadComplete(title: task.title);
       return;
     }
 
@@ -129,6 +131,10 @@ class DownloadController extends ChangeNotifier {
       scheduler.fail(task.id, message: task.errorMessage ?? '下载失败');
       notifyListeners();
       unawaited(_startPendingRunningTasks());
+      NotificationService().showDownloadFailed(
+        title: task.title,
+        error: task.errorMessage ?? '未知错误',
+      );
       return;
     }
 

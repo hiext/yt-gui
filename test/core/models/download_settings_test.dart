@@ -39,7 +39,7 @@ void main() {
         'ffmpegPath': ' /tools/ffmpeg ',
       });
 
-      expect(restored.saveDirectory, '.');
+      expect(restored.saveDirectory, isNotEmpty);
       expect(restored.downloadMode, DownloadMode.serial);
       expect(restored.concurrentCount, 8);
       expect(restored.defaultQuality, 'best');

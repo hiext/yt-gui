@@ -1,3 +1,5 @@
+import 'dart:io';
+
 enum DownloadMode { serial, queue, concurrent }
 
 enum DownloadStatus {
@@ -25,13 +27,22 @@ class DownloadSettings {
   });
 
   static const defaults = DownloadSettings(
-    saveDirectory: '.',
+    saveDirectory: '',
     downloadMode: DownloadMode.serial,
     concurrentCount: 1,
     defaultQuality: 'best',
     downloadSubtitles: false,
     downloadThumbnail: false,
   );
+
+  static String defaultSaveDirectory() {
+    final home =
+        Platform.environment['HOME'] ??
+        Platform.environment['USERPROFILE'] ??
+        '.';
+    if (Platform.isMacOS) return '$home/Movies';
+    return '$home/Videos';
+  }
 
   final String saveDirectory;
   final DownloadMode downloadMode;
@@ -70,7 +81,7 @@ class DownloadSettings {
 
   DownloadSettings normalized() {
     final normalizedSaveDirectory = saveDirectory.trim().isEmpty
-        ? defaults.saveDirectory
+        ? defaultSaveDirectory()
         : saveDirectory.trim();
     final normalizedDefaultQuality = defaultQuality.trim().isEmpty
         ? defaults.defaultQuality
@@ -112,7 +123,7 @@ class DownloadSettings {
   factory DownloadSettings.fromJson(Map<String, Object?> json) {
     return DownloadSettings(
       saveDirectory:
-          (json['saveDirectory'] as String?) ?? defaults.saveDirectory,
+          (json['saveDirectory'] as String?) ?? defaultSaveDirectory(),
       downloadMode: _parseDownloadMode(json['downloadMode']),
       concurrentCount:
           (json['concurrentCount'] as int?) ?? defaults.concurrentCount,

@@ -16,7 +16,7 @@ void main() {
 
       final settings = await repository.load();
 
-      expect(settings.saveDirectory, '.');
+      expect(settings.saveDirectory, isNotEmpty);
       expect(settings.defaultQuality, 'best');
       expect(settings.ytDlpPath, isNull);
       expect(settings.ffmpegPath, isNull);

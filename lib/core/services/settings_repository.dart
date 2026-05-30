@@ -12,7 +12,7 @@ class SettingsRepository {
 
   Future<DownloadSettings> load() async {
     final all = await _prefs.getAll(allowList: _keys.allKeys);
-    if (all.isEmpty) return DownloadSettings.defaults;
+    if (all.isEmpty) return DownloadSettings.defaults.normalized();
     return DownloadSettings.fromJson(all);
   }
 
