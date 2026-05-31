@@ -131,8 +131,9 @@ class DownloadSettings {
     };
     if (ytDlpPath != null) map['ytDlpPath'] = ytDlpPath!;
     if (ffmpegPath != null) map['ffmpegPath'] = ffmpegPath!;
-    if (defaultCookieBrowser != null)
+    if (defaultCookieBrowser != null) {
       map['defaultCookieBrowser'] = defaultCookieBrowser!;
+    }
     return map;
   }
 

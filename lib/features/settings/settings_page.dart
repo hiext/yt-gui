@@ -246,8 +246,9 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _importCookies(String browser, String domain) async {
     final settings = widget.controller.settings;
+    final saveDir = settings.saveDirectory;
     final cookieFile =
-        '${settings.saveDirectory}/.cookies/${domain}_${browser}.txt';
+        '$saveDir/.cookies/$domain' '_$browser.txt';
     final service = CookieService();
     final ok = await service.importFromBrowser(
       browser: browser,
@@ -496,21 +497,42 @@ class _CookieSectionState extends State<_CookieSection> {
 }
 
 IconData _siteIcon(String domain) {
-  if (domain.contains('youtube') || domain.contains('youtu.be'))
+  if (domain.contains('youtube') || domain.contains('youtu.be')) {
     return Icons.play_circle_outline;
-  if (domain.contains('bilibili')) return Icons.tv_outlined;
-  if (domain.contains('twitter') || domain.contains('x.com'))
+  }
+  if (domain.contains('bilibili')) {
+    return Icons.tv_outlined;
+  }
+  if (domain.contains('twitter') || domain.contains('x.com')) {
     return Icons.alternate_email;
-  if (domain.contains('instagram')) return Icons.camera_alt_outlined;
-  if (domain.contains('tiktok')) return Icons.music_note_outlined;
-  if (domain.contains('facebook')) return Icons.people_outline;
-  if (domain.contains('twitch')) return Icons.live_tv_outlined;
-  if (domain.contains('reddit')) return Icons.forum_outlined;
-  if (domain.contains('nicovideo')) return Icons.videocam_outlined;
-  if (domain.contains('soundcloud')) return Icons.audiotrack_outlined;
-  if (domain.contains('vimeo')) return Icons.play_circle_outline;
-  if (domain.contains('pornhub') || domain.contains('xvideos'))
+  }
+  if (domain.contains('instagram')) {
+    return Icons.camera_alt_outlined;
+  }
+  if (domain.contains('tiktok')) {
+    return Icons.music_note_outlined;
+  }
+  if (domain.contains('facebook')) {
+    return Icons.people_outline;
+  }
+  if (domain.contains('twitch')) {
+    return Icons.live_tv_outlined;
+  }
+  if (domain.contains('reddit')) {
+    return Icons.forum_outlined;
+  }
+  if (domain.contains('nicovideo')) {
+    return Icons.videocam_outlined;
+  }
+  if (domain.contains('soundcloud')) {
+    return Icons.audiotrack_outlined;
+  }
+  if (domain.contains('vimeo')) {
+    return Icons.play_circle_outline;
+  }
+  if (domain.contains('pornhub') || domain.contains('xvideos')) {
     return Icons.visibility_off_outlined;
+  }
   return Icons.language;
 }
 
