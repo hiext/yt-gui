@@ -87,3 +87,5 @@ build_output.txt# Bundled tool binaries (too large for git; see README for downl
 assets/bin/linux/yt-dlp
 assets/bin/linux/ffmpeg
 assets/bin/linux/ffprobe
+# Runtime cookie data
+.cookies/
