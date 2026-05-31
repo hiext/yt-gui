@@ -71,4 +71,65 @@ class CookieService {
     if (!file.existsSync()) return false;
     return file.lengthSync() > 10;
   }
+
+  List<CookieEntry> parseCookieFile(String path) {
+    final file = File(path);
+    if (!file.existsSync()) return const [];
+    try {
+      final entries = <CookieEntry>[];
+      for (final line in file.readAsLinesSync()) {
+        if (line.startsWith('#') || line.trim().isEmpty) continue;
+        final parts = line.split('\t');
+        if (parts.length < 7) continue;
+        final expUnix = int.tryParse(parts[4]) ?? 0;
+        entries.add(
+          CookieEntry(
+            domain: parts[0],
+            flag: parts[1],
+            path: parts[2],
+            secure: parts[3] == 'TRUE',
+            expiry: expUnix > 0
+                ? DateTime.fromMillisecondsSinceEpoch(expUnix * 1000)
+                : null,
+            name: parts[5],
+            value: parts[6],
+          ),
+        );
+      }
+      return entries;
+    } catch (_) {
+      return const [];
+    }
+  }
+}
+
+class CookieEntry {
+  const CookieEntry({
+    required this.domain,
+    required this.flag,
+    required this.path,
+    required this.secure,
+    this.expiry,
+    required this.name,
+    required this.value,
+  });
+
+  final String domain;
+  final String flag;
+  final String path;
+  final bool secure;
+  final DateTime? expiry;
+  final String name;
+  final String value;
+
+  bool get isExpired => expiry != null && expiry!.isBefore(DateTime.now());
+
+  String get expiryText {
+    if (expiry == null) return '会话';
+    if (isExpired) return '已过期';
+    final diff = expiry!.difference(DateTime.now());
+    if (diff.inDays > 0) return '${diff.inDays} 天后';
+    if (diff.inHours > 0) return '${diff.inHours} 小时后';
+    return '即将过期';
+  }
 }

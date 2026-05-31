@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../../core/controllers/settings_controller.dart';
 import '../../core/models/app_models.dart';
-import '../../core/services/cookie_service.dart';
+import '../../core/services/cookie_service.dart'
+    show CookieService, CookieEntry;
 import '../../shared/widgets/section_card.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -545,7 +546,7 @@ IconData _siteIcon(String domain) {
   return Icons.language;
 }
 
-class _CookieTile extends StatelessWidget {
+class _CookieTile extends StatefulWidget {
   const _CookieTile({
     required this.config,
     required this.onRemove,
@@ -557,39 +558,142 @@ class _CookieTile extends StatelessWidget {
   final VoidCallback onReimport;
 
   @override
+  State<_CookieTile> createState() => _CookieTileState();
+}
+
+class _CookieTileState extends State<_CookieTile> {
+  bool _expanded = false;
+  List<CookieEntry>? _entries;
+
+  void _loadEntries() {
+    _entries ??= CookieService().parseCookieFile(widget.config.cookieFile);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final expired = config.isExpired;
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(
-        expired ? Icons.cookie_outlined : Icons.cookie,
-        color: expired ? Colors.orange : Colors.green,
-        size: 20,
-      ),
-      title: Text(config.domain, style: const TextStyle(fontSize: 14)),
-      subtitle: Text(
-        '${config.browser} · ${expired
-            ? '已过期'
-            : config.importedAt != null
-            ? '${DateTime.now().difference(config.importedAt!).inDays} 天前'
-            : '刚导入'}',
-        style: TextStyle(fontSize: 12, color: expired ? Colors.orange : null),
-      ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.refresh, size: 18),
-            tooltip: '重新导入',
-            onPressed: onReimport,
+    final expired = widget.config.isExpired;
+    _loadEntries();
+    final entries = _entries ?? const [];
+    final activeCount = entries.where((e) => !e.isExpired).length;
+    final domains = entries.map((e) => e.domain).toSet();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(
+            expired ? Icons.cookie_outlined : Icons.cookie,
+            color: expired ? Colors.orange : Colors.green,
+            size: 20,
           ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline, size: 18),
-            tooltip: '删除',
-            onPressed: onRemove,
+          title: Text(
+            widget.config.domain,
+            style: const TextStyle(fontSize: 14),
+          ),
+          subtitle: Text(
+            '${widget.config.browser} · 共 ${entries.length} 个 cookie · $activeCount 个有效'
+            '${expired ? ' (需重新导入)' : ''}',
+            style: TextStyle(
+              fontSize: 12,
+              color: expired ? Colors.orange : null,
+            ),
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: Icon(
+                  _expanded ? Icons.expand_less : Icons.expand_more,
+                  size: 18,
+                ),
+                tooltip: '查看详情',
+                onPressed: () => setState(() => _expanded = !_expanded),
+              ),
+              IconButton(
+                icon: const Icon(Icons.refresh, size: 18),
+                tooltip: '重新导入',
+                onPressed: widget.onReimport,
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, size: 18),
+                tooltip: '删除',
+                onPressed: widget.onRemove,
+              ),
+            ],
+          ),
+        ),
+        if (_expanded && entries.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.only(left: 28, right: 8, bottom: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Divider(height: 1),
+                const SizedBox(height: 8),
+                Text(
+                  '来源域名: ${domains.take(5).join(", ")}${domains.length > 5 ? " ..." : ""}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '文件: ${widget.config.cookieFile}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ...entries
+                    .take(8)
+                    .map(
+                      (e) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
+                          children: [
+                            Icon(
+                              e.isExpired
+                                  ? Icons.warning_amber_outlined
+                                  : Icons.check_circle_outline,
+                              size: 14,
+                              color: e.isExpired ? Colors.orange : Colors.green,
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                '${e.name}',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontFamily: 'monospace',
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Text(
+                              e.expiryText,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: e.isExpired
+                                    ? Colors.orange
+                                    : Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                if (entries.length > 8)
+                  Text(
+                    '... 还有 ${entries.length - 8} 个 cookie',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+              ],
+            ),
           ),
         ],
-      ),
+      ],
     );
   }
 }
