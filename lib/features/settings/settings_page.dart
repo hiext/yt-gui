@@ -272,7 +272,10 @@ class _SettingsPageState extends State<SettingsPage> {
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
-                const Text('1. 浏览器已安装且已登录目标网站', style: TextStyle(fontSize: 13)),
+                const Text(
+                  '1. 先在浏览器中打开网站并登录账号（游客态无法获取高清）',
+                  style: TextStyle(fontSize: 13),
+                ),
                 const Text(
                   '2. 关闭浏览器后重试（浏览器运行时会锁住 cookie 数据库）',
                   style: TextStyle(fontSize: 13),
@@ -424,7 +427,7 @@ class _CookieSectionState extends State<_CookieSection> {
   Widget build(BuildContext context) {
     return SectionCard(
       title: 'Cookie 管理',
-      subtitle: '从浏览器导入登录态，解决 YouTube 等网站的验证问题。',
+      subtitle: '先在浏览器中登录目标网站，再导入 cookies。登录后才能获取高清格式。',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

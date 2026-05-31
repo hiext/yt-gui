@@ -105,8 +105,9 @@ class _HomePageState extends State<HomePage> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      '该网站可能需要登录才能获取完整格式列表。'
-                      '请在设置页导入 ${_linkController.text.isNotEmpty ? Uri.tryParse(_linkController.text.trim())?.host ?? '' : ''} 的浏览器 Cookies。',
+                      '该网站需要登录才能获取高清格式。'
+                      '先在浏览器登录 ${_linkController.text.isNotEmpty ? Uri.tryParse(_linkController.text.trim())?.host ?? '目标网站' : '目标网站'}，'
+                      '然后去设置页导入 Cookies。',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ),
