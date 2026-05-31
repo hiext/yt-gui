@@ -264,6 +264,11 @@ class DownloadController extends ChangeNotifier {
     await _startPendingRunningTasks();
   }
 
+  void deleteFromHistory(String taskId) {
+    scheduler.removeFromHistory(taskId);
+    _notifyChanged();
+  }
+
   Future<void> _startPendingRunningTasks() async {
     if (_isDisposed) {
       return;

@@ -103,6 +103,12 @@ class DownloadScheduler {
     }
   }
 
+  void removeFromHistory(String taskId) {
+    _completed.removeWhere((t) => t.id == taskId);
+    _failed.removeWhere((t) => t.id == taskId);
+    _cancelled.removeWhere((t) => t.id == taskId);
+  }
+
   void retry(String taskId) {
     final task = _removeById(_failed, taskId);
     _queued.insert(

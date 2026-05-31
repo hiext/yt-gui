@@ -208,28 +208,30 @@ class _HistoryTaskTile extends StatelessWidget {
                 ),
               ),
             ],
-            if (task.status == DownloadStatus.failed) ...[
-              const SizedBox(height: 10),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: () async => controller.retry(task.id),
-                  icon: const Icon(Icons.refresh_outlined, size: 18),
-                  label: const Text('重试'),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (task.status == DownloadStatus.failed)
+                  TextButton.icon(
+                    onPressed: () async => controller.retry(task.id),
+                    icon: const Icon(Icons.refresh_outlined, size: 16),
+                    label: const Text('重试'),
+                  ),
+                if (task.status == DownloadStatus.completed)
+                  TextButton.icon(
+                    onPressed: () async => controller.openDownloadFolder(task),
+                    icon: const Icon(Icons.folder_open_outlined, size: 16),
+                    label: const Text('打开文件夹'),
+                  ),
+                TextButton.icon(
+                  onPressed: () => controller.deleteFromHistory(task.id),
+                  icon: const Icon(Icons.delete_outline, size: 16),
+                  label: const Text('删除'),
+                  style: TextButton.styleFrom(foregroundColor: Colors.red),
                 ),
-              ),
-            ],
-            if (task.status == DownloadStatus.completed) ...[
-              const SizedBox(height: 10),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: () async => controller.openDownloadFolder(task),
-                  icon: const Icon(Icons.folder_open_outlined, size: 18),
-                  label: const Text('打开文件夹'),
-                ),
-              ),
-            ],
+              ],
+            ),
           ],
         ),
       ),
