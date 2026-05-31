@@ -88,6 +88,21 @@ class DownloadScheduler {
     startNext();
   }
 
+  void restoreHistory(List<DownloadTask> tasks) {
+    for (final task in tasks) {
+      switch (task.status) {
+        case DownloadStatus.completed:
+          _completed.add(task);
+        case DownloadStatus.failed:
+          _failed.add(task);
+        case DownloadStatus.cancelled:
+          _cancelled.add(task);
+        default:
+          break;
+      }
+    }
+  }
+
   void retry(String taskId) {
     final task = _removeById(_failed, taskId);
     _queued.insert(

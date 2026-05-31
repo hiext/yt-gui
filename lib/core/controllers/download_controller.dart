@@ -27,6 +27,12 @@ class DownloadController extends ChangeNotifier {
   Future<void> loadPendingTasks() async {
     final repo = taskRepository;
     if (repo == null) return;
+    // Load history first
+    final history = await repo.loadHistoryTasks();
+    if (history.isNotEmpty) {
+      scheduler.restoreHistory(history);
+    }
+    // Load pending tasks
     final tasks = await repo.loadPendingTasks();
     if (tasks.isEmpty) return;
     for (final task in tasks) {
@@ -53,6 +59,12 @@ class DownloadController extends ChangeNotifier {
       ...scheduler.pausedTasks,
     ];
     unawaited(repo.savePendingTasks(active));
+    final history = <DownloadTask>[
+      ...scheduler.completedTasks,
+      ...scheduler.failedTasks,
+      ...scheduler.cancelledTasks,
+    ];
+    unawaited(repo.saveHistoryTasks(history));
   }
 
   void _notifyChanged() {
