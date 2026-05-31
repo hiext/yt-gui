@@ -4,7 +4,12 @@ import 'database_service.dart';
 class SettingsRepository {
   Future<DownloadSettings> load() async {
     final data = await DatabaseService().loadSettings();
-    if (data.isEmpty) return DownloadSettings.defaults.normalized();
+    if (data.isEmpty) {
+      final defaults = DownloadSettings.defaults.normalized();
+      // Persist defaults on first launch so DB has full config
+      await DatabaseService().saveSettings(defaults.toJson());
+      return defaults;
+    }
     return DownloadSettings.fromJson(data);
   }
 
