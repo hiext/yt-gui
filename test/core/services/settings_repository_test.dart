@@ -1,14 +1,35 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiext_yt_gui/core/models/app_models.dart';
+import 'package:hiext_yt_gui/core/services/database_service.dart';
 import 'package:hiext_yt_gui/core/services/settings_repository.dart';
-import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
-import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+Future<void> _setupTestDb() async {
+  sqfliteFfiInit();
+  final db = await databaseFactoryFfi.openDatabase(
+    inMemoryDatabasePath,
+    options: OpenDatabaseOptions(
+      version: 1,
+      onCreate: (db, _) async {
+        await db.execute(
+          'CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)',
+        );
+        await db.execute(
+          'CREATE TABLE tasks (id TEXT PRIMARY KEY, title TEXT NOT NULL, source TEXT NOT NULL, status TEXT NOT NULL, progress REAL NOT NULL DEFAULT 0, data TEXT NOT NULL)',
+        );
+        await db.execute(
+          'CREATE TABLE cookie_configs (id INTEGER PRIMARY KEY AUTOINCREMENT, domain TEXT NOT NULL UNIQUE, data TEXT NOT NULL)',
+        );
+      },
+    ),
+  );
+  DatabaseService().useTestDatabase(db);
+}
 
 void main() {
   group('SettingsRepository', () {
-    setUp(() {
-      SharedPreferencesAsyncPlatform.instance =
-          InMemorySharedPreferencesAsync.empty();
+    setUp(() async {
+      await _setupTestDb();
     });
 
     test('loads defaults when no settings are saved', () async {

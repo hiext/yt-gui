@@ -2,34 +2,16 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:shared_preferences/shared_preferences.dart';
-
 import '../models/app_models.dart';
+import 'database_service.dart';
 
 class CookieService {
-  CookieService({SharedPreferencesAsync? prefs})
-    : _prefs = prefs ?? SharedPreferencesAsync();
-
-  final SharedPreferencesAsync _prefs;
-  static const _storeKey = 'cookie_configs';
-
   Future<List<CookieConfig>> loadConfigs() async {
-    final raw = await _prefs.getString(_storeKey);
-    if (raw == null || raw.isEmpty) return const [];
-    try {
-      final list = jsonDecode(raw) as List<Object?>;
-      return list
-          .whereType<Map<String, Object?>>()
-          .map(CookieConfig.fromJson)
-          .toList();
-    } catch (_) {
-      return const [];
-    }
+    return DatabaseService().loadCookieConfigs();
   }
 
   Future<void> saveConfigs(List<CookieConfig> configs) async {
-    final json = jsonEncode(configs.map((c) => c.toJson()).toList());
-    await _prefs.setString(_storeKey, json);
+    await DatabaseService().saveCookieConfigs(configs);
   }
 
   static const _siteTestUrls = <String, String>{

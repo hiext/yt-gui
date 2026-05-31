@@ -6,13 +6,34 @@ import 'package:hiext_yt_gui/core/controllers/settings_controller.dart';
 import 'package:hiext_yt_gui/core/models/app_models.dart';
 import 'package:hiext_yt_gui/core/services/download_scheduler.dart';
 import 'package:hiext_yt_gui/core/services/yt_dlp_executor.dart';
-import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
-import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
+import 'package:hiext_yt_gui/core/services/database_service.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+Future<void> _setupTestDb() async {
+  sqfliteFfiInit();
+  final db = await databaseFactoryFfi.openDatabase(
+    inMemoryDatabasePath,
+    options: OpenDatabaseOptions(
+      version: 1,
+      onCreate: (db, _) async {
+        await db.execute(
+          'CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)',
+        );
+        await db.execute(
+          'CREATE TABLE tasks (id TEXT PRIMARY KEY, title TEXT NOT NULL, source TEXT NOT NULL, status TEXT NOT NULL, progress REAL NOT NULL DEFAULT 0, data TEXT NOT NULL)',
+        );
+        await db.execute(
+          'CREATE TABLE cookie_configs (id INTEGER PRIMARY KEY AUTOINCREMENT, domain TEXT NOT NULL UNIQUE, data TEXT NOT NULL)',
+        );
+      },
+    ),
+  );
+  DatabaseService().useTestDatabase(db);
+}
 
 void main() {
-  setUp(() {
-    SharedPreferencesAsyncPlatform.instance =
-        InMemorySharedPreferencesAsync.empty();
+  setUp(() async {
+    await _setupTestDb();
   });
 
   testWidgets('full user flow', (tester) async {
@@ -84,9 +105,7 @@ void main() {
     final settingsController = SettingsController();
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: AppShell(settingsController: settingsController),
-      ),
+      MaterialApp(home: AppShell(settingsController: settingsController)),
     );
     await tester.pump();
 
@@ -119,7 +138,10 @@ class _ImmediateFake implements YtDlpExecutor {
   Future<void> dispose() async {}
 
   @override
-  Future<List<ResourceVariant>> inspect(Uri url, {DownloadSettings? settings}) async {
+  Future<List<ResourceVariant>> inspect(
+    Uri url, {
+    DownloadSettings? settings,
+  }) async {
     inspected.add(url);
     return const [
       ResourceVariant(
@@ -147,15 +169,17 @@ class _ImmediateFake implements YtDlpExecutor {
     DownloadTaskChanged? onTaskChanged,
   }) async {
     started.add(taskId);
-    onTaskChanged?.call(DownloadTask(
-      id: taskId,
-      title: 'example.com/video',
-      source: 'https://example.com/video',
-      status: DownloadStatus.downloading,
-      progress: 50,
-      variants: const [],
-      speed: '1.2MiB/s',
-      eta: '00:10',
-    ));
+    onTaskChanged?.call(
+      DownloadTask(
+        id: taskId,
+        title: 'example.com/video',
+        source: 'https://example.com/video',
+        status: DownloadStatus.downloading,
+        progress: 50,
+        variants: const [],
+        speed: '1.2MiB/s',
+        eta: '00:10',
+      ),
+    );
   }
 }

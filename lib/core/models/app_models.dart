@@ -138,18 +138,26 @@ class DownloadSettings {
   }
 
   factory DownloadSettings.fromJson(Map<String, Object?> json) {
+    int? parseCount(dynamic v) {
+      if (v is int) return v;
+      if (v is String) return int.tryParse(v);
+      return null;
+    }
+    bool? parseBool(dynamic v) {
+      if (v is bool) return v;
+      if (v is String) return v == 'true' || v == '1';
+      return null;
+    }
+
     return DownloadSettings(
       saveDirectory:
           (json['saveDirectory'] as String?) ?? defaultSaveDirectory(),
       downloadMode: _parseDownloadMode(json['downloadMode']),
-      concurrentCount:
-          (json['concurrentCount'] as int?) ?? defaults.concurrentCount,
+      concurrentCount: parseCount(json['concurrentCount']) ?? defaults.concurrentCount,
       defaultQuality:
           (json['defaultQuality'] as String?) ?? defaults.defaultQuality,
-      downloadSubtitles:
-          (json['downloadSubtitles'] as bool?) ?? defaults.downloadSubtitles,
-      downloadThumbnail:
-          (json['downloadThumbnail'] as bool?) ?? defaults.downloadThumbnail,
+      downloadSubtitles: parseBool(json['downloadSubtitles']) ?? defaults.downloadSubtitles,
+      downloadThumbnail: parseBool(json['downloadThumbnail']) ?? defaults.downloadThumbnail,
       ytDlpPath: json['ytDlpPath'] as String?,
       ffmpegPath: json['ffmpegPath'] as String?,
       defaultCookieBrowser: json['defaultCookieBrowser'] as String?,
