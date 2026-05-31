@@ -157,66 +157,69 @@ class _CompactTaskTile extends StatelessWidget {
     final statusInfo = _statusInfo(task.status, colorScheme);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            children: [
-              Icon(statusInfo.icon, size: 14, color: statusInfo.color),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
+          // Status icon
+          Icon(statusInfo.icon, size: 16, color: statusInfo.color),
+          const SizedBox(width: 10),
+          // Label + progress bar
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
                   _taskFormatLabel(task),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodyMedium,
                 ),
-              ),
-              SizedBox(
-                width: 64,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                const SizedBox(height: 5),
+                Row(
                   children: [
-                    if (task.speed != null) ...[
-                      Icon(Icons.speed, size: 12, color: Colors.grey),
-                      const SizedBox(width: 2),
-                      Flexible(
-                        child: Text(
-                          task.speed!,
-                          style: const TextStyle(fontSize: 11),
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(3),
+                        child: LinearProgressIndicator(
+                          value: progress,
+                          minHeight: 4,
+                          backgroundColor: colorScheme.surfaceContainerHighest,
                         ),
                       ),
-                      const SizedBox(width: 8),
-                    ],
+                    ),
+                    const SizedBox(width: 10),
                     Text(
                       '${task.progress.toStringAsFixed(0)}%',
-                      style: TextStyle(fontSize: 11, color: statusInfo.color),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: statusInfo.color,
+                      ),
                     ),
                   ],
                 ),
-              ),
-              if (_actionsFor(task.status).isNotEmpty) ...[
-                const SizedBox(width: 4),
-                ..._actionsFor(task.status),
               ],
-            ],
+            ),
           ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(2),
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    minHeight: 3,
-                    backgroundColor: colorScheme.surfaceContainerHighest,
-                  ),
+          const SizedBox(width: 10),
+          // Speed info
+          if (task.speed != null) ...[
+            ConstrainedBox(
+              constraints: const BoxConstraints(minWidth: 60),
+              child: Text(
+                task.speed!,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
+                textAlign: TextAlign.end,
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 8),
+          ],
+          // Actions
+          ..._actionsFor(task.status),
         ],
       ),
     );
