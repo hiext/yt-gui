@@ -248,7 +248,8 @@ class _SettingsPageState extends State<SettingsPage> {
     final settings = widget.controller.settings;
     final saveDir = settings.saveDirectory;
     final cookieFile =
-        '$saveDir/.cookies/$domain' '_$browser.txt';
+        '$saveDir/.cookies/$domain'
+        '_$browser.txt';
     final service = CookieService();
     final ok = await service.importFromBrowser(
       browser: browser,
@@ -259,7 +260,15 @@ class _SettingsPageState extends State<SettingsPage> {
     if (!ok) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Cookie 导入失败，请确认浏览器已安装且已登录')),
+          const SnackBar(
+            content: Text(
+              'Cookie 导入失败。请确认：\n'
+              '1. 浏览器已安装且已登录目标网站\n'
+              '2. 浏览器未运行（关闭浏览器后重试）\n'
+              '3. yt-dlp 已安装或在设置中配置路径',
+            ),
+            duration: Duration(seconds: 6),
+          ),
         );
       }
       return;

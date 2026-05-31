@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -37,34 +38,31 @@ class CookieService {
     required String ytDlpPath,
     required String outputFile,
   }) async {
-    // Ensure output directory exists
     final file = File(outputFile);
     if (!file.parent.existsSync()) {
       file.parent.createSync(recursive: true);
     }
 
-    // Use yt-dlp to extract cookies from browser for the domain
-    // by doing a lightweight request that triggers cookie reading,
-    // then saving the jar to the output file
-    final result = await Process.run(ytDlpPath, [
+    // Use Process.start to avoid buffering large stdout
+    final process = await Process.start(ytDlpPath, [
       '--cookies-from-browser',
       browser,
       '--cookies',
       outputFile,
-      '--dump-json',
+      '--print',
+      'id',
       '--skip-download',
+      '--no-playlist',
       'https://$domain/',
     ], runInShell: false);
 
-    if (result.exitCode != 0) {
-      return false;
-    }
+    // Discard stdout/stderr but wait for completion
+    unawaited(process.stdout.drain());
+    unawaited(process.stderr.drain());
+    final exitCode = await process.exitCode;
 
-    // Verify the cookie file was created
-    if (!file.existsSync() || file.lengthSync() < 10) {
-      return false;
-    }
-
+    if (exitCode != 0) return false;
+    if (!file.existsSync() || file.lengthSync() < 10) return false;
     return true;
   }
 
