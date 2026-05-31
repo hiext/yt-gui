@@ -156,6 +156,8 @@ class _CompactTaskTile extends StatelessWidget {
     final progress = task.progress.clamp(0, 100) / 100;
     final statusInfo = _statusInfo(task.status, colorScheme);
 
+    final isCompleted = task.status == DownloadStatus.completed;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -170,10 +172,14 @@ class _CompactTaskTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _taskFormatLabel(task),
+                  isCompleted
+                      ? '✓ ${_taskFormatLabel(task)}'
+                      : _taskFormatLabel(task),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: isCompleted ? Colors.green : null,
+                  ),
                 ),
                 const SizedBox(height: 5),
                 Row(

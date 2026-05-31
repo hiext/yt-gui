@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../../core/controllers/download_controller.dart';
@@ -225,7 +227,7 @@ class _HistoryTaskTile extends StatelessWidget {
                     label: const Text('打开文件夹'),
                   ),
                 TextButton.icon(
-                  onPressed: () => controller.deleteFromHistory(task.id),
+                  onPressed: () => _confirmDelete(context, controller, task),
                   icon: const Icon(Icons.delete_outline, size: 16),
                   label: const Text('删除'),
                   style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -250,5 +252,45 @@ class _HistoryTaskTile extends StatelessWidget {
       DownloadStatus.cancelled => '已取消',
       _ => '历史',
     };
+  }
+}
+
+Future<void> _confirmDelete(
+  BuildContext context,
+  DownloadController controller,
+  DownloadTask task,
+) async {
+  final result = await showDialog<String>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      title: const Text('删除历史记录'),
+      content: Text('确定要删除「${task.title}」吗？'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx, 'record'),
+          child: const Text('仅删除记录'),
+        ),
+        OutlinedButton(
+          onPressed: () => Navigator.pop(ctx, 'files'),
+          style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
+          child: const Text('同时删除下载文件'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('取消'),
+        ),
+      ],
+    ),
+  );
+
+  if (result == null) return;
+  controller.deleteFromHistory(task.id);
+
+  if (result == 'files') {
+    final path = controller.getDownloadPath(task);
+    final dir = Directory(path);
+    if (dir.existsSync()) {
+      dir.deleteSync(recursive: true);
+    }
   }
 }
