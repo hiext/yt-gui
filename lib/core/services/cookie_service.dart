@@ -37,6 +37,14 @@ class CookieService {
     'nicovideo.jp': 'https://www.nicovideo.jp/watch/sm8628149',
   };
 
+  static const _browserFallback = [
+    'chrome',
+    'firefox',
+    'edge',
+    'brave',
+    'opera',
+  ];
+
   Future<CookieImportResult> importFromBrowser({
     required String browser,
     required String domain,
@@ -50,64 +58,69 @@ class CookieService {
 
     final testUrl = _siteTestUrls[domain] ?? 'https://$domain/';
 
-    final process = await Process.start(ytDlpPath, [
-      '--cookies-from-browser',
-      browser,
-      '--cookies',
-      outputFile,
-      '--print',
-      'id',
-      '--skip-download',
-      '--no-playlist',
-      testUrl,
-    ], runInShell: false);
+    // Build browser list: selected browser first, then fallbacks
+    final browsers = <String>[browser];
+    for (final b in _browserFallback) {
+      if (b != browser) browsers.add(b);
+    }
 
-    unawaited(process.stdout.drain());
-    final stderr = await process.stderr
-        .transform(utf8.decoder)
-        .transform(const LineSplitter())
-        .toList();
-    await process.exitCode;
+    final failures = <String>[];
+    for (final br in browsers) {
+      if (file.existsSync()) file.deleteSync();
 
-    // Check for cookie decryption failures (Chrome v11+ on Linux)
-    final cannotDecrypt = stderr.any(
-      (l) => l.contains('could not be decrypted'),
+      final process = await Process.start(ytDlpPath, [
+        '--cookies-from-browser',
+        br,
+        '--cookies',
+        outputFile,
+        '--print',
+        'id',
+        '--skip-download',
+        '--no-playlist',
+        testUrl,
+      ], runInShell: false);
+
+      unawaited(process.stdout.drain());
+      final stderr = await process.stderr
+          .transform(utf8.decoder)
+          .transform(const LineSplitter())
+          .toList();
+      await process.exitCode;
+
+      final cannotDecrypt = stderr.any(
+        (l) => l.contains('could not be decrypted'),
+      );
+      final extractedCount = _parseExtractedCount(stderr);
+      final fileCreated = file.existsSync() && file.lengthSync() >= 10;
+
+      if (cannotDecrypt && extractedCount == 0) {
+        failures.add('$br: cookie 加密无法解密');
+        continue;
+      }
+
+      if (!fileCreated) {
+        failures.add('$br: 未生成 cookie 文件');
+        continue;
+      }
+
+      if (extractedCount == 0) {
+        failures.add('$br: 未找到已登录的 cookie');
+        continue;
+      }
+
+      // Success — note which browser worked
+      final actualBr = br;
+      return CookieImportResult(
+        success: true,
+        detail: '已从 $actualBr 提取 $extractedCount 个 cookie',
+      );
+    }
+
+    return CookieImportResult(
+      success: false,
+      reason: 'all_failed',
+      detail: failures.join('\n'),
     );
-    final extractedCount = _parseExtractedCount(stderr);
-
-    final fileCreated = file.existsSync() && file.lengthSync() >= 10;
-
-    if (cannotDecrypt && extractedCount == 0) {
-      return const CookieImportResult(
-        success: false,
-        reason: 'browser_encrypted',
-        detail:
-            'Chrome/Edge 的 cookie 被加密，yt-dlp 无法解密。解决方案：\n'
-            '1. 改用 Firefox 浏览器登录网站后导入\n'
-            '2. 或用 Chrome 扩展 "Get cookies.txt" 导出文件\n'
-            '3. 然后设置 → 外部工具 → 手动指定 cookie 文件路径',
-      );
-    }
-
-    if (!fileCreated) {
-      return const CookieImportResult(
-        success: false,
-        reason: 'no_file',
-        detail: 'Cookie 文件未生成。请确认浏览器已安装且已登录目标网站。',
-      );
-    }
-
-    if (extractedCount == 0) {
-      return const CookieImportResult(
-        success: false,
-        reason: 'no_cookies',
-        detail:
-            '未从浏览器提取到任何 cookie。\n'
-            '请先在浏览器中打开目标网站并登录账号。',
-      );
-    }
-
-    return const CookieImportResult(success: true);
   }
 
   int _parseExtractedCount(List<String> stderr) {

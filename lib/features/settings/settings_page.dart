@@ -261,16 +261,15 @@ class _SettingsPageState extends State<SettingsPage> {
     );
     if (!result.success) {
       if (mounted) {
-        final isEncrypt = result.reason == 'browser_encrypted';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  isEncrypt ? 'Cookie 解密失败' : 'Cookie 导入失败',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                const Text(
+                  'Cookie 导入失败（已尝试所有浏览器）',
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -302,7 +301,10 @@ class _SettingsPageState extends State<SettingsPage> {
     widget.controller.updateSettings(updated);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('已导入 $domain 的 cookies ($browser)')),
+        SnackBar(
+          content: Text(result.detail ?? '已导入 $domain 的 cookies'),
+          duration: const Duration(seconds: 3),
+        ),
       );
     }
   }
