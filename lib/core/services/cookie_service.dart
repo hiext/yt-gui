@@ -45,6 +45,8 @@ class CookieService {
     'opera',
   ];
 
+  static const _chromeBased = {'chrome', 'edge', 'brave', 'opera', 'chromium'};
+
   Future<CookieImportResult> importFromBrowser({
     required String browser,
     required String domain,
@@ -94,7 +96,11 @@ class CookieService {
       final fileCreated = file.existsSync() && file.lengthSync() >= 10;
 
       if (cannotDecrypt && extractedCount == 0) {
-        failures.add('$br: cookie 加密无法解密');
+        var msg = '$br: cookie v11 加密无法解密';
+        if (Platform.isLinux && _chromeBased.contains(br)) {
+          msg += '（需安装 libsecret-tools: sudo apt install libsecret-tools）';
+        }
+        failures.add(msg);
         continue;
       }
 
