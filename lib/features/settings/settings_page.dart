@@ -386,19 +386,14 @@ class _CookieSectionState extends State<_CookieSection> {
     'bandcamp.com',
   ];
 
-  final List<String> _importedDomains = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _importedDomains.addAll(widget.configs.map((c) => c.domain));
-  }
-
   @override
   void dispose() {
     _domainCtrl.dispose();
     super.dispose();
   }
+
+  Set<String> get _importedDomains =>
+      widget.configs.map((c) => c.domain).toSet();
 
   List<String> get _availablePresets =>
       _presetSites.where((d) => !_importedDomains.contains(d)).toList();
@@ -406,7 +401,6 @@ class _CookieSectionState extends State<_CookieSection> {
   void _doImport(String domain) {
     if (domain.isNotEmpty) {
       widget.onImport(_browser, domain);
-      setState(() => _importedDomains.add(domain));
     }
   }
 
