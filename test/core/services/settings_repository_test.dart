@@ -4,7 +4,7 @@ import 'package:hiext_yt_gui/core/services/database_service.dart';
 import 'package:hiext_yt_gui/core/services/settings_repository.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
-Future<void> _setupTestDb() async {
+Future<Database> _createTestDb() async {
   sqfliteFfiInit();
   final db = await databaseFactoryFfi.openDatabase(
     inMemoryDatabasePath,
@@ -23,13 +23,20 @@ Future<void> _setupTestDb() async {
       },
     ),
   );
-  DatabaseService().useTestDatabase(db);
+  return db;
 }
+
+late Database _testDb;
 
 void main() {
   group('SettingsRepository', () {
     setUp(() async {
-      await _setupTestDb();
+      _testDb = await _createTestDb();
+      DatabaseService().useTestDatabase(_testDb);
+    });
+
+    tearDown(() async {
+      await _testDb.close();
     });
 
     test('loads defaults when no settings are saved', () async {
