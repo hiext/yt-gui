@@ -72,15 +72,24 @@ class DownloadsPage extends StatelessWidget {
   }
 }
 
-class _TaskGroupCard extends StatelessWidget {
+class _TaskGroupCard extends StatefulWidget {
   const _TaskGroupCard({required this.group, required this.controller});
 
   final TaskGroup group;
   final DownloadController controller;
 
   @override
+  State<_TaskGroupCard> createState() => _TaskGroupCardState();
+}
+
+class _TaskGroupCardState extends State<_TaskGroupCard> {
+  bool _collapsed = false;
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final group = widget.group;
+    final controller = widget.controller;
     final activeCount = group.tasks
         .where((t) => t.status == DownloadStatus.downloading)
         .length;
@@ -90,10 +99,15 @@ class _TaskGroupCard extends StatelessWidget {
     final pausedCount = group.tasks
         .where((t) => t.status == DownloadStatus.paused)
         .length;
+    final allDone = doneCount == group.tasks.length;
     final totalProgress = group.tasks.isEmpty
         ? 0.0
         : group.tasks.fold<double>(0, (sum, t) => sum + t.progress) /
               group.tasks.length;
+
+    if (allDone && !_collapsed) {
+      _collapsed = true;
+    }
 
     return SectionCard(
       title: _truncateSource(group.source),
@@ -102,6 +116,7 @@ class _TaskGroupCard extends StatelessWidget {
           '${doneCount > 0 ? ' · $doneCount 已完成' : ''}'
           '${activeCount > 0 ? ' · $activeCount 下载中' : ''}'
           '${pausedCount > 0 ? ' · $pausedCount 已暂停' : ''}',
+      backgroundColor: allDone ? Colors.green.withAlpha(15) : null,
       child: Column(
         children: [
           // Group progress bar
@@ -114,24 +129,47 @@ class _TaskGroupCard extends StatelessWidget {
                     value: totalProgress / 100,
                     minHeight: 6,
                     backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                    color: allDone ? Colors.green : null,
                   ),
                 ),
               ),
               const SizedBox(width: 12),
               SizedBox(
                 width: 48,
-                child: Text(
-                  '${totalProgress.toStringAsFixed(0)}%',
-                  textAlign: TextAlign.end,
-                  style: theme.textTheme.bodySmall,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    if (allDone)
+                      const Text(
+                        '✓',
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      )
+                    else
+                      Text(
+                        '${totalProgress.toStringAsFixed(0)}%',
+                        style: theme.textTheme.bodySmall,
+                      ),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          // Individual task tiles
-          for (final task in group.tasks)
-            _CompactTaskTile(task: task, controller: controller),
+          if (activeCount + pausedCount > 0 || !_collapsed) ...[
+            const SizedBox(height: 8),
+            for (final task in group.tasks)
+              _CompactTaskTile(task: task, controller: controller),
+          ],
+          if (allDone)
+            TextButton(
+              onPressed: () => setState(() => _collapsed = !_collapsed),
+              child: Text(
+                _collapsed ? '展开已完成任务' : '收起已完成任务',
+                style: const TextStyle(fontSize: 12),
+              ),
+            ),
         ],
       ),
     );
@@ -155,79 +193,129 @@ class _CompactTaskTile extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final progress = task.progress.clamp(0, 100) / 100;
     final statusInfo = _statusInfo(task.status, colorScheme);
-
     final isCompleted = task.status == DownloadStatus.completed;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Status icon
-          Icon(statusInfo.icon, size: 16, color: statusInfo.color),
-          const SizedBox(width: 10),
-          // Label + progress bar
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  isCompleted
-                      ? '✓ ${_taskFormatLabel(task)}'
-                      : _taskFormatLabel(task),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: isCompleted ? Colors.green : null,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(3),
-                        child: LinearProgressIndicator(
-                          value: progress,
-                          minHeight: 4,
-                          backgroundColor: colorScheme.surfaceContainerHighest,
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      decoration: isCompleted
+          ? BoxDecoration(
+              color: Colors.green.withAlpha(12),
+              borderRadius: BorderRadius.circular(8),
+            )
+          : null,
+      padding: EdgeInsets.symmetric(
+        horizontal: isCompleted ? 10 : 0,
+        vertical: isCompleted ? 6 : 0,
+      ),
+      child: isCompleted
+          ? _buildCompletedTile(context, theme, statusInfo)
+          : _buildActiveTile(context, theme, colorScheme, progress, statusInfo),
+    );
+  }
+
+  Widget _buildCompletedTile(
+    BuildContext context,
+    ThemeData theme,
+    _StatusInfo statusInfo,
+  ) {
+    return Row(
+      children: [
+        Icon(statusInfo.icon, size: 16, color: Colors.green),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            '✓ ${_taskFormatLabel(task)}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: Colors.green.shade700,
+            ),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: Colors.green.withAlpha(25),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: const Text(
+            '已完成',
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.green,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        ..._actionsFor(task.status),
+      ],
+    );
+  }
+
+  Widget _buildActiveTile(
+    BuildContext context,
+    ThemeData theme,
+    ColorScheme colorScheme,
+    double progress,
+    _StatusInfo statusInfo,
+  ) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Icon(statusInfo.icon, size: 16, color: statusInfo.color),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                _taskFormatLabel(task),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyMedium,
+              ),
+            ),
+            SizedBox(
+              width: 64,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  if (task.speed != null) ...[
+                    Flexible(
+                      child: Text(
+                        task.speed!,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    Text(
-                      '${task.progress.toStringAsFixed(0)}%',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: statusInfo.color,
-                      ),
-                    ),
+                    const SizedBox(width: 8),
                   ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          // Speed info
-          if (task.speed != null) ...[
-            ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: 60),
-              child: Text(
-                task.speed!,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-                textAlign: TextAlign.end,
+                  Text(
+                    '${task.progress.toStringAsFixed(0)}%',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: statusInfo.color,
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(width: 8),
+            ..._actionsFor(task.status),
           ],
-          // Actions
-          ..._actionsFor(task.status),
-        ],
-      ),
+        ),
+        const SizedBox(height: 5),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(3),
+          child: LinearProgressIndicator(
+            value: progress,
+            minHeight: 4,
+            backgroundColor: colorScheme.surfaceContainerHighest,
+          ),
+        ),
+      ],
     );
   }
 
