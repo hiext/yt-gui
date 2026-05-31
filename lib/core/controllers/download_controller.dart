@@ -7,6 +7,7 @@ import '../services/download_scheduler.dart';
 import '../services/notification_service.dart';
 import '../services/task_repository.dart';
 import '../services/yt_dlp_executor.dart';
+import '../../shared/utils/platform_utils.dart';
 
 class DownloadController extends ChangeNotifier {
   DownloadController({
@@ -98,6 +99,19 @@ class DownloadController extends ChangeNotifier {
       }
     }
     return null;
+  }
+
+  String getDownloadPath(DownloadTask task) {
+    final variant = task.variants.isNotEmpty ? task.variants.first : null;
+    final videoId = variant?.videoId;
+    final saveDir = settingsProvider().saveDirectory;
+    if (videoId != null) return '$saveDir/$videoId';
+    return saveDir;
+  }
+
+  Future<void> openDownloadFolder(DownloadTask task) async {
+    final path = getDownloadPath(task);
+    await openFolder(path);
   }
 
   Future<void> queueDownload({

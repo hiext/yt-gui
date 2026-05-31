@@ -210,7 +210,16 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _openDownloadFolder(BuildContext context) {
-    // No-op: folder opening is handled after download completes in downloads/history page
+    if (_videoId == null) return;
+    final task = DownloadTask(
+      id: '',
+      title: '',
+      source: '',
+      status: DownloadStatus.completed,
+      progress: 100,
+      variants: _variants,
+    );
+    widget.controller.openDownloadFolder(task);
   }
 
   Future<void> _inspect() async {

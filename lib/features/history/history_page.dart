@@ -219,6 +219,17 @@ class _HistoryTaskTile extends StatelessWidget {
                 ),
               ),
             ],
+            if (task.status == DownloadStatus.completed) ...[
+              const SizedBox(height: 10),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () async => controller.openDownloadFolder(task),
+                  icon: const Icon(Icons.folder_open_outlined, size: 18),
+                  label: const Text('打开文件夹'),
+                ),
+              ),
+            ],
           ],
         ),
       ),

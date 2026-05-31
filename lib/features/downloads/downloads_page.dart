@@ -259,6 +259,12 @@ class _CompactTaskTile extends StatelessWidget {
           child: const Icon(Icons.refresh_outlined, size: 18),
         ),
       ],
+      DownloadStatus.completed => [
+        GestureDetector(
+          onTap: () => controller.openDownloadFolder(task),
+          child: const Icon(Icons.folder_open_outlined, size: 18),
+        ),
+      ],
       _ => const [],
     };
   }
