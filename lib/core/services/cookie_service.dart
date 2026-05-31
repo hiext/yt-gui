@@ -32,6 +32,11 @@ class CookieService {
     await _prefs.setString(_storeKey, json);
   }
 
+  static const _siteTestUrls = <String, String>{
+    'bilibili.com': 'https://www.bilibili.com/video/BV1GJ411x7h7',
+    'nicovideo.jp': 'https://www.nicovideo.jp/watch/sm8628149',
+  };
+
   Future<bool> importFromBrowser({
     required String browser,
     required String domain,
@@ -43,7 +48,8 @@ class CookieService {
       file.parent.createSync(recursive: true);
     }
 
-    // Use Process.start to avoid buffering large stdout
+    final testUrl = _siteTestUrls[domain] ?? 'https://$domain/';
+
     final process = await Process.start(ytDlpPath, [
       '--cookies-from-browser',
       browser,
@@ -53,15 +59,16 @@ class CookieService {
       'id',
       '--skip-download',
       '--no-playlist',
-      'https://$domain/',
+      testUrl,
     ], runInShell: false);
 
-    // Discard stdout/stderr but wait for completion
     unawaited(process.stdout.drain());
     unawaited(process.stderr.drain());
-    final exitCode = await process.exitCode;
+    await process.exitCode;
 
-    if (exitCode != 0) return false;
+    // Exit code may be non-zero for sites without a supported homepage
+    // (e.g. bilibili.com), but cookies may still have been extracted.
+    // Only check if the cookie file was actually created.
     if (!file.existsSync() || file.lengthSync() < 10) return false;
     return true;
   }
