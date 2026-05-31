@@ -253,40 +253,33 @@ class _SettingsPageState extends State<SettingsPage> {
         '_$browser.txt';
     final ytDlpPath = settings.ytDlpPath ?? 'yt-dlp';
     final service = CookieService();
-    final ok = await service.importFromBrowser(
+    final result = await service.importFromBrowser(
       browser: browser,
       domain: domain,
       ytDlpPath: ytDlpPath,
       outputFile: cookieFile,
     );
-    if (!ok) {
+    if (!result.success) {
       if (mounted) {
+        final isEncrypt = result.reason == 'browser_encrypted';
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Cookie 导入失败，请确认：',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                Text(
+                  isEncrypt ? 'Cookie 解密失败' : 'Cookie 导入失败',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  '1. 先在浏览器中打开网站并登录账号（游客态无法获取高清）',
-                  style: TextStyle(fontSize: 13),
-                ),
-                const Text(
-                  '2. 关闭浏览器后重试（浏览器运行时会锁住 cookie 数据库）',
-                  style: TextStyle(fontSize: 13),
-                ),
                 Text(
-                  '3. yt-dlp 可用（当前路径：$ytDlpPath）',
+                  result.detail ?? '未知错误',
                   style: const TextStyle(fontSize: 13),
                 ),
               ],
             ),
-            duration: const Duration(seconds: 8),
+            duration: const Duration(seconds: 10),
             behavior: SnackBarBehavior.floating,
           ),
         );

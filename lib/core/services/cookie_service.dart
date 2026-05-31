@@ -37,7 +37,7 @@ class CookieService {
     'nicovideo.jp': 'https://www.nicovideo.jp/watch/sm8628149',
   };
 
-  Future<bool> importFromBrowser({
+  Future<CookieImportResult> importFromBrowser({
     required String browser,
     required String domain,
     required String ytDlpPath,
@@ -63,14 +63,60 @@ class CookieService {
     ], runInShell: false);
 
     unawaited(process.stdout.drain());
-    unawaited(process.stderr.drain());
+    final stderr = await process.stderr
+        .transform(utf8.decoder)
+        .transform(const LineSplitter())
+        .toList();
     await process.exitCode;
 
-    // Exit code may be non-zero for sites without a supported homepage
-    // (e.g. bilibili.com), but cookies may still have been extracted.
-    // Only check if the cookie file was actually created.
-    if (!file.existsSync() || file.lengthSync() < 10) return false;
-    return true;
+    // Check for cookie decryption failures (Chrome v11+ on Linux)
+    final cannotDecrypt = stderr.any(
+      (l) => l.contains('could not be decrypted'),
+    );
+    final extractedCount = _parseExtractedCount(stderr);
+
+    final fileCreated = file.existsSync() && file.lengthSync() >= 10;
+
+    if (cannotDecrypt && extractedCount == 0) {
+      return const CookieImportResult(
+        success: false,
+        reason: 'browser_encrypted',
+        detail:
+            'Chrome/Edge 的 cookie 被加密，yt-dlp 无法解密。解决方案：\n'
+            '1. 改用 Firefox 浏览器登录网站后导入\n'
+            '2. 或用 Chrome 扩展 "Get cookies.txt" 导出文件\n'
+            '3. 然后设置 → 外部工具 → 手动指定 cookie 文件路径',
+      );
+    }
+
+    if (!fileCreated) {
+      return const CookieImportResult(
+        success: false,
+        reason: 'no_file',
+        detail: 'Cookie 文件未生成。请确认浏览器已安装且已登录目标网站。',
+      );
+    }
+
+    if (extractedCount == 0) {
+      return const CookieImportResult(
+        success: false,
+        reason: 'no_cookies',
+        detail:
+            '未从浏览器提取到任何 cookie。\n'
+            '请先在浏览器中打开目标网站并登录账号。',
+      );
+    }
+
+    return const CookieImportResult(success: true);
+  }
+
+  int _parseExtractedCount(List<String> stderr) {
+    for (final line in stderr) {
+      // "Extracted 1234 cookies from chrome"
+      final match = RegExp(r'Extracted (\d+) cookies?').firstMatch(line);
+      if (match != null) return int.parse(match.group(1)!);
+    }
+    return -1;
   }
 
   bool isCookieFileValid(String path) {
@@ -108,6 +154,14 @@ class CookieService {
       return const [];
     }
   }
+}
+
+class CookieImportResult {
+  const CookieImportResult({required this.success, this.reason, this.detail});
+
+  final bool success;
+  final String? reason;
+  final String? detail;
 }
 
 class CookieEntry {
