@@ -38,6 +38,9 @@ dependencies:
   window_manager: ^0.5.1
   sqflite_common_ffi: ^2.4.0+3
   path: ^1.9.1
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.20.2
 
 dev_dependencies:
   flutter_test:
@@ -56,6 +59,7 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  generate: true
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
@@ -97,3 +101,7 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+l10n:
+  arb-dir: lib/l10n
+  template-arb-file: app_zh.arb

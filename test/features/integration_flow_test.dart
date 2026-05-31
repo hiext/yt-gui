@@ -7,6 +7,8 @@ import 'package:hiext_yt_gui/core/models/app_models.dart';
 import 'package:hiext_yt_gui/core/services/download_scheduler.dart';
 import 'package:hiext_yt_gui/core/services/yt_dlp_executor.dart';
 import 'package:hiext_yt_gui/core/services/database_service.dart';
+import 'package:hiext_yt_gui/l10n/app_localizations.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 Future<void> _setupTestDb() async {
@@ -52,6 +54,12 @@ void main() {
     );
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('zh'), Locale('en')],
         home: AppShell(
           settingsController: settingsController,
           downloadController: downloadController,
@@ -61,7 +69,7 @@ void main() {
     await tester.pump();
 
     // Phase 1: Verify home page shows
-    expect(find.text('新建下载'), findsWidgets);
+    expect(find.text('New Download'), findsWidgets);
     expect(find.text('请先粘贴链接并解析可下载格式。'), findsOneWidget);
 
     // Phase 2: Enter URL and parse
@@ -78,9 +86,10 @@ void main() {
     // Phase 4: Select format and download
     await tester.tap(find.text('1080p 视频'));
     await tester.pump();
-    await tester.ensureVisible(find.textContaining('下载所选'));
+    final dlBtn = find.textContaining('下载所选');
+    await tester.scrollUntilVisible(dlBtn, 300, scrollable: find.byType(Scrollable).first);
     await tester.pump();
-    await tester.tap(find.textContaining('下载所选'));
+    await tester.tap(dlBtn);
     await tester.pump();
 
     // Phase 5: Verify download started and navigated to downloads
@@ -105,7 +114,15 @@ void main() {
     final settingsController = SettingsController();
 
     await tester.pumpWidget(
-      MaterialApp(home: AppShell(settingsController: settingsController)),
+      MaterialApp(
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+        ],
+        supportedLocales: const [Locale('zh'), Locale('en')],
+        home: AppShell(settingsController: settingsController),
+      ),
     );
     await tester.pump();
 

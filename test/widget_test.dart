@@ -33,16 +33,15 @@ void main() {
       await tester.pumpAndSettle();
     });
 
-    expect(find.text('新建下载'), findsWidgets);
-    expect(find.text('下载中'), findsOneWidget);
-    expect(find.text('历史记录'), findsOneWidget);
-    expect(find.text('设置'), findsOneWidget);
-    expect(find.text('帮助'), findsOneWidget);
+    expect(find.text('New Download'), findsWidgets);
+    expect(find.text('Downloads'), findsOneWidget);
+    expect(find.text('History'), findsOneWidget);
+    expect(find.text('Settings'), findsOneWidget);
+    expect(find.text('Help'), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.settings_outlined));
     await tester.pumpAndSettle();
 
-    expect(find.text('设置'), findsWidgets);
     expect(find.text('保存与画质'), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.history_outlined));

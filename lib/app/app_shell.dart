@@ -9,6 +9,7 @@ import '../core/services/download_scheduler.dart';
 import '../core/services/process_yt_dlp_executor.dart';
 import '../core/services/settings_repository.dart';
 import '../core/services/task_repository.dart';
+import '../l10n/app_localizations.dart';
 import '../features/downloads/downloads_page.dart';
 import '../features/help/help_page.dart';
 import '../features/history/history_page.dart';
@@ -86,6 +87,8 @@ class _AppShellState extends State<AppShell> {
       const HelpPage(),
     ];
 
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       body: SafeArea(
         child: Row(
@@ -98,39 +101,39 @@ class _AppShellState extends State<AppShell> {
                 });
               },
               labelType: NavigationRailLabelType.all,
-              leading: const Padding(
-                padding: EdgeInsets.only(top: 16),
+              leading: Padding(
+                padding: const EdgeInsets.only(top: 16),
                 child: SectionCard(
-                  title: 'Hiext YT GUI',
-                  subtitle: 'yt-dlp 可视化下载器',
-                  child: SizedBox(height: 1),
+                  title: l10n.appTitle,
+                  subtitle: l10n.appSubtitle,
+                  child: const SizedBox(height: 1),
                 ),
               ),
-              destinations: const [
+              destinations: [
                 NavigationRailDestination(
-                  icon: Icon(Icons.add_link_outlined),
-                  selectedIcon: Icon(Icons.add_link),
-                  label: Text('新建下载'),
+                  icon: const Icon(Icons.add_link_outlined),
+                  selectedIcon: const Icon(Icons.add_link),
+                  label: Text(l10n.newDownload),
                 ),
                 NavigationRailDestination(
-                  icon: Icon(Icons.downloading_outlined),
-                  selectedIcon: Icon(Icons.downloading),
-                  label: Text('下载中'),
+                  icon: const Icon(Icons.downloading_outlined),
+                  selectedIcon: const Icon(Icons.downloading),
+                  label: Text(l10n.downloading),
                 ),
                 NavigationRailDestination(
-                  icon: Icon(Icons.history_outlined),
-                  selectedIcon: Icon(Icons.history),
-                  label: Text('历史记录'),
+                  icon: const Icon(Icons.history_outlined),
+                  selectedIcon: const Icon(Icons.history),
+                  label: Text(l10n.history),
                 ),
                 NavigationRailDestination(
-                  icon: Icon(Icons.settings_outlined),
-                  selectedIcon: Icon(Icons.settings),
-                  label: Text('设置'),
+                  icon: const Icon(Icons.settings_outlined),
+                  selectedIcon: const Icon(Icons.settings),
+                  label: Text(l10n.settings),
                 ),
                 NavigationRailDestination(
-                  icon: Icon(Icons.help_outline),
-                  selectedIcon: Icon(Icons.help),
-                  label: Text('帮助'),
+                  icon: const Icon(Icons.help_outline),
+                  selectedIcon: const Icon(Icons.help),
+                  label: Text(l10n.help),
                 ),
               ],
             ),
