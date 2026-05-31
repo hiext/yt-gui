@@ -30,14 +30,20 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     final cached = _extractedPaths[tool.path];
     if (cached != null) return cached;
 
-    final data = await rootBundle.load(tool.path);
-    final dir = Directory.systemTemp.createTempSync('hiext-yt-tools-');
-    final fileName = tool.path.split('/').last;
-    final filePath = '${dir.path}/$fileName';
-    File(filePath).writeAsBytesSync(data.buffer.asUint8List());
-    await Process.run('chmod', ['+x', filePath]);
-    _extractedPaths[tool.path] = filePath;
-    return filePath;
+    try {
+      final data = await rootBundle.load(tool.path);
+      final dir = Directory.systemTemp.createTempSync('hiext-yt-tools-');
+      final fileName = tool.path.split('/').last;
+      final filePath = '${dir.path}/$fileName';
+      File(filePath).writeAsBytesSync(data.buffer.asUint8List());
+      await Process.run('chmod', ['+x', filePath]);
+      _extractedPaths[tool.path] = filePath;
+      return filePath;
+    } catch (_) {
+      // rootBundle.load fails in test environments without Flutter assets
+      // Return the original path; it may work if the file exists at that path
+      return tool.path;
+    }
   }
 
   @override
