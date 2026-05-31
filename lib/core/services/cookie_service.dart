@@ -47,6 +47,88 @@ class CookieService {
 
   static const _chromeBased = {'chrome', 'edge', 'brave', 'opera', 'chromium'};
 
+  static const _extractScriptPaths = [
+    'assets/bin/linux/extract_cookies.py',
+    'assets/bin/macos/extract_cookies.py',
+    'assets/bin/windows/extract_cookies.py',
+  ];
+
+  String? _findExtractScript() {
+    for (final path in _extractScriptPaths) {
+      if (File(path).existsSync()) return path;
+    }
+    return null;
+  }
+
+  Future<CookieImportResult> _tryBrowserCookie3({
+    required String browser,
+    required String domain,
+    required String outputFile,
+    required String actualBrowser,
+  }) async {
+    final script = _findExtractScript();
+    if (script == null)
+      return const CookieImportResult(
+        success: false,
+        reason: 'no_script',
+        detail: 'extract_cookies.py 脚本未找到',
+      );
+
+    final result = await Process.run('python3', [
+      script,
+      browser,
+      domain,
+      outputFile,
+    ], runInShell: false);
+
+    if (result.exitCode == 0) {
+      final stderr = result.stderr.toString();
+      final count = _parseBrowserCookie3Count(stderr);
+      return CookieImportResult(
+        success: true,
+        detail: '已从 $actualBrowser 提取 $count 个 cookie (browser_cookie3)',
+      );
+    }
+
+    final stderr = result.stderr.toString();
+    if (stderr.contains('NO_MODULE')) {
+      return const CookieImportResult(
+        success: false,
+        reason: 'no_module',
+        detail: 'browser_cookie3 未安装。运行: pip install browser-cookie3',
+      );
+    }
+    if (stderr.contains('NO_COOKIES')) {
+      return CookieImportResult(
+        success: false,
+        reason: 'no_cookies',
+        detail: '$actualBrowser: 未找到 $domain 的已登录 cookie',
+      );
+    }
+    return CookieImportResult(
+      success: false,
+      reason: 'error',
+      detail: '$actualBrowser: browser_cookie3 失败: ${stderr.trim()}',
+    );
+  }
+
+  int _parseBrowserCookie3Count(String stderr) {
+    final match = RegExp(r'EXTRACTED: (\d+)').firstMatch(stderr);
+    if (match != null) return int.parse(match.group(1)!);
+    return 0;
+  }
+
+  String? _bundledSecretToolPath() {
+    // Check common locations for the bundled secret-tool
+    for (final path in [
+      'assets/bin/linux/secret-tool',
+      'assets/bin/macos/secret-tool',
+    ]) {
+      if (File(path).existsSync()) return path;
+    }
+    return null;
+  }
+
   Future<CookieImportResult> importFromBrowser({
     required String browser,
     required String domain,
@@ -58,6 +140,8 @@ class CookieService {
       file.parent.createSync(recursive: true);
     }
 
+    // Ensure bundled secret-tool is in PATH for Chrome-based browsers
+    final secretTool = _bundledSecretToolPath();
     final testUrl = _siteTestUrls[domain] ?? 'https://$domain/';
 
     // Build browser list: selected browser first, then fallbacks
@@ -70,18 +154,30 @@ class CookieService {
     for (final br in browsers) {
       if (file.existsSync()) file.deleteSync();
 
-      final process = await Process.start(ytDlpPath, [
-        '--cookies-from-browser',
-        br,
-        '--cookies',
-        outputFile,
-        '--print',
-        'id',
-        '--skip-download',
-        '--no-playlist',
-        testUrl,
-      ], runInShell: false);
+      // Prepare environment with bundled secret-tool if available
+      Map<String, String>? env;
+      if (secretTool != null && _chromeBased.contains(br)) {
+        final secretDir = File(secretTool).parent.path;
+        final existingPath = Platform.environment['PATH'] ?? '';
+        env = {'PATH': '$secretDir:$existingPath'};
+      }
 
+      final process = await Process.start(
+        ytDlpPath,
+        [
+          '--cookies-from-browser',
+          br,
+          '--cookies',
+          outputFile,
+          '--print',
+          'id',
+          '--skip-download',
+          '--no-playlist',
+          testUrl,
+        ],
+        runInShell: false,
+        environment: env,
+      );
       unawaited(process.stdout.drain());
       final stderr = await process.stderr
           .transform(utf8.decoder)
@@ -96,13 +192,19 @@ class CookieService {
       final fileCreated = file.existsSync() && file.lengthSync() >= 10;
 
       if (cannotDecrypt && extractedCount == 0) {
-        var msg = '$br: cookie v11 加密无法解密';
+        // Try browser_cookie3 as fallback for encrypted Chrome on Linux
         if (Platform.isLinux && _chromeBased.contains(br)) {
-          msg +=
-              '\n  Linux: 改用 Firefox 导入或安装 libsecret-tools\n'
-              '  macOS/Windows: 通常已内置支持';
+          final bc3 = await _tryBrowserCookie3(
+            browser: br,
+            domain: domain,
+            outputFile: outputFile,
+            actualBrowser: br,
+          );
+          if (bc3.success) return bc3;
+          failures.add(bc3.detail!);
+          continue;
         }
-        failures.add(msg);
+        failures.add('$br: cookie 加密无法解密');
         continue;
       }
 
