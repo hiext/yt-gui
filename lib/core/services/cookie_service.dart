@@ -47,14 +47,16 @@ class CookieService {
 
   static const _chromeBased = {'chrome', 'edge', 'brave', 'opera', 'chromium'};
 
-  static const _extractScriptPaths = [
-    'assets/bin/linux/extract_cookies.py',
-    'assets/bin/macos/extract_cookies.py',
-    'assets/bin/windows/extract_cookies.py',
-  ];
-
   String? _findExtractScript() {
-    for (final path in _extractScriptPaths) {
+    // Check development paths (relative to project root)
+    for (final path in ['assets/bin/linux/extract_cookies.py']) {
+      if (File(path).existsSync()) return path;
+    }
+    // Check bundled release paths (relative to executable)
+    final exeDir = File(Platform.resolvedExecutable).parent.path;
+    for (final path in [
+      '$exeDir/data/flutter_assets/assets/bin/linux/extract_cookies.py',
+    ]) {
       if (File(path).existsSync()) return path;
     }
     return null;
@@ -74,12 +76,31 @@ class CookieService {
         detail: 'extract_cookies.py 脚本未找到',
       );
 
-    final result = await Process.run('python3', [
-      script,
-      browser,
-      domain,
-      outputFile,
-    ], runInShell: false);
+    // Try python3 first, then python as fallback
+    ProcessResult result;
+    try {
+      result = await Process.run('python3', [
+        script,
+        browser,
+        domain,
+        outputFile,
+      ], runInShell: false);
+    } catch (_) {
+      try {
+        result = await Process.run('python', [
+          script,
+          browser,
+          domain,
+          outputFile,
+        ], runInShell: false);
+      } catch (e) {
+        return CookieImportResult(
+          success: false,
+          reason: 'no_python',
+          detail: 'Python 未安装或不在 PATH 中',
+        );
+      }
+    }
 
     if (result.exitCode == 0) {
       final stderr = result.stderr.toString();
@@ -119,13 +140,15 @@ class CookieService {
   }
 
   String? _bundledSecretToolPath() {
-    // Check common locations for the bundled secret-tool
-    for (final path in [
-      'assets/bin/linux/secret-tool',
-      'assets/bin/macos/secret-tool',
-    ]) {
-      if (File(path).existsSync()) return path;
+    // Check development path
+    if (File('assets/bin/linux/secret-tool').existsSync()) {
+      return 'assets/bin/linux/secret-tool';
     }
+    // Check bundled release path
+    final exeDir = File(Platform.resolvedExecutable).parent.path;
+    final bundledPath =
+        '$exeDir/data/flutter_assets/assets/bin/linux/secret-tool';
+    if (File(bundledPath).existsSync()) return bundledPath;
     return null;
   }
 
