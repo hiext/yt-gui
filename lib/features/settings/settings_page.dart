@@ -251,24 +251,40 @@ class _SettingsPageState extends State<SettingsPage> {
     final cookieFile =
         '$saveDir/.cookies/$domain'
         '_$browser.txt';
+    final ytDlpPath = settings.ytDlpPath ?? 'yt-dlp';
     final service = CookieService();
     final ok = await service.importFromBrowser(
       browser: browser,
       domain: domain,
-      ytDlpPath: settings.ytDlpPath ?? 'yt-dlp',
+      ytDlpPath: ytDlpPath,
       outputFile: cookieFile,
     );
     if (!ok) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Cookie 导入失败。请确认：\n'
-              '1. 浏览器已安装且已登录目标网站\n'
-              '2. 浏览器未运行（关闭浏览器后重试）\n'
-              '3. yt-dlp 已安装或在设置中配置路径',
+          SnackBar(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Cookie 导入失败，请确认：',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                const Text('1. 浏览器已安装且已登录目标网站', style: TextStyle(fontSize: 13)),
+                const Text(
+                  '2. 关闭浏览器后重试（浏览器运行时会锁住 cookie 数据库）',
+                  style: TextStyle(fontSize: 13),
+                ),
+                Text(
+                  '3. yt-dlp 可用（当前路径：$ytDlpPath）',
+                  style: const TextStyle(fontSize: 13),
+                ),
+              ],
             ),
-            duration: Duration(seconds: 6),
+            duration: const Duration(seconds: 8),
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
