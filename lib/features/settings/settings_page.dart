@@ -554,6 +554,28 @@ IconData _siteIcon(String domain) {
   return Icons.language;
 }
 
+Color _browserColor(String browser) {
+  return switch (browser) {
+    'chrome' => const Color(0xFF4285F4),
+    'firefox' => const Color(0xFFFF7139),
+    'edge' => const Color(0xFF0078D7),
+    'brave' => const Color(0xFFFB542B),
+    'opera' => const Color(0xFFFF1B2D),
+    _ => Colors.grey,
+  };
+}
+
+IconData _browserIcon(String browser) {
+  return switch (browser) {
+    'chrome' => Icons.language,
+    'firefox' => Icons.local_fire_department_outlined,
+    'edge' => Icons.explore_outlined,
+    'brave' => Icons.shield_outlined,
+    'opera' => Icons.circle_outlined,
+    _ => Icons.language,
+  };
+}
+
 class _CookieTile extends StatefulWidget {
   const _CookieTile({
     required this.config,
@@ -579,33 +601,30 @@ class _CookieTileState extends State<_CookieTile> {
 
   @override
   Widget build(BuildContext context) {
-    final expired = widget.config.isExpired;
     _loadEntries();
     final entries = _entries ?? const [];
-    final activeCount = entries.where((e) => !e.isExpired).length;
-    final domains = entries.map((e) => e.domain).toSet();
+    final brColor = _browserColor(widget.config.browser);
+    final brIcon = _browserIcon(widget.config.browser);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: Icon(
-            expired ? Icons.cookie_outlined : Icons.cookie,
-            color: expired ? Colors.orange : Colors.green,
-            size: 20,
-          ),
+          leading: Icon(Icons.cookie, color: brColor, size: 20),
           title: Text(
             widget.config.domain,
             style: const TextStyle(fontSize: 14),
           ),
-          subtitle: Text(
-            '${widget.config.browser} · 共 ${entries.length} 个 cookie · $activeCount 个有效'
-            '${expired ? ' (需重新导入)' : ''}',
-            style: TextStyle(
-              fontSize: 12,
-              color: expired ? Colors.orange : null,
-            ),
+          subtitle: Row(
+            children: [
+              Icon(brIcon, size: 13, color: brColor),
+              const SizedBox(width: 4),
+              Text(
+                '${widget.config.browser} · ${entries.length} cookies',
+                style: TextStyle(fontSize: 12, color: brColor),
+              ),
+            ],
           ),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
@@ -640,13 +659,6 @@ class _CookieTileState extends State<_CookieTile> {
                 const Divider(height: 1),
                 const SizedBox(height: 8),
                 Text(
-                  '来源域名: ${domains.take(5).join(", ")}${domains.length > 5 ? " ..." : ""}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
                   '文件: ${widget.config.cookieFile}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -654,20 +666,21 @@ class _CookieTileState extends State<_CookieTile> {
                 ),
                 const SizedBox(height: 8),
                 ...entries
-                    .take(8)
+                    .take(12)
                     .map(
                       (e) => Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
+                        padding: const EdgeInsets.only(bottom: 3),
                         child: Row(
                           children: [
-                            Icon(
-                              e.isExpired
-                                  ? Icons.warning_amber_outlined
-                                  : Icons.check_circle_outline,
-                              size: 14,
-                              color: e.isExpired ? Colors.orange : Colors.green,
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                color: e.isExpired ? Colors.orange : brColor,
+                                shape: BoxShape.circle,
+                              ),
                             ),
-                            const SizedBox(width: 6),
+                            const SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 '${e.name}',
@@ -692,9 +705,9 @@ class _CookieTileState extends State<_CookieTile> {
                         ),
                       ),
                     ),
-                if (entries.length > 8)
+                if (entries.length > 12)
                   Text(
-                    '... 还有 ${entries.length - 8} 个 cookie',
+                    '... 还有 ${entries.length - 12} 个 cookie',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
               ],
