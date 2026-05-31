@@ -89,6 +89,17 @@ class DownloadController extends ChangeNotifier {
     return executor.inspect(url, settings: settingsProvider());
   }
 
+  String? resolveCookieFile(Uri url) {
+    final host = url.host;
+    for (final config in settingsProvider().cookieConfigs) {
+      if (!config.enabled) continue;
+      if (host.contains(config.domain) || config.domain.contains(host)) {
+        return config.cookieFile;
+      }
+    }
+    return null;
+  }
+
   Future<void> queueDownload({
     required Uri url,
     required ResourceVariant variant,

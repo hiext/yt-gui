@@ -49,7 +49,14 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       settings: settings ?? DownloadSettings.defaults,
     );
     final ytDlpPath = await _ensureExecutable(tools.ytDlp);
-    final process = await _processRunner(ytDlpPath, buildInspectArguments(url));
+    final cookieFile = _resolveCookieFile(
+      url,
+      settings ?? DownloadSettings.defaults,
+    );
+    final process = await _processRunner(
+      ytDlpPath,
+      buildInspectArguments(url, cookieFile: cookieFile),
+    );
 
     final outputLines = <String>[];
     final session = YtDlpSession.forTesting(
@@ -169,8 +176,13 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     _sessions.clear();
   }
 
-  static List<String> buildInspectArguments(Uri url) {
-    return ['--dump-json', '--no-playlist', url.toString()];
+  static List<String> buildInspectArguments(Uri url, {String? cookieFile}) {
+    return [
+      '--dump-json',
+      '--no-playlist',
+      if (cookieFile != null) ...['--cookies', cookieFile],
+      url.toString(),
+    ];
   }
 
   static List<String> buildDownloadArguments({

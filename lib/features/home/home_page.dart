@@ -28,6 +28,7 @@ class _HomePageState extends State<HomePage> {
   String? _videoId;
   List<ResourceVariant> _variants = const [];
   final Set<String?> _selected = {};
+  bool _showCookiePrompt = false;
 
   @override
   void dispose() {
@@ -88,6 +89,32 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
         ),
+        if (_showCookiePrompt) ...[
+          const SizedBox(height: 16),
+          Card(
+            color: Colors.orange.withAlpha(30),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.cookie_outlined,
+                    color: Colors.orange,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      '该网站可能需要登录才能获取完整格式列表。'
+                      '请在设置页导入 ${_linkController.text.isNotEmpty ? Uri.tryParse(_linkController.text.trim())?.host ?? '' : ''} 的浏览器 Cookies。',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
         if (_variants.isNotEmpty) ...[
           const SizedBox(height: 16),
           if (_videoTitle != null)
@@ -207,10 +234,12 @@ class _HomePageState extends State<HomePage> {
           _linkController.text.trim() != uri.toString()) {
         return;
       }
+      final hasCookie = widget.controller.resolveCookieFile(uri) != null;
       setState(() {
         _variants = variants;
         _videoTitle = variants.isNotEmpty ? variants.first.videoTitle : null;
         _videoId = variants.isNotEmpty ? variants.first.videoId : null;
+        _showCookiePrompt = !hasCookie;
       });
     } catch (error) {
       if (!mounted ||
@@ -283,6 +312,7 @@ class _HomePageState extends State<HomePage> {
       _videoTitle = null;
       _videoId = null;
       _errorText = null;
+      _showCookiePrompt = false;
     });
   }
 }
