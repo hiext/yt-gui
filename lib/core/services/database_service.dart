@@ -78,13 +78,15 @@ class DatabaseService {
 
   Future<void> saveSettings(Map<String, Object> data) async {
     final d = await db;
-    await d.delete('settings');
-    for (final entry in data.entries) {
-      await d.insert(
-        'settings',
-        {'key': entry.key, 'value': entry.value.toString()},
-      );
-    }
+    await d.transaction((txn) async {
+      await txn.delete('settings');
+      for (final entry in data.entries) {
+        await txn.insert(
+          'settings',
+          {'key': entry.key, 'value': entry.value.toString()},
+        );
+      }
+    });
   }
 
   // ---- Tasks ----
