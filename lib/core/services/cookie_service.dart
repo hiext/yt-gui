@@ -98,7 +98,9 @@ class CookieService {
       if (cannotDecrypt && extractedCount == 0) {
         var msg = '$br: cookie v11 加密无法解密';
         if (Platform.isLinux && _chromeBased.contains(br)) {
-          msg += '（需安装 libsecret-tools: sudo apt install libsecret-tools）';
+          msg +=
+              '\n  Linux: 改用 Firefox 导入或安装 libsecret-tools\n'
+              '  macOS/Windows: 通常已内置支持';
         }
         failures.add(msg);
         continue;
