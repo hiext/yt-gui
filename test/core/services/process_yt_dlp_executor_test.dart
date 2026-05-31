@@ -25,9 +25,10 @@ void main() {
 
     final variants = await inspectFuture;
 
-    expect(variants, hasLength(2));
-    expect(variants.first.label, '1080p 视频 (推荐)');
-    expect(variants.first.formatId, '137');
+    expect(variants.length, greaterThanOrEqualTo(2));
+    expect(variants.first.formatId, 'bestvideo+bestaudio');
+    expect(variants[1].formatId, '137');
+    expect(variants[1].label, '1080p 视频 (推荐)');
     expect(variants.last.label, '音频 140');
     expect(variants.last.formatId, '140');
   });

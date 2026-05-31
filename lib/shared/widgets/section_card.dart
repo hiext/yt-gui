@@ -6,15 +6,18 @@ class SectionCard extends StatelessWidget {
     required this.title,
     required this.subtitle,
     required this.child,
+    this.backgroundColor,
   });
 
   final String title;
   final String subtitle;
   final Widget child;
+  final Color? backgroundColor;
 
   @override
   Widget build(BuildContext context) {
     return Card(
+      color: backgroundColor,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

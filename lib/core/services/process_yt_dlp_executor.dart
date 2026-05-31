@@ -339,11 +339,27 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
           return (b.filesize ?? 0).compareTo(a.filesize ?? 0);
         });
 
-        // Mark best quality video as recommended
+        // Insert synthetic "bestvideo+bestaudio" merge option at top
         final bestVideo = variants.firstWhere(
           (v) => v.type == ResourceType.video,
           orElse: () => variants.first,
         );
+        final maxHeight = bestVideo.height ?? 1080;
+        variants.insert(
+          0,
+          ResourceVariant(
+            label: '最佳品质（${maxHeight}p 视频+音频合并）',
+            description: 'yt-dlp 自动选取最佳视频和音频流合并 · 推荐',
+            isRecommended: true,
+            formatId: 'bestvideo+bestaudio',
+            type: ResourceType.video,
+            height: maxHeight,
+            videoId: videoId,
+            videoTitle: videoTitle,
+          ),
+        );
+
+        // Mark best quality video as recommended
         final bestIdx = variants.indexOf(bestVideo);
         if (bestIdx >= 0) {
           variants[bestIdx] = ResourceVariant(

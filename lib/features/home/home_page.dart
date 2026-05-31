@@ -35,8 +35,15 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  List<ResourceVariant> get _videoVariants =>
-      _variants.where((v) => v.type == ResourceType.video).toList();
+  List<ResourceVariant> get _mergeVariant =>
+      _variants.where((v) => v.formatId == 'bestvideo+bestaudio').toList();
+
+  List<ResourceVariant> get _videoVariants => _variants
+      .where(
+        (v) =>
+            v.type == ResourceType.video && v.formatId != 'bestvideo+bestaudio',
+      )
+      .toList();
 
   List<ResourceVariant> get _audioVariants =>
       _variants.where((v) => v.type == ResourceType.audio).toList();
@@ -107,7 +114,17 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
-          if (_videoVariants.isNotEmpty)
+          if (_mergeVariant.isNotEmpty)
+            _VariantGroup(
+              title: '推荐品质',
+              icon: Icons.star_outlined,
+              variants: _mergeVariant,
+              selected: _selected,
+              onToggle: _toggle,
+              highlight: true,
+            ),
+          if (_videoVariants.isNotEmpty) ...[
+            const SizedBox(height: 16),
             _VariantGroup(
               title: '视频格式',
               icon: Icons.videocam_outlined,
@@ -115,6 +132,7 @@ class _HomePageState extends State<HomePage> {
               selected: _selected,
               onToggle: _toggle,
             ),
+          ],
           if (_audioVariants.isNotEmpty) ...[
             const SizedBox(height: 16),
             _VariantGroup(
@@ -276,6 +294,7 @@ class _VariantGroup extends StatelessWidget {
     required this.variants,
     required this.selected,
     required this.onToggle,
+    this.highlight = false,
   });
 
   final String title;
@@ -283,12 +302,16 @@ class _VariantGroup extends StatelessWidget {
   final List<ResourceVariant> variants;
   final Set<String?> selected;
   final ValueChanged<String?> onToggle;
+  final bool highlight;
 
   @override
   Widget build(BuildContext context) {
     return SectionCard(
       title: '$title (${variants.length})',
-      subtitle: '勾选要下载的格式，可以多选。',
+      subtitle: highlight ? '自动选取最佳视频和音频流合并输出单个文件。' : '勾选要下载的格式，可以多选。',
+      backgroundColor: highlight
+          ? Theme.of(context).colorScheme.primaryContainer.withAlpha(60)
+          : null,
       child: Column(
         children: [
           for (final variant in variants)

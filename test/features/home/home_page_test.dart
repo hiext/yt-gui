@@ -51,6 +51,9 @@ void main() {
     expect(find.text('音频 140'), findsOneWidget);
 
     // Check the audio format checkbox and submit
+    await tester.scrollUntilVisible(find.text('音频 140'), 200,
+        scrollable: find.byType(Scrollable).first);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('音频 140'));
     await tester.pumpAndSettle();
     await tester.dragUntilVisible(
