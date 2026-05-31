@@ -8,6 +8,8 @@ import 'package:hiext_yt_gui/core/services/embedded_tool_resolver.dart';
 import 'package:hiext_yt_gui/core/services/process_yt_dlp_executor.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   test('keeps part files and restarts with same resume command', () async {
     final tempDir = Directory.systemTemp.createTempSync('yt-dlp-resume-');
     addTearDown(() => tempDir.deleteSync(recursive: true));

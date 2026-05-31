@@ -8,6 +8,8 @@ import 'package:hiext_yt_gui/core/services/embedded_tool_resolver.dart';
 import 'package:hiext_yt_gui/core/services/process_yt_dlp_executor.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   test('inspect parses format variants from yt-dlp json output', () async {
     final process = _FakeProcess(exitCodeValue: 0);
     final executor = ProcessYtDlpExecutor(
