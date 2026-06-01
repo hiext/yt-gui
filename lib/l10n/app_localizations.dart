@@ -865,6 +865,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'取消'**
   String get cancel;
+
+  /// No description provided for @additionalOptionsDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'下载时附带字幕和封面文件。'**
+  String get additionalOptionsDesc;
 }
 
 class _AppLocalizationsDelegate

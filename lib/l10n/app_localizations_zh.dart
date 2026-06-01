@@ -156,7 +156,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get additionalOptions => '附加选项';
-  String get additionalOptionsDesc => '下载时附带字幕和封面文件。';
 
   @override
   String get downloadSubtitles => '下载字幕';
@@ -246,6 +245,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get openFolder => '打开文件夹';
+  String get openDownloadDir => '打开下载目录';
 
   @override
   String get threeSteps => '三步上手';
@@ -415,4 +415,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get cancel => '取消';
+
+  @override
+  String get additionalOptionsDesc => '下载时附带字幕和封面文件。';
 }
