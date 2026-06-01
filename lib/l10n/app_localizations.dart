@@ -194,7 +194,7 @@ abstract class AppLocalizations {
   /// No description provided for @recommendedQualityDesc.
   ///
   /// In en, this message translates to:
-  /// **'Automatically select best video and audio streams and merge into one file.'**
+  /// **'Auto-select best video and audio streams and merge into one file.'**
   String get recommendedQualityDesc;
 
   /// No description provided for @videoFormats.
@@ -236,7 +236,7 @@ abstract class AppLocalizations {
   /// No description provided for @taskListDesc.
   ///
   /// In en, this message translates to:
-  /// **'Download tasks will appear here after pasting a link and selecting formats.'**
+  /// **'Download tasks appear here after pasting a link and selecting formats.'**
   String get taskListDesc;
 
   /// No description provided for @noDownloadTasks.
@@ -248,62 +248,8 @@ abstract class AppLocalizations {
   /// No description provided for @noDownloadTasksHint.
   ///
   /// In en, this message translates to:
-  /// **'Go to \'New Download\' and paste a link to start'**
+  /// **'Go to New Download and paste a link to start'**
   String get noDownloadTasksHint;
-
-  /// No description provided for @pause.
-  ///
-  /// In en, this message translates to:
-  /// **'Pause'**
-  String get pause;
-
-  /// No description provided for @cancel.
-  ///
-  /// In en, this message translates to:
-  /// **'Cancel'**
-  String get cancel;
-
-  /// No description provided for @resume.
-  ///
-  /// In en, this message translates to:
-  /// **'Resume'**
-  String get resume;
-
-  /// No description provided for @retry.
-  ///
-  /// In en, this message translates to:
-  /// **'Retry'**
-  String get retry;
-
-  /// No description provided for @completed.
-  ///
-  /// In en, this message translates to:
-  /// **'Completed'**
-  String get completed;
-
-  /// No description provided for @failed.
-  ///
-  /// In en, this message translates to:
-  /// **'Failed'**
-  String get failed;
-
-  /// No description provided for @cancelled.
-  ///
-  /// In en, this message translates to:
-  /// **'Cancelled'**
-  String get cancelled;
-
-  /// No description provided for @waiting.
-  ///
-  /// In en, this message translates to:
-  /// **'Waiting'**
-  String get waiting;
-
-  /// No description provided for @queued.
-  ///
-  /// In en, this message translates to:
-  /// **'Queued'**
-  String get queued;
 
   /// No description provided for @formatsCount.
   ///
@@ -437,12 +383,6 @@ abstract class AppLocalizations {
   /// **'Additional Options'**
   String get additionalOptions;
 
-  /// No description provided for @additionalOptionsDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Download subtitles and thumbnails along with video.'**
-  String get additionalOptionsDesc;
-
   /// No description provided for @downloadSubtitles.
   ///
   /// In en, this message translates to:
@@ -494,7 +434,7 @@ abstract class AppLocalizations {
   /// No description provided for @cookieManagementDesc.
   ///
   /// In en, this message translates to:
-  /// **'Log into websites in browser first, then import cookies. Login required for HD formats.'**
+  /// **'Log into websites in browser first, then import cookies. Login required for HD.'**
   String get cookieManagementDesc;
 
   /// No description provided for @browser.
@@ -538,6 +478,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'View Details'**
   String get viewDetails;
+
+  /// No description provided for @cookieImportFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Cookie import failed after trying all browsers'**
+  String get cookieImportFailed;
+
+  /// No description provided for @cookieImportSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Imported cookies for {domain}'**
+  String cookieImportSuccess(String domain);
 
   /// No description provided for @noHistory.
   ///
@@ -596,7 +548,7 @@ abstract class AppLocalizations {
   /// No description provided for @noRecordsHere.
   ///
   /// In en, this message translates to:
-  /// **'No records in this category'**
+  /// **'No records here'**
   String get noRecordsHere;
 
   /// No description provided for @openFolder.
@@ -626,7 +578,7 @@ abstract class AppLocalizations {
   /// No description provided for @step1Desc.
   ///
   /// In en, this message translates to:
-  /// **'Paste a video URL on the \'New Download\' page (supports YouTube, Bilibili, and thousands more).'**
+  /// **'Paste a video URL on the New Download page (supports YouTube, Bilibili, etc).'**
   String get step1Desc;
 
   /// No description provided for @step2.
@@ -638,7 +590,7 @@ abstract class AppLocalizations {
   /// No description provided for @step2Desc.
   ///
   /// In en, this message translates to:
-  /// **'Click \'Parse Link\' to view available formats, pick your preferred quality or audio format.'**
+  /// **'Click Parse Link to view available formats, pick your preferred quality.'**
   String get step2Desc;
 
   /// No description provided for @step3.
@@ -650,7 +602,7 @@ abstract class AppLocalizations {
   /// No description provided for @step3Desc.
   ///
   /// In en, this message translates to:
-  /// **'Click \'Download Selected\' to add tasks to the queue and start automatically.'**
+  /// **'Click Download Selected to add tasks to the queue and start automatically.'**
   String get step3Desc;
 
   /// No description provided for @modeHelp.
@@ -674,7 +626,7 @@ abstract class AppLocalizations {
   /// No description provided for @modeSerialDesc.
   ///
   /// In en, this message translates to:
-  /// **'One task at a time. Next starts automatically after completion. Best for limited bandwidth.'**
+  /// **'One task at a time. Best for limited bandwidth.'**
   String get modeSerialDesc;
 
   /// No description provided for @modeQueue.
@@ -686,7 +638,7 @@ abstract class AppLocalizations {
   /// No description provided for @modeQueueDesc.
   ///
   /// In en, this message translates to:
-  /// **'Manually manage download order. New tasks join the queue tail, won\'t auto-start.'**
+  /// **'Manually manage download order, won\'t auto-start next.'**
   String get modeQueueDesc;
 
   /// No description provided for @modeConcurrent.
@@ -698,7 +650,7 @@ abstract class AppLocalizations {
   /// No description provided for @modeConcurrentDesc.
   ///
   /// In en, this message translates to:
-  /// **'Multiple tasks simultaneously. Adjust count (1-8) in Settings. Best for abundant bandwidth.'**
+  /// **'Multiple tasks simultaneously (1-8). Best for abundant bandwidth.'**
   String get modeConcurrentDesc;
 
   /// No description provided for @toolConfig.
@@ -710,7 +662,7 @@ abstract class AppLocalizations {
   /// No description provided for @toolConfigDesc.
   ///
   /// In en, this message translates to:
-  /// **'The app bundles yt-dlp and ffmpeg, but you can also use system-installed versions.'**
+  /// **'The app bundles yt-dlp and ffmpeg, or use system-installed versions.'**
   String get toolConfigDesc;
 
   /// No description provided for @faqYtDlp.
@@ -722,7 +674,7 @@ abstract class AppLocalizations {
   /// No description provided for @faqYtDlpAnswer.
   ///
   /// In en, this message translates to:
-  /// **'Enter the full path (e.g. /usr/bin/yt-dlp) in Settings > yt-dlp Path. Leave empty for bundled version.'**
+  /// **'Enter full path in Settings, leave empty for bundled version.'**
   String get faqYtDlpAnswer;
 
   /// No description provided for @faqFfmpeg.
@@ -734,7 +686,7 @@ abstract class AppLocalizations {
   /// No description provided for @faqFfmpegAnswer.
   ///
   /// In en, this message translates to:
-  /// **'yt-dlp uses ffmpeg for format conversion and merging (e.g. combining separate video and audio streams). Some features may not work without ffmpeg.'**
+  /// **'yt-dlp uses ffmpeg for format conversion and merging.'**
   String get faqFfmpegAnswer;
 
   /// No description provided for @faqSites.
@@ -746,7 +698,7 @@ abstract class AppLocalizations {
   /// No description provided for @faqSitesAnswer.
   ///
   /// In en, this message translates to:
-  /// **'yt-dlp supports thousands of sites including YouTube, Bilibili, Twitter/X, TikTok, Instagram, etc. See yt-dlp docs for the full list.'**
+  /// **'yt-dlp supports thousands of sites: YouTube, Bilibili, Twitter/X, TikTok, Instagram, etc.'**
   String get faqSitesAnswer;
 
   /// No description provided for @resumeHelp.
@@ -758,7 +710,7 @@ abstract class AppLocalizations {
   /// No description provided for @resumeHelpDesc.
   ///
   /// In en, this message translates to:
-  /// **'Downloads can be resumed after interruption without starting over.'**
+  /// **'Downloads can be resumed after interruption.'**
   String get resumeHelpDesc;
 
   /// No description provided for @faqResumePause.
@@ -770,7 +722,7 @@ abstract class AppLocalizations {
   /// No description provided for @faqResumePauseAnswer.
   ///
   /// In en, this message translates to:
-  /// **'No. yt-dlp preserves partially downloaded files (.part and .ytdl) when paused. It resumes from the breakpoint.'**
+  /// **'No. yt-dlp preserves partial files and resumes from breakpoint.'**
   String get faqResumePauseAnswer;
 
   /// No description provided for @faqResumeCrash.
@@ -782,14 +734,20 @@ abstract class AppLocalizations {
   /// No description provided for @faqResumeCrashAnswer.
   ///
   /// In en, this message translates to:
-  /// **'Yes. Restart the app, find the failed task in History, click \'Retry\'. yt-dlp will detect and resume from .part files.'**
+  /// **'Yes. Restart the app and click Retry in History.'**
   String get faqResumeCrashAnswer;
 
-  /// No description provided for @openDownloadDir.
+  /// No description provided for @expandCompleted.
   ///
   /// In en, this message translates to:
-  /// **'Open Download Folder'**
-  String get openDownloadDir;
+  /// **'Expand Completed'**
+  String get expandCompleted;
+
+  /// No description provided for @collapseCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse Completed'**
+  String get collapseCompleted;
 
   /// No description provided for @deleteRecord.
   ///
@@ -815,65 +773,83 @@ abstract class AppLocalizations {
   /// **'Delete \"{title}\"?'**
   String confirmDeleteContent(String title);
 
-  /// No description provided for @expandCompleted.
-  ///
-  /// In en, this message translates to:
-  /// **'Expand Completed'**
-  String get expandCompleted;
-
-  /// No description provided for @collapseCompleted.
-  ///
-  /// In en, this message translates to:
-  /// **'Collapse Completed'**
-  String get collapseCompleted;
-
-  /// No description provided for @progress.
-  ///
-  /// In en, this message translates to:
-  /// **'Progress'**
-  String get progress;
-
-  /// No description provided for @speed.
-  ///
-  /// In en, this message translates to:
-  /// **'Speed'**
-  String get speed;
-
-  /// No description provided for @remaining.
-  ///
-  /// In en, this message translates to:
-  /// **'Remaining'**
-  String get remaining;
-
-  /// No description provided for @cookieImportFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Cookie Import Failed'**
-  String get cookieImportFailed;
-
-  /// No description provided for @saveFailed.
-  ///
-  /// In en, this message translates to:
-  /// **'Save Failed'**
-  String get saveFailed;
-
   /// No description provided for @parseFailed.
   ///
   /// In en, this message translates to:
-  /// **'Parse Failed'**
-  String get parseFailed;
+  /// **'Parse failed: {error}'**
+  String parseFailed(String error);
 
   /// No description provided for @addTaskFailed.
   ///
   /// In en, this message translates to:
-  /// **'Failed to Add Task'**
-  String get addTaskFailed;
+  /// **'Failed to add task: {error}'**
+  String addTaskFailed(String error);
 
   /// No description provided for @pleaseEnterUrl.
   ///
   /// In en, this message translates to:
   /// **'Please enter a complete URL, e.g. https://...'**
   String get pleaseEnterUrl;
+
+  /// No description provided for @cookiePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Login required for HD formats. Log into {host} in browser, then import Cookies in Settings.'**
+  String cookiePrompt(String host);
+
+  /// No description provided for @downloadSelectedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Download Selected ({count} items)'**
+  String downloadSelectedCount(int count);
+
+  /// No description provided for @video.
+  ///
+  /// In en, this message translates to:
+  /// **'Video'**
+  String get video;
+
+  /// No description provided for @audio.
+  ///
+  /// In en, this message translates to:
+  /// **'Audio'**
+  String get audio;
+
+  /// No description provided for @unknownError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown error'**
+  String get unknownError;
+
+  /// No description provided for @fileLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'File'**
+  String get fileLabel;
+
+  /// No description provided for @alreadyImported.
+  ///
+  /// In en, this message translates to:
+  /// **'Imported'**
+  String get alreadyImported;
+
+  /// No description provided for @daysAgo.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} days ago'**
+  String daysAgo(int count);
+
+  /// No description provided for @justImported.
+  ///
+  /// In en, this message translates to:
+  /// **'Just imported'**
+  String get justImported;
+
+  /// No description provided for @cookiesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} cookies'**
+  String cookiesCount(int count);
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

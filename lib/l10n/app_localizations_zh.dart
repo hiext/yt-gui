@@ -87,33 +87,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get noDownloadTasksHint => '回到「新建下载」页粘贴链接开始';
 
   @override
-  String get pause => '暂停';
-
-  @override
-  String get cancel => '取消';
-
-  @override
-  String get resume => '恢复';
-
-  @override
-  String get retry => '重试';
-
-  @override
-  String get completed => '已完成';
-
-  @override
-  String get failed => '失败';
-
-  @override
-  String get cancelled => '已取消';
-
-  @override
-  String get waiting => '等待中';
-
-  @override
-  String get queued => '排队中';
-
-  @override
   String formatsCount(int count) {
     return '$count 个格式';
   }
@@ -184,9 +157,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get additionalOptions => '附加选项';
 
   @override
-  String get additionalOptionsDesc => '下载时附带字幕和封面文件。';
-
-  @override
   String get downloadSubtitles => '下载字幕';
 
   @override
@@ -235,6 +205,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get viewDetails => '查看详情';
 
   @override
+  String get cookieImportFailed => 'Cookie 导入失败（已尝试所有浏览器）';
+
+  @override
+  String cookieImportSuccess(String domain) {
+    return '已导入 $domain 的 cookies';
+  }
+
+  @override
   String get noHistory => '没有历史';
 
   @override
@@ -262,7 +240,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cancelledTasksDesc => '用户取消的任务。';
 
   @override
-  String get noRecordsHere => '此分类暂无记录';
+  String get noRecordsHere => '暂无记录';
 
   @override
   String get openFolder => '打开文件夹';
@@ -301,19 +279,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get modeSerial => '串行下载';
 
   @override
-  String get modeSerialDesc => '一次只下载一个任务，上一个完成后自动开始下一个。适合带宽有限的场景。';
+  String get modeSerialDesc => '一次只下载一个任务，适合带宽有限的场景。';
 
   @override
   String get modeQueue => '队列下载';
 
   @override
-  String get modeQueueDesc => '手动管理下载次序。新任务加入队列尾部，完成后不会自动开始下一个。';
+  String get modeQueueDesc => '手动管理下载次序，完成后不会自动开始下一个。';
 
   @override
   String get modeConcurrent => '并发下载';
 
   @override
-  String get modeConcurrentDesc => '同时下载多个任务。在「设置」中可调整并发数量（1-8），适合带宽充裕的场景。';
+  String get modeConcurrentDesc => '同时下载多个任务（1-8），适合带宽充裕的场景。';
 
   @override
   String get toolConfig => '工具配置';
@@ -325,19 +303,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get faqYtDlp => '如何使用自己安装的 yt-dlp？';
 
   @override
-  String get faqYtDlpAnswer => '在「设置」页面的「yt-dlp 路径」中输入完整路径（例如 /usr/bin/yt-dlp），留空则使用应用内置版本。';
+  String get faqYtDlpAnswer => '在「设置」页面的「yt-dlp 路径」中输入完整路径，留空则使用应用内置版本。';
 
   @override
   String get faqFfmpeg => 'ffmpeg 有什么用？';
 
   @override
-  String get faqFfmpegAnswer => 'yt-dlp 使用 ffmpeg 进行格式转换和合并（例如将分离的视频和音频合并为单个文件）。缺少 ffmpeg 时部分功能可能不可用。';
+  String get faqFfmpegAnswer => 'yt-dlp 使用 ffmpeg 进行格式转换和合并。缺少 ffmpeg 时部分功能可能不可用。';
 
   @override
   String get faqSites => '支持哪些视频网站？';
 
   @override
-  String get faqSitesAnswer => 'yt-dlp 支持数千个网站，包括 YouTube、Bilibili、Twitter/X、TikTok、Instagram 等。完整列表可在 yt-dlp 官方文档查阅。';
+  String get faqSitesAnswer => 'yt-dlp 支持数千个网站，包括 YouTube、Bilibili、Twitter/X、TikTok、Instagram 等。';
 
   @override
   String get resumeHelp => '断点续传';
@@ -349,16 +327,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get faqResumePause => '暂停后恢复会丢失进度吗？';
 
   @override
-  String get faqResumePauseAnswer => '不会。暂停时 yt-dlp 会保留已下载的部分文件（.part 和 .ytdl），恢复后会从断点继续。';
+  String get faqResumePauseAnswer => '不会。yt-dlp 会保留已下载的部分文件，恢复后会从断点继续。';
 
   @override
   String get faqResumeCrash => '应用崩溃后能恢复吗？';
 
   @override
-  String get faqResumeCrashAnswer => '可以。重新启动应用后，之前的 .part 文件仍然存在。只需在历史记录中对失败任务点击「重试」，yt-dlp 会自动检测并续传。';
+  String get faqResumeCrashAnswer => '可以。重启应用后在历史记录中点击「重试」，yt-dlp 会自动检测并续传。';
 
   @override
-  String get openDownloadDir => '打开下载目录';
+  String get expandCompleted => '展开已完成任务';
+
+  @override
+  String get collapseCompleted => '收起已完成任务';
 
   @override
   String get deleteRecord => '仅删除记录';
@@ -375,32 +356,53 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
-  String get expandCompleted => '展开已完成任务';
+  String parseFailed(String error) {
+    return '解析失败：$error';
+  }
 
   @override
-  String get collapseCompleted => '收起已完成任务';
-
-  @override
-  String get progress => '进度';
-
-  @override
-  String get speed => '速度';
-
-  @override
-  String get remaining => '剩余';
-
-  @override
-  String get cookieImportFailed => 'Cookie 导入失败';
-
-  @override
-  String get saveFailed => '设置保存失败';
-
-  @override
-  String get parseFailed => '解析失败';
-
-  @override
-  String get addTaskFailed => '加入任务失败';
+  String addTaskFailed(String error) {
+    return '加入任务失败：$error';
+  }
 
   @override
   String get pleaseEnterUrl => '请输入完整链接，例如 https://...';
+
+  @override
+  String cookiePrompt(String host) {
+    return '该网站需要登录才能获取高清格式。先在浏览器登录 $host，然后去设置页导入 Cookies。';
+  }
+
+  @override
+  String downloadSelectedCount(int count) {
+    return '下载所选 ($count 项)';
+  }
+
+  @override
+  String get video => '视频';
+
+  @override
+  String get audio => '音频';
+
+  @override
+  String get unknownError => '未知错误';
+
+  @override
+  String get fileLabel => '文件';
+
+  @override
+  String get alreadyImported => '已导入';
+
+  @override
+  String daysAgo(int count) {
+    return '$count 天前';
+  }
+
+  @override
+  String get justImported => '刚导入';
+
+  @override
+  String cookiesCount(int count) {
+    return '$count 个 cookie';
+  }
 }

@@ -57,7 +57,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recommendedQuality => 'Recommended Quality';
 
   @override
-  String get recommendedQualityDesc => 'Automatically select best video and audio streams and merge into one file.';
+  String get recommendedQualityDesc => 'Auto-select best video and audio streams and merge into one file.';
 
   @override
   String get videoFormats => 'Video Formats';
@@ -78,40 +78,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskList => 'Task List';
 
   @override
-  String get taskListDesc => 'Download tasks will appear here after pasting a link and selecting formats.';
+  String get taskListDesc => 'Download tasks appear here after pasting a link and selecting formats.';
 
   @override
   String get noDownloadTasks => 'No download tasks yet';
 
   @override
-  String get noDownloadTasksHint => 'Go to \'New Download\' and paste a link to start';
-
-  @override
-  String get pause => 'Pause';
-
-  @override
-  String get cancel => 'Cancel';
-
-  @override
-  String get resume => 'Resume';
-
-  @override
-  String get retry => 'Retry';
-
-  @override
-  String get completed => 'Completed';
-
-  @override
-  String get failed => 'Failed';
-
-  @override
-  String get cancelled => 'Cancelled';
-
-  @override
-  String get waiting => 'Waiting';
-
-  @override
-  String get queued => 'Queued';
+  String get noDownloadTasksHint => 'Go to New Download and paste a link to start';
 
   @override
   String formatsCount(int count) {
@@ -184,9 +157,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get additionalOptions => 'Additional Options';
 
   @override
-  String get additionalOptionsDesc => 'Download subtitles and thumbnails along with video.';
-
-  @override
   String get downloadSubtitles => 'Download Subtitles';
 
   @override
@@ -211,7 +181,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cookieManagement => 'Cookie Management';
 
   @override
-  String get cookieManagementDesc => 'Log into websites in browser first, then import cookies. Login required for HD formats.';
+  String get cookieManagementDesc => 'Log into websites in browser first, then import cookies. Login required for HD.';
 
   @override
   String get browser => 'Browser';
@@ -233,6 +203,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get viewDetails => 'View Details';
+
+  @override
+  String get cookieImportFailed => 'Cookie import failed after trying all browsers';
+
+  @override
+  String cookieImportSuccess(String domain) {
+    return 'Imported cookies for $domain';
+  }
 
   @override
   String get noHistory => 'No History';
@@ -262,7 +240,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cancelledTasksDesc => 'Tasks cancelled by user.';
 
   @override
-  String get noRecordsHere => 'No records in this category';
+  String get noRecordsHere => 'No records here';
 
   @override
   String get openFolder => 'Open Folder';
@@ -277,19 +255,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get step1 => 'Paste Link';
 
   @override
-  String get step1Desc => 'Paste a video URL on the \'New Download\' page (supports YouTube, Bilibili, and thousands more).';
+  String get step1Desc => 'Paste a video URL on the New Download page (supports YouTube, Bilibili, etc).';
 
   @override
   String get step2 => 'Select Format';
 
   @override
-  String get step2Desc => 'Click \'Parse Link\' to view available formats, pick your preferred quality or audio format.';
+  String get step2Desc => 'Click Parse Link to view available formats, pick your preferred quality.';
 
   @override
   String get step3 => 'Download';
 
   @override
-  String get step3Desc => 'Click \'Download Selected\' to add tasks to the queue and start automatically.';
+  String get step3Desc => 'Click Download Selected to add tasks to the queue and start automatically.';
 
   @override
   String get modeHelp => 'Download Modes';
@@ -301,64 +279,67 @@ class AppLocalizationsEn extends AppLocalizations {
   String get modeSerial => 'Serial Download';
 
   @override
-  String get modeSerialDesc => 'One task at a time. Next starts automatically after completion. Best for limited bandwidth.';
+  String get modeSerialDesc => 'One task at a time. Best for limited bandwidth.';
 
   @override
   String get modeQueue => 'Queue Download';
 
   @override
-  String get modeQueueDesc => 'Manually manage download order. New tasks join the queue tail, won\'t auto-start.';
+  String get modeQueueDesc => 'Manually manage download order, won\'t auto-start next.';
 
   @override
   String get modeConcurrent => 'Concurrent Download';
 
   @override
-  String get modeConcurrentDesc => 'Multiple tasks simultaneously. Adjust count (1-8) in Settings. Best for abundant bandwidth.';
+  String get modeConcurrentDesc => 'Multiple tasks simultaneously (1-8). Best for abundant bandwidth.';
 
   @override
   String get toolConfig => 'Tool Configuration';
 
   @override
-  String get toolConfigDesc => 'The app bundles yt-dlp and ffmpeg, but you can also use system-installed versions.';
+  String get toolConfigDesc => 'The app bundles yt-dlp and ffmpeg, or use system-installed versions.';
 
   @override
   String get faqYtDlp => 'How to use your own yt-dlp?';
 
   @override
-  String get faqYtDlpAnswer => 'Enter the full path (e.g. /usr/bin/yt-dlp) in Settings > yt-dlp Path. Leave empty for bundled version.';
+  String get faqYtDlpAnswer => 'Enter full path in Settings, leave empty for bundled version.';
 
   @override
   String get faqFfmpeg => 'What is ffmpeg for?';
 
   @override
-  String get faqFfmpegAnswer => 'yt-dlp uses ffmpeg for format conversion and merging (e.g. combining separate video and audio streams). Some features may not work without ffmpeg.';
+  String get faqFfmpegAnswer => 'yt-dlp uses ffmpeg for format conversion and merging.';
 
   @override
   String get faqSites => 'Which websites are supported?';
 
   @override
-  String get faqSitesAnswer => 'yt-dlp supports thousands of sites including YouTube, Bilibili, Twitter/X, TikTok, Instagram, etc. See yt-dlp docs for the full list.';
+  String get faqSitesAnswer => 'yt-dlp supports thousands of sites: YouTube, Bilibili, Twitter/X, TikTok, Instagram, etc.';
 
   @override
   String get resumeHelp => 'Resume Support';
 
   @override
-  String get resumeHelpDesc => 'Downloads can be resumed after interruption without starting over.';
+  String get resumeHelpDesc => 'Downloads can be resumed after interruption.';
 
   @override
   String get faqResumePause => 'Will pausing lose progress?';
 
   @override
-  String get faqResumePauseAnswer => 'No. yt-dlp preserves partially downloaded files (.part and .ytdl) when paused. It resumes from the breakpoint.';
+  String get faqResumePauseAnswer => 'No. yt-dlp preserves partial files and resumes from breakpoint.';
 
   @override
   String get faqResumeCrash => 'Can it recover after a crash?';
 
   @override
-  String get faqResumeCrashAnswer => 'Yes. Restart the app, find the failed task in History, click \'Retry\'. yt-dlp will detect and resume from .part files.';
+  String get faqResumeCrashAnswer => 'Yes. Restart the app and click Retry in History.';
 
   @override
-  String get openDownloadDir => 'Open Download Folder';
+  String get expandCompleted => 'Expand Completed';
+
+  @override
+  String get collapseCompleted => 'Collapse Completed';
 
   @override
   String get deleteRecord => 'Delete Record Only';
@@ -375,32 +356,53 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get expandCompleted => 'Expand Completed';
+  String parseFailed(String error) {
+    return 'Parse failed: $error';
+  }
 
   @override
-  String get collapseCompleted => 'Collapse Completed';
-
-  @override
-  String get progress => 'Progress';
-
-  @override
-  String get speed => 'Speed';
-
-  @override
-  String get remaining => 'Remaining';
-
-  @override
-  String get cookieImportFailed => 'Cookie Import Failed';
-
-  @override
-  String get saveFailed => 'Save Failed';
-
-  @override
-  String get parseFailed => 'Parse Failed';
-
-  @override
-  String get addTaskFailed => 'Failed to Add Task';
+  String addTaskFailed(String error) {
+    return 'Failed to add task: $error';
+  }
 
   @override
   String get pleaseEnterUrl => 'Please enter a complete URL, e.g. https://...';
+
+  @override
+  String cookiePrompt(String host) {
+    return 'Login required for HD formats. Log into $host in browser, then import Cookies in Settings.';
+  }
+
+  @override
+  String downloadSelectedCount(int count) {
+    return 'Download Selected ($count items)';
+  }
+
+  @override
+  String get video => 'Video';
+
+  @override
+  String get audio => 'Audio';
+
+  @override
+  String get unknownError => 'Unknown error';
+
+  @override
+  String get fileLabel => 'File';
+
+  @override
+  String get alreadyImported => 'Imported';
+
+  @override
+  String daysAgo(int count) {
+    return '$count days ago';
+  }
+
+  @override
+  String get justImported => 'Just imported';
+
+  @override
+  String cookiesCount(int count) {
+    return '$count cookies';
+  }
 }
