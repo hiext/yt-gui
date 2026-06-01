@@ -198,5 +198,6 @@
   },
   "retry": "重试",
   "cancel": "取消",
-  "additionalOptionsDesc": "下载时附带字幕和封面文件。"
+  "additionalOptionsDesc": "下载时附带字幕和封面文件。",
+  "openDownloadDir": "打开下载目录"
 }

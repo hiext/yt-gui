@@ -871,6 +871,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'下载时附带字幕和封面文件。'**
   String get additionalOptionsDesc;
+
+  /// No description provided for @openDownloadDir.
+  ///
+  /// In zh, this message translates to:
+  /// **'打开下载目录'**
+  String get openDownloadDir;
 }
 
 class _AppLocalizationsDelegate

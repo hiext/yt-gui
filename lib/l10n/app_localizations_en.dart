@@ -256,7 +256,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get openFolder => 'Open Folder';
-  String get openDownloadDir => 'Open Download Folder';
 
   @override
   String get threeSteps => 'Three Steps';
@@ -440,4 +439,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get additionalOptionsDesc =>
       'Download subtitles and thumbnails along with video.';
+
+  @override
+  String get openDownloadDir => 'Open Download Folder';
 }

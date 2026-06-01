@@ -198,5 +198,6 @@
   },
   "retry": "Retry",
   "cancel": "Cancel",
-  "additionalOptionsDesc": "Download subtitles and thumbnails along with video."
+  "additionalOptionsDesc": "Download subtitles and thumbnails along with video.",
+  "openDownloadDir": "Open Download Folder"
 }
