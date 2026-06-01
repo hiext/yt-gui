@@ -135,5 +135,7 @@
   "@daysAgo": {"placeholders": {"count": {"type": "int"}}},
   "justImported": "刚导入",
   "cookiesCount": "{count} 个 cookie",
-  "@cookiesCount": {"placeholders": {"count": {"type": "int"}}}
+  "@cookiesCount": {"placeholders": {"count": {"type": "int"}}},
+  "retry": "重试",
+  "cancel": "取消"
 }

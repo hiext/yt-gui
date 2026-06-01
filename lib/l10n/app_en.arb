@@ -135,5 +135,7 @@
   "@daysAgo": {"placeholders": {"count": {"type": "int"}}},
   "justImported": "Just imported",
   "cookiesCount": "{count} cookies",
-  "@cookiesCount": {"placeholders": {"count": {"type": "int"}}}
+  "@cookiesCount": {"placeholders": {"count": {"type": "int"}}},
+  "retry": "Retry",
+  "cancel": "Cancel"
 }

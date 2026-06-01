@@ -104,7 +104,8 @@ class AppLocalizationsZh extends AppLocalizations {
   String get defaultQuality => '默认画质 / 格式';
 
   @override
-  String get defaultQualityHint => '例如 best、bestvideo+bestaudio 或 yt-dlp format id';
+  String get defaultQualityHint =>
+      '例如 best、bestvideo+bestaudio 或 yt-dlp format id';
 
   @override
   String get externalTools => '外部工具';
@@ -309,13 +310,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get faqFfmpeg => 'ffmpeg 有什么用？';
 
   @override
-  String get faqFfmpegAnswer => 'yt-dlp 使用 ffmpeg 进行格式转换和合并。缺少 ffmpeg 时部分功能可能不可用。';
+  String get faqFfmpegAnswer =>
+      'yt-dlp 使用 ffmpeg 进行格式转换和合并。缺少 ffmpeg 时部分功能可能不可用。';
 
   @override
   String get faqSites => '支持哪些视频网站？';
 
   @override
-  String get faqSitesAnswer => 'yt-dlp 支持数千个网站，包括 YouTube、Bilibili、Twitter/X、TikTok、Instagram 等。';
+  String get faqSitesAnswer =>
+      'yt-dlp 支持数千个网站，包括 YouTube、Bilibili、Twitter/X、TikTok、Instagram 等。';
 
   @override
   String get resumeHelp => '断点续传';
@@ -405,4 +408,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String cookiesCount(int count) {
     return '$count 个 cookie';
   }
+
+  @override
+  String get retry => '重试';
+
+  @override
+  String get cancel => '取消';
 }

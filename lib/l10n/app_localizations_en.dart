@@ -36,7 +36,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pasteLinkHint => 'Paste video link here';
 
   @override
-  String get pasteLinkDesc => 'Drop a video URL here, we\'ll find downloadable content.';
+  String get pasteLinkDesc =>
+      'Drop a video URL here, we\'ll find downloadable content.';
 
   @override
   String get parseLink => 'Parse Link';
@@ -57,7 +58,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recommendedQuality => 'Recommended Quality';
 
   @override
-  String get recommendedQualityDesc => 'Auto-select best video and audio streams and merge into one file.';
+  String get recommendedQualityDesc =>
+      'Auto-select best video and audio streams and merge into one file.';
 
   @override
   String get videoFormats => 'Video Formats';
@@ -66,7 +68,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get audioFormats => 'Audio Formats';
 
   @override
-  String get checkToSelect => 'Check formats to download. You can select multiple.';
+  String get checkToSelect =>
+      'Check formats to download. You can select multiple.';
 
   @override
   String get downloadSelected => 'Download Selected';
@@ -78,13 +81,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskList => 'Task List';
 
   @override
-  String get taskListDesc => 'Download tasks appear here after pasting a link and selecting formats.';
+  String get taskListDesc =>
+      'Download tasks appear here after pasting a link and selecting formats.';
 
   @override
   String get noDownloadTasks => 'No download tasks yet';
 
   @override
-  String get noDownloadTasksHint => 'Go to New Download and paste a link to start';
+  String get noDownloadTasksHint =>
+      'Go to New Download and paste a link to start';
 
   @override
   String formatsCount(int count) {
@@ -95,7 +100,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get saveAndQuality => 'Save & Quality';
 
   @override
-  String get saveAndQualityDesc => 'File save location and default download quality.';
+  String get saveAndQualityDesc =>
+      'File save location and default download quality.';
 
   @override
   String get saveDirectory => 'Save Directory';
@@ -104,13 +110,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get defaultQuality => 'Default Quality / Format';
 
   @override
-  String get defaultQualityHint => 'e.g. best, bestvideo+bestaudio, or yt-dlp format id';
+  String get defaultQualityHint =>
+      'e.g. best, bestvideo+bestaudio, or yt-dlp format id';
 
   @override
   String get externalTools => 'External Tools';
 
   @override
-  String get externalToolsDesc => 'Paths to yt-dlp and ffmpeg. Leave empty to use bundled versions.';
+  String get externalToolsDesc =>
+      'Paths to yt-dlp and ffmpeg. Leave empty to use bundled versions.';
 
   @override
   String get ytDlpPath => 'yt-dlp Path';
@@ -128,7 +136,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get downloadMode => 'Download Mode';
 
   @override
-  String get downloadModeDesc => 'Control parallel task count and scheduling strategy.';
+  String get downloadModeDesc =>
+      'Control parallel task count and scheduling strategy.';
 
   @override
   String get scheduleMode => 'Schedule Mode';
@@ -181,7 +190,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cookieManagement => 'Cookie Management';
 
   @override
-  String get cookieManagementDesc => 'Log into websites in browser first, then import cookies. Login required for HD.';
+  String get cookieManagementDesc =>
+      'Log into websites in browser first, then import cookies. Login required for HD.';
 
   @override
   String get browser => 'Browser';
@@ -205,7 +215,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get viewDetails => 'View Details';
 
   @override
-  String get cookieImportFailed => 'Cookie import failed after trying all browsers';
+  String get cookieImportFailed =>
+      'Cookie import failed after trying all browsers';
 
   @override
   String cookieImportSuccess(String domain) {
@@ -216,7 +227,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noHistory => 'No History';
 
   @override
-  String get noHistoryDesc => 'Completed or cancelled downloads will appear here.';
+  String get noHistoryDesc =>
+      'Completed or cancelled downloads will appear here.';
 
   @override
   String get noHistoryYet => 'No history records yet';
@@ -255,19 +267,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get step1 => 'Paste Link';
 
   @override
-  String get step1Desc => 'Paste a video URL on the New Download page (supports YouTube, Bilibili, etc).';
+  String get step1Desc =>
+      'Paste a video URL on the New Download page (supports YouTube, Bilibili, etc).';
 
   @override
   String get step2 => 'Select Format';
 
   @override
-  String get step2Desc => 'Click Parse Link to view available formats, pick your preferred quality.';
+  String get step2Desc =>
+      'Click Parse Link to view available formats, pick your preferred quality.';
 
   @override
   String get step3 => 'Download';
 
   @override
-  String get step3Desc => 'Click Download Selected to add tasks to the queue and start automatically.';
+  String get step3Desc =>
+      'Click Download Selected to add tasks to the queue and start automatically.';
 
   @override
   String get modeHelp => 'Download Modes';
@@ -279,43 +294,50 @@ class AppLocalizationsEn extends AppLocalizations {
   String get modeSerial => 'Serial Download';
 
   @override
-  String get modeSerialDesc => 'One task at a time. Best for limited bandwidth.';
+  String get modeSerialDesc =>
+      'One task at a time. Best for limited bandwidth.';
 
   @override
   String get modeQueue => 'Queue Download';
 
   @override
-  String get modeQueueDesc => 'Manually manage download order, won\'t auto-start next.';
+  String get modeQueueDesc =>
+      'Manually manage download order, won\'t auto-start next.';
 
   @override
   String get modeConcurrent => 'Concurrent Download';
 
   @override
-  String get modeConcurrentDesc => 'Multiple tasks simultaneously (1-8). Best for abundant bandwidth.';
+  String get modeConcurrentDesc =>
+      'Multiple tasks simultaneously (1-8). Best for abundant bandwidth.';
 
   @override
   String get toolConfig => 'Tool Configuration';
 
   @override
-  String get toolConfigDesc => 'The app bundles yt-dlp and ffmpeg, or use system-installed versions.';
+  String get toolConfigDesc =>
+      'The app bundles yt-dlp and ffmpeg, or use system-installed versions.';
 
   @override
   String get faqYtDlp => 'How to use your own yt-dlp?';
 
   @override
-  String get faqYtDlpAnswer => 'Enter full path in Settings, leave empty for bundled version.';
+  String get faqYtDlpAnswer =>
+      'Enter full path in Settings, leave empty for bundled version.';
 
   @override
   String get faqFfmpeg => 'What is ffmpeg for?';
 
   @override
-  String get faqFfmpegAnswer => 'yt-dlp uses ffmpeg for format conversion and merging.';
+  String get faqFfmpegAnswer =>
+      'yt-dlp uses ffmpeg for format conversion and merging.';
 
   @override
   String get faqSites => 'Which websites are supported?';
 
   @override
-  String get faqSitesAnswer => 'yt-dlp supports thousands of sites: YouTube, Bilibili, Twitter/X, TikTok, Instagram, etc.';
+  String get faqSitesAnswer =>
+      'yt-dlp supports thousands of sites: YouTube, Bilibili, Twitter/X, TikTok, Instagram, etc.';
 
   @override
   String get resumeHelp => 'Resume Support';
@@ -327,13 +349,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get faqResumePause => 'Will pausing lose progress?';
 
   @override
-  String get faqResumePauseAnswer => 'No. yt-dlp preserves partial files and resumes from breakpoint.';
+  String get faqResumePauseAnswer =>
+      'No. yt-dlp preserves partial files and resumes from breakpoint.';
 
   @override
   String get faqResumeCrash => 'Can it recover after a crash?';
 
   @override
-  String get faqResumeCrashAnswer => 'Yes. Restart the app and click Retry in History.';
+  String get faqResumeCrashAnswer =>
+      'Yes. Restart the app and click Retry in History.';
 
   @override
   String get expandCompleted => 'Expand Completed';
@@ -405,4 +429,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String cookiesCount(int count) {
     return '$count cookies';
   }
+
+  @override
+  String get retry => 'Retry';
+
+  @override
+  String get cancel => 'Cancel';
 }
