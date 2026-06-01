@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 
 import '../../core/controllers/download_controller.dart';
 import '../../core/models/app_models.dart';
@@ -14,17 +15,21 @@ class DownloadsPage extends StatelessWidget {
     return AnimatedBuilder(
       animation: controller,
       builder: (context, _) {
+        final l10n = AppLocalizations.of(context)!;
         final groups = controller.taskGroups;
 
         return ListView(
           padding: const EdgeInsets.all(24),
           children: [
-            Text('下载中', style: Theme.of(context).textTheme.headlineMedium),
+            Text(
+              l10n.downloading,
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
             const SizedBox(height: 16),
             if (groups.isEmpty)
               SectionCard(
-                title: '任务列表',
-                subtitle: '粘贴链接并选择格式后，下载任务会显示在这里。',
+                title: l10n.taskList,
+                subtitle: l10n.taskListDesc,
                 child: Center(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 32),
@@ -37,7 +42,7 @@ class DownloadsPage extends StatelessWidget {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          '还没有下载任务',
+                          l10n.noDownloadTasks,
                           style: Theme.of(context).textTheme.bodyLarge
                               ?.copyWith(
                                 color: Theme.of(
@@ -47,7 +52,7 @@ class DownloadsPage extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '回到「新建下载」页粘贴链接开始',
+                          l10n.noDownloadTasksHint,
                           style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(
                                 color: Theme.of(
@@ -89,6 +94,7 @@ class _TaskGroupCardState extends State<_TaskGroupCard> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final group = widget.group;
+    final l10n = AppLocalizations.of(context)!;
     final controller = widget.controller;
     final activeCount = group.tasks
         .where((t) => t.status == DownloadStatus.downloading)
@@ -111,11 +117,12 @@ class _TaskGroupCardState extends State<_TaskGroupCard> {
 
     return SectionCard(
       title: _truncateSource(group.source),
-      subtitle:
-          '${group.tasks.length} 个格式'
-          '${doneCount > 0 ? ' · $doneCount 已完成' : ''}'
-          '${activeCount > 0 ? ' · $activeCount 下载中' : ''}'
-          '${pausedCount > 0 ? ' · $pausedCount 已暂停' : ''}',
+      subtitle: [
+        l10n.formatsCount(group.tasks.length),
+        if (doneCount > 0) ' · $doneCount ${l10n.completedTasks}',
+        if (activeCount > 0) ' · $activeCount ${l10n.downloading}',
+        if (pausedCount > 0) ' · $pausedCount ${l10n.cancelledTasks}',
+      ].join(),
       backgroundColor: allDone ? Colors.green.withAlpha(15) : null,
       child: Column(
         children: [
@@ -166,7 +173,7 @@ class _TaskGroupCardState extends State<_TaskGroupCard> {
             TextButton(
               onPressed: () => setState(() => _collapsed = !_collapsed),
               child: Text(
-                _collapsed ? '展开已完成任务' : '收起已完成任务',
+                _collapsed ? l10n.expandCompleted : l10n.collapseCompleted,
                 style: const TextStyle(fontSize: 12),
               ),
             ),
