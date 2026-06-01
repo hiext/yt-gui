@@ -27,7 +27,13 @@
   "noDownloadTasks": "还没有下载任务",
   "noDownloadTasksHint": "回到「新建下载」页粘贴链接开始",
   "formatsCount": "{count} 个格式",
-  "@formatsCount": {"placeholders": {"count": {"type": "int"}}},
+  "@formatsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "saveAndQuality": "保存与画质",
   "saveAndQualityDesc": "文件保存位置和默认下载质量。",
   "saveDirectory": "保存目录",
@@ -47,7 +53,13 @@
   "concurrentDownload": "并发下载 — 同时进行",
   "concurrentCount": "并发数量",
   "concurrentHint": "同时下载 {count} 个任务",
-  "@concurrentHint": {"placeholders": {"count": {"type": "int"}}},
+  "@concurrentHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "concurrentDisabledHint": "仅并发模式下生效",
   "additionalOptions": "附加选项",
   "downloadSubtitles": "下载字幕",
@@ -68,7 +80,13 @@
   "viewDetails": "查看详情",
   "cookieImportFailed": "Cookie 导入失败（已尝试所有浏览器）",
   "cookieImportSuccess": "已导入 {domain} 的 cookies",
-  "@cookieImportSuccess": {"placeholders": {"domain": {"type": "String"}}},
+  "@cookieImportSuccess": {
+    "placeholders": {
+      "domain": {
+        "type": "String"
+      }
+    }
+  },
   "noHistory": "没有历史",
   "noHistoryDesc": "完成或取消下载后，记录会显示在这里。",
   "noHistoryYet": "还没有历史记录",
@@ -116,26 +134,69 @@
   "deleteWithFiles": "同时删除下载文件",
   "confirmDelete": "删除历史记录",
   "confirmDeleteContent": "确定要删除「{title}」吗？",
-  "@confirmDeleteContent": {"placeholders": {"title": {"type": "String"}}},
+  "@confirmDeleteContent": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "parseFailed": "解析失败：{error}",
-  "@parseFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@parseFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "addTaskFailed": "加入任务失败：{error}",
-  "@addTaskFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@addTaskFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "pleaseEnterUrl": "请输入完整链接，例如 https://...",
   "cookiePrompt": "该网站需要登录才能获取高清格式。先在浏览器登录 {host}，然后去设置页导入 Cookies。",
-  "@cookiePrompt": {"placeholders": {"host": {"type": "String"}}},
+  "@cookiePrompt": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
   "downloadSelectedCount": "下载所选 ({count} 项)",
-  "@downloadSelectedCount": {"placeholders": {"count": {"type": "int"}}},
+  "@downloadSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "video": "视频",
   "audio": "音频",
   "unknownError": "未知错误",
   "fileLabel": "文件",
   "alreadyImported": "已导入",
   "daysAgo": "{count} 天前",
-  "@daysAgo": {"placeholders": {"count": {"type": "int"}}},
+  "@daysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "justImported": "刚导入",
   "cookiesCount": "{count} 个 cookie",
-  "@cookiesCount": {"placeholders": {"count": {"type": "int"}}},
+  "@cookiesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "retry": "重试",
-  "cancel": "取消"
+  "cancel": "取消",
+  "additionalOptionsDesc": "下载时附带字幕和封面文件。"
 }

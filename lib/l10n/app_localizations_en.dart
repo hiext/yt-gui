@@ -164,6 +164,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get additionalOptions => 'Additional Options';
+  String get additionalOptionsDesc => 'Download subtitles and thumbnails along with video.';
 
   @override
   String get downloadSubtitles => 'Download Subtitles';

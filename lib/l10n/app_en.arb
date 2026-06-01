@@ -27,7 +27,13 @@
   "noDownloadTasks": "No download tasks yet",
   "noDownloadTasksHint": "Go to New Download and paste a link to start",
   "formatsCount": "{count} formats",
-  "@formatsCount": {"placeholders": {"count": {"type": "int"}}},
+  "@formatsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "saveAndQuality": "Save & Quality",
   "saveAndQualityDesc": "File save location and default download quality.",
   "saveDirectory": "Save Directory",
@@ -47,7 +53,13 @@
   "concurrentDownload": "Concurrent — simultaneously",
   "concurrentCount": "Concurrent Count",
   "concurrentHint": "Download {count} tasks simultaneously",
-  "@concurrentHint": {"placeholders": {"count": {"type": "int"}}},
+  "@concurrentHint": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "concurrentDisabledHint": "Only effective in concurrent mode",
   "additionalOptions": "Additional Options",
   "downloadSubtitles": "Download Subtitles",
@@ -68,7 +80,13 @@
   "viewDetails": "View Details",
   "cookieImportFailed": "Cookie import failed after trying all browsers",
   "cookieImportSuccess": "Imported cookies for {domain}",
-  "@cookieImportSuccess": {"placeholders": {"domain": {"type": "String"}}},
+  "@cookieImportSuccess": {
+    "placeholders": {
+      "domain": {
+        "type": "String"
+      }
+    }
+  },
   "noHistory": "No History",
   "noHistoryDesc": "Completed or cancelled downloads will appear here.",
   "noHistoryYet": "No history records yet",
@@ -116,26 +134,69 @@
   "deleteWithFiles": "Also Delete Files",
   "confirmDelete": "Delete History Record",
   "confirmDeleteContent": "Delete \"{title}\"?",
-  "@confirmDeleteContent": {"placeholders": {"title": {"type": "String"}}},
+  "@confirmDeleteContent": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
   "parseFailed": "Parse failed: {error}",
-  "@parseFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@parseFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "addTaskFailed": "Failed to add task: {error}",
-  "@addTaskFailed": {"placeholders": {"error": {"type": "String"}}},
+  "@addTaskFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "pleaseEnterUrl": "Please enter a complete URL, e.g. https://...",
   "cookiePrompt": "Login required for HD formats. Log into {host} in browser, then import Cookies in Settings.",
-  "@cookiePrompt": {"placeholders": {"host": {"type": "String"}}},
+  "@cookiePrompt": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
   "downloadSelectedCount": "Download Selected ({count} items)",
-  "@downloadSelectedCount": {"placeholders": {"count": {"type": "int"}}},
+  "@downloadSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "video": "Video",
   "audio": "Audio",
   "unknownError": "Unknown error",
   "fileLabel": "File",
   "alreadyImported": "Imported",
   "daysAgo": "{count} days ago",
-  "@daysAgo": {"placeholders": {"count": {"type": "int"}}},
+  "@daysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "justImported": "Just imported",
   "cookiesCount": "{count} cookies",
-  "@cookiesCount": {"placeholders": {"count": {"type": "int"}}},
+  "@cookiesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "retry": "Retry",
-  "cancel": "Cancel"
+  "cancel": "Cancel",
+  "additionalOptionsDesc": "Download subtitles and thumbnails along with video."
 }

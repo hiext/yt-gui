@@ -156,6 +156,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get additionalOptions => '附加选项';
+  String get additionalOptionsDesc => '下载时附带字幕和封面文件。';
 
   @override
   String get downloadSubtitles => '下载字幕';

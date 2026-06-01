@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 
 import '../../core/controllers/settings_controller.dart';
 import '../../core/models/app_models.dart';
@@ -63,6 +64,7 @@ class _SettingsPageState extends State<SettingsPage> {
     return AnimatedBuilder(
       animation: widget.controller,
       builder: (context, _) {
+        final l10n = AppLocalizations.of(context)!;
         final settings = widget.controller.settings;
 
         return ListView(
@@ -72,21 +74,21 @@ class _SettingsPageState extends State<SettingsPage> {
               children: [
                 Expanded(
                   child: Text(
-                    '设置',
+                    l10n.settings,
                     style: Theme.of(context).textTheme.headlineMedium,
                   ),
                 ),
                 TextButton.icon(
                   onPressed: _resetToDefaults,
                   icon: const Icon(Icons.restore_outlined),
-                  label: const Text('恢复默认'),
+                  label: const Text(l10n.restoreDefaults),
                 ),
               ],
             ),
             const SizedBox(height: 16),
             SectionCard(
-              title: '保存与画质',
-              subtitle: '文件保存位置和默认下载质量。',
+              title: l10n.saveAndQuality,
+              subtitle: l10n.saveAndQualityDesc,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -94,11 +96,11 @@ class _SettingsPageState extends State<SettingsPage> {
                     key: const Key('save-directory-field'),
                     controller: _saveDirCtrl,
                     decoration: InputDecoration(
-                      labelText: '保存目录',
+                      labelText: l10n.saveDirectory,
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
                         icon: const Icon(Icons.folder_open_outlined),
-                        tooltip: '浏览目录',
+                        tooltip: l10n.browseDirectory,
                         onPressed: _browseDirectory,
                       ),
                     ),
@@ -109,9 +111,8 @@ class _SettingsPageState extends State<SettingsPage> {
                     key: const Key('default-quality-field'),
                     controller: _qualityCtrl,
                     decoration: const InputDecoration(
-                      labelText: '默认画质 / 格式',
-                      helperText:
-                          '例如 best、bestvideo+bestaudio 或 yt-dlp format id',
+                      labelText: l10n.defaultQuality,
+                      helperText: l10n.defaultQualityHint,
                       border: OutlineInputBorder(),
                     ),
                     onChanged: widget.controller.updateDefaultQuality,
@@ -121,8 +122,8 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             const SizedBox(height: 16),
             SectionCard(
-              title: '外部工具',
-              subtitle: 'yt-dlp 和 ffmpeg 的路径，留空则使用应用内置版本。',
+              title: l10n.externalTools,
+              subtitle: l10n.externalToolsDesc,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -130,12 +131,12 @@ class _SettingsPageState extends State<SettingsPage> {
                     key: const Key('yt-dlp-path-field'),
                     controller: _ytDlpCtrl,
                     decoration: InputDecoration(
-                      labelText: 'yt-dlp 路径',
-                      helperText: '留空时使用应用内置 yt-dlp',
+                      labelText: l10n.ytDlpPath,
+                      helperText: l10n.ytDlpPathHint,
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
                         icon: const Icon(Icons.folder_open_outlined),
-                        tooltip: '浏览文件',
+                        tooltip: l10n.browseFile,
                         onPressed: () => _browseFile(_ytDlpCtrl),
                       ),
                     ),
@@ -146,12 +147,12 @@ class _SettingsPageState extends State<SettingsPage> {
                     key: const Key('ffmpeg-path-field'),
                     controller: _ffmpegCtrl,
                     decoration: InputDecoration(
-                      labelText: 'ffmpeg 路径',
-                      helperText: '留空时使用应用内置 ffmpeg',
+                      labelText: l10n.ffmpegPath,
+                      helperText: l10n.ffmpegPathHint,
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
                         icon: const Icon(Icons.folder_open_outlined),
-                        tooltip: '浏览文件',
+                        tooltip: l10n.browseFile,
                         onPressed: () => _browseFile(_ffmpegCtrl),
                       ),
                     ),
@@ -162,8 +163,8 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             const SizedBox(height: 16),
             SectionCard(
-              title: '下载模式',
-              subtitle: '控制并行任务数量和调度策略。',
+              title: l10n.downloadMode,
+              subtitle: l10n.downloadModeDesc,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -172,21 +173,21 @@ class _SettingsPageState extends State<SettingsPage> {
                     // ignore: deprecated_member_use
                     value: settings.downloadMode,
                     decoration: const InputDecoration(
-                      labelText: '调度模式',
+                      labelText: l10n.scheduleMode,
                       border: OutlineInputBorder(),
                     ),
                     items: const [
                       DropdownMenuItem(
                         value: DownloadMode.serial,
-                        child: Text('串行下载 — 一个一个来'),
+                        child: Text(l10n.serialDownload),
                       ),
                       DropdownMenuItem(
                         value: DownloadMode.queue,
-                        child: Text('队列下载 — 排队等待'),
+                        child: Text(l10n.queueDownload),
                       ),
                       DropdownMenuItem(
                         value: DownloadMode.concurrent,
-                        child: Text('并发下载 — 同时进行'),
+                        child: Text(l10n.concurrentDownload),
                       ),
                     ],
                     onChanged: (mode) {
@@ -206,21 +207,21 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             const SizedBox(height: 16),
             SectionCard(
-              title: '附加选项',
-              subtitle: '下载时附带字幕和封面文件。',
+              title: l10n.additionalOptions,
+              subtitle: l10n.additionalOptionsDesc,
               child: Column(
                 children: [
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('下载字幕'),
-                    subtitle: const Text('启动 yt-dlp 时追加 --write-subs'),
+                    title: const Text(l10n.downloadSubtitles),
+                    subtitle: const Text(l10n.downloadSubtitlesDesc),
                     value: settings.downloadSubtitles,
                     onChanged: widget.controller.updateDownloadSubtitles,
                   ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('下载封面'),
-                    subtitle: const Text('启动 yt-dlp 时追加 --write-thumbnail'),
+                    title: const Text(l10n.downloadThumbnail),
+                    subtitle: const Text(l10n.downloadThumbnailDesc),
                     value: settings.downloadThumbnail,
                     onChanged: widget.controller.updateDownloadThumbnail,
                   ),
@@ -246,6 +247,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _importCookies(String browser, String domain) async {
+    final l10n = AppLocalizations.of(context)!;
     final settings = widget.controller.settings;
     final saveDir = settings.saveDirectory;
     final cookieFile =
@@ -268,12 +270,12 @@ class _SettingsPageState extends State<SettingsPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Cookie 导入失败（已尝试所有浏览器）',
+                  l10n.cookieImportFailed,
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  result.detail ?? '未知错误',
+                  result.detail ?? l10n.unknownError,
                   style: const TextStyle(fontSize: 13),
                 ),
               ],
@@ -302,7 +304,7 @@ class _SettingsPageState extends State<SettingsPage> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result.detail ?? '已导入 $domain 的 cookies'),
+          content: Text(result.detail ?? l10n.cookieImportSuccess(domain)),
           duration: const Duration(seconds: 3),
         ),
       );
@@ -310,6 +312,7 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _removeCookie(String domain) async {
+    final l10n = AppLocalizations.of(context)!;
     final settings = widget.controller.settings;
     final configs = List<CookieConfig>.from(settings.cookieConfigs)
       ..removeWhere((c) => c.domain == domain);
@@ -421,8 +424,8 @@ class _CookieSectionState extends State<_CookieSection> {
   @override
   Widget build(BuildContext context) {
     return SectionCard(
-      title: 'Cookie 管理',
-      subtitle: '先在浏览器中登录目标网站，再导入 cookies。登录后才能获取高清格式。',
+      title: l10n.cookieManagement,
+      subtitle: l10n.cookieManagementDesc,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -434,7 +437,7 @@ class _CookieSectionState extends State<_CookieSection> {
                 child: DropdownButtonFormField<String>(
                   value: _browser,
                   decoration: const InputDecoration(
-                    labelText: '浏览器',
+                    labelText: l10n.browser,
                     border: OutlineInputBorder(),
                     isDense: true,
                   ),
@@ -459,8 +462,8 @@ class _CookieSectionState extends State<_CookieSection> {
                       child: TextFormField(
                         controller: _domainCtrl,
                         decoration: const InputDecoration(
-                          labelText: '域名',
-                          hintText: '输入域名后点导入',
+                          labelText: l10n.domain,
+                          hintText: l10n.domain,
                           border: OutlineInputBorder(),
                           isDense: true,
                         ),
@@ -471,7 +474,7 @@ class _CookieSectionState extends State<_CookieSection> {
                     FilledButton.tonalIcon(
                       onPressed: () => _doImport(_domainCtrl.text.trim()),
                       icon: const Icon(Icons.file_download_outlined, size: 18),
-                      label: const Text('导入'),
+                      label: const Text(l10n.importBtn),
                     ),
                   ],
                 ),
@@ -481,7 +484,10 @@ class _CookieSectionState extends State<_CookieSection> {
           // Preset sites
           if (_availablePresets.isNotEmpty) ...[
             const SizedBox(height: 12),
-            Text('常用网站', style: Theme.of(context).textTheme.labelMedium),
+            Text(
+              l10n.commonSites,
+              style: Theme.of(context).textTheme.labelMedium,
+            ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,
@@ -634,17 +640,17 @@ class _CookieTileState extends State<_CookieTile> {
                   _expanded ? Icons.expand_less : Icons.expand_more,
                   size: 18,
                 ),
-                tooltip: '查看详情',
+                tooltip: l10n.viewDetails,
                 onPressed: () => setState(() => _expanded = !_expanded),
               ),
               IconButton(
                 icon: const Icon(Icons.refresh, size: 18),
-                tooltip: '重新导入',
+                tooltip: l10n.reimport,
                 onPressed: widget.onReimport,
               ),
               IconButton(
                 icon: const Icon(Icons.delete_outline, size: 18),
-                tooltip: '删除',
+                tooltip: l10n.delete,
                 onPressed: widget.onRemove,
               ),
             ],
@@ -659,7 +665,7 @@ class _CookieTileState extends State<_CookieTile> {
                 const Divider(height: 1),
                 const SizedBox(height: 8),
                 Text(
-                  '文件: ${widget.config.cookieFile}',
+                  l10n.fileLabel + ': ' + widget.config.cookieFile,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
@@ -734,8 +740,10 @@ class _ConcurrentCountSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     return InputDecorator(
       decoration: InputDecoration(
-        labelText: '并发数量',
-        helperText: enabled ? '同时下载 $value 个任务' : '仅并发模式下生效',
+        labelText: l10n.concurrentCount,
+        helperText: enabled
+            ? l10n.concurrentHint(value)
+            : l10n.concurrentDisabledHint,
         border: const OutlineInputBorder(),
       ),
       child: Row(
