@@ -51,12 +51,13 @@ class CookieService {
     required String actualBrowser,
   }) async {
     final script = _findExtractScript();
-    if (script == null)
+    if (script == null) {
       return const CookieImportResult(
         success: false,
         reason: 'no_script',
         detail: 'extract_cookies.py 脚本未找到',
       );
+    }
 
     // Try python3 first, then python as fallback
     ProcessResult result;

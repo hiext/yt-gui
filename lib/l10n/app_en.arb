@@ -92,10 +92,12 @@
   "noHistoryYet": "No history records yet",
   "completedTasks": "Completed Tasks",
   "completedTasksDesc": "Successfully downloaded tasks.",
+  "downloadingTasks": "Downloading Tasks",
   "failedTasks": "Failed Tasks",
   "failedTasksDesc": "You can re-add these to the download queue.",
   "cancelledTasks": "Cancelled Tasks",
   "cancelledTasksDesc": "Tasks cancelled by user.",
+  "pausedTasks": "Paused Tasks",
   "noRecordsHere": "No records here",
   "openFolder": "Open Folder",
   "threeSteps": "Three Steps",
@@ -190,6 +192,18 @@
   "justImported": "Just imported",
   "cookiesCount": "{count} cookies",
   "@cookiesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "completedStatus": "Completed",
+  "enterDomainHint": "Enter domain then import",
+  "filePickerSaveDirTitle": "Select save directory",
+  "filePickerExecutableTitle": "Select executable file",
+  "moreCookies": "... {count} more cookies",
+  "@moreCookies": {
     "placeholders": {
       "count": {
         "type": "int"

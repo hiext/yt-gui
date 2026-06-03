@@ -524,6 +524,12 @@ abstract class AppLocalizations {
   /// **'下载成功的任务。'**
   String get completedTasksDesc;
 
+  /// No description provided for @downloadingTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'下载中任务'**
+  String get downloadingTasks;
+
   /// No description provided for @failedTasks.
   ///
   /// In zh, this message translates to:
@@ -547,6 +553,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'用户取消的任务。'**
   String get cancelledTasksDesc;
+
+  /// No description provided for @pausedTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'已暂停任务'**
+  String get pausedTasks;
 
   /// No description provided for @noRecordsHere.
   ///
@@ -853,6 +865,36 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'{count} 个 cookie'**
   String cookiesCount(int count);
+
+  /// No description provided for @completedStatus.
+  ///
+  /// In zh, this message translates to:
+  /// **'已完成'**
+  String get completedStatus;
+
+  /// No description provided for @enterDomainHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入域名后点导入'**
+  String get enterDomainHint;
+
+  /// No description provided for @filePickerSaveDirTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择保存目录'**
+  String get filePickerSaveDirTitle;
+
+  /// No description provided for @filePickerExecutableTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择可执行文件'**
+  String get filePickerExecutableTitle;
+
+  /// No description provided for @moreCookies.
+  ///
+  /// In zh, this message translates to:
+  /// **'... 还有 {count} 个 cookie'**
+  String moreCookies(int count);
 
   /// No description provided for @retry.
   ///

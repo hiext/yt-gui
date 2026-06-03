@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hiext_yt_gui/core/controllers/settings_controller.dart';
 import 'package:hiext_yt_gui/core/models/app_models.dart';
 import 'package:hiext_yt_gui/features/settings/settings_page.dart';
+import 'package:hiext_yt_gui/l10n/app_localizations.dart';
 
 void main() {
   testWidgets('renders settings form and updates text fields', (tester) async {
@@ -10,7 +11,7 @@ void main() {
     addTearDown(controller.dispose);
 
     await tester.pumpWidget(
-      MaterialApp(home: SettingsPage(controller: controller)),
+      _buildApp(SettingsPage(controller: controller)),
     );
 
     final saveField = find.byKey(const Key('save-directory-field'));
@@ -46,10 +47,9 @@ void main() {
     addTearDown(controller.dispose);
 
     await tester.pumpWidget(
-      MaterialApp(home: SettingsPage(controller: controller)),
+      _buildApp(SettingsPage(controller: controller)),
     );
 
-    // Update toggle and mode directly via controller (skip scrolling)
     controller.updateDownloadSubtitles(true);
     controller.updateDownloadThumbnail(true);
     controller.updateDownloadMode(DownloadMode.concurrent);
@@ -59,4 +59,39 @@ void main() {
     expect(controller.settings.downloadThumbnail, isTrue);
     expect(controller.settings.downloadMode, DownloadMode.concurrent);
   });
+
+  testWidgets('renders cookie section in english locale', (tester) async {
+    final controller = SettingsController(
+      settings: DownloadSettings.defaults,
+    );
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      _buildApp(
+        SettingsPage(controller: controller),
+        locale: const Locale('en'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Settings'), findsOneWidget);
+    expect(find.text('Cookie Management'), findsOneWidget);
+    expect(find.text('Browser'), findsOneWidget);
+    expect(find.text('Domain'), findsOneWidget);
+    expect(find.text('Import'), findsOneWidget);
+    expect(find.text('设置'), findsNothing);
+    expect(find.text('Cookie 管理'), findsNothing);
+    expect(find.text('浏览器'), findsNothing);
+    expect(find.text('域名'), findsNothing);
+    expect(find.text('导入'), findsNothing);
+  });
+}
+
+Widget _buildApp(Widget child, {Locale? locale}) {
+  return MaterialApp(
+    locale: locale,
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: child,
+  );
 }

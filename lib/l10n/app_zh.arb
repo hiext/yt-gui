@@ -92,10 +92,12 @@
   "noHistoryYet": "还没有历史记录",
   "completedTasks": "已完成任务",
   "completedTasksDesc": "下载成功的任务。",
+  "downloadingTasks": "下载中任务",
   "failedTasks": "失败任务",
   "failedTasksDesc": "可以从这里重新加入下载队列。",
   "cancelledTasks": "已取消任务",
   "cancelledTasksDesc": "用户取消的任务。",
+  "pausedTasks": "已暂停任务",
   "noRecordsHere": "暂无记录",
   "openFolder": "打开文件夹",
   "threeSteps": "三步上手",
@@ -190,6 +192,18 @@
   "justImported": "刚导入",
   "cookiesCount": "{count} 个 cookie",
   "@cookiesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "completedStatus": "已完成",
+  "enterDomainHint": "输入域名后点导入",
+  "filePickerSaveDirTitle": "选择保存目录",
+  "filePickerExecutableTitle": "选择可执行文件",
+  "moreCookies": "... 还有 {count} 个 cookie",
+  "@moreCookies": {
     "placeholders": {
       "count": {
         "type": "int"

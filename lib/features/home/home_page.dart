@@ -207,8 +207,6 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  int get _selectedCount => _selected.length;
-
   void _toggle(String? formatId) {
     setState(() {
       if (_selected.contains(formatId)) {
@@ -250,8 +248,9 @@ class _HomePageState extends State<HomePage> {
       final variants = await widget.controller.inspect(uri);
       if (!mounted ||
           token != _inspectToken ||
-          _linkController.text.trim() != uri.toString())
+          _linkController.text.trim() != uri.toString()) {
         return;
+      }
       final hasCookie = widget.controller.resolveCookieFile(uri) != null;
       setState(() {
         _variants = variants;
@@ -262,16 +261,18 @@ class _HomePageState extends State<HomePage> {
     } catch (error) {
       if (!mounted ||
           token != _inspectToken ||
-          _linkController.text.trim() != uri.toString())
+          _linkController.text.trim() != uri.toString()) {
         return;
+      }
       setState(() {
         _errorText = l10n.parseFailed('$error');
       });
     } finally {
-      if (mounted && token == _inspectToken)
+      if (mounted && token == _inspectToken) {
         setState(() {
           _inspecting = false;
         });
+      }
     }
   }
 
@@ -297,10 +298,11 @@ class _HomePageState extends State<HomePage> {
         _errorText = l10n.addTaskFailed('$error');
       });
     } finally {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _submitting = false;
         });
+      }
     }
   }
 

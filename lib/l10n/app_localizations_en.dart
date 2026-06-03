@@ -240,6 +240,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get completedTasksDesc => 'Successfully downloaded tasks.';
 
   @override
+  String get downloadingTasks => 'Downloading Tasks';
+
+  @override
   String get failedTasks => 'Failed Tasks';
 
   @override
@@ -250,6 +253,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cancelledTasksDesc => 'Tasks cancelled by user.';
+
+  @override
+  String get pausedTasks => 'Paused Tasks';
 
   @override
   String get noRecordsHere => 'No records here';
@@ -428,6 +434,23 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String cookiesCount(int count) {
     return '$count cookies';
+  }
+
+  @override
+  String get completedStatus => 'Completed';
+
+  @override
+  String get enterDomainHint => 'Enter domain then import';
+
+  @override
+  String get filePickerSaveDirTitle => 'Select save directory';
+
+  @override
+  String get filePickerExecutableTitle => 'Select executable file';
+
+  @override
+  String moreCookies(int count) {
+    return '... $count more cookies';
   }
 
   @override

@@ -229,6 +229,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get completedTasksDesc => '下载成功的任务。';
 
   @override
+  String get downloadingTasks => '下载中任务';
+
+  @override
   String get failedTasks => '失败任务';
 
   @override
@@ -239,6 +242,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get cancelledTasksDesc => '用户取消的任务。';
+
+  @override
+  String get pausedTasks => '已暂停任务';
 
   @override
   String get noRecordsHere => '暂无记录';
@@ -407,6 +413,23 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String cookiesCount(int count) {
     return '$count 个 cookie';
+  }
+
+  @override
+  String get completedStatus => '已完成';
+
+  @override
+  String get enterDomainHint => '输入域名后点导入';
+
+  @override
+  String get filePickerSaveDirTitle => '选择保存目录';
+
+  @override
+  String get filePickerExecutableTitle => '选择可执行文件';
+
+  @override
+  String moreCookies(int count) {
+    return '... 还有 $count 个 cookie';
   }
 
   @override

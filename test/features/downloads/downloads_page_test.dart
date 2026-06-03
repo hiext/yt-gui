@@ -5,6 +5,7 @@ import 'package:hiext_yt_gui/core/models/app_models.dart';
 import 'package:hiext_yt_gui/core/services/download_scheduler.dart';
 import 'package:hiext_yt_gui/core/services/yt_dlp_executor.dart';
 import 'package:hiext_yt_gui/features/downloads/downloads_page.dart';
+import 'package:hiext_yt_gui/l10n/app_localizations.dart';
 
 void main() {
   testWidgets('shows pause and resume actions for download tasks', (tester) async {
@@ -14,6 +15,7 @@ void main() {
       executor: executor,
       settingsProvider: _settings,
     );
+    addTearDown(controller.dispose);
 
     await controller.queueDownload(
       url: Uri.parse('https://example.com/video'),
@@ -27,16 +29,12 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MaterialApp(home: DownloadsPage(controller: controller)),
+      _buildApp(DownloadsPage(controller: controller)),
     );
     await tester.pumpAndSettle();
 
-    // Group card shows source URL and task count
     expect(find.textContaining('example.com'), findsWidgets);
-    // Task format label is shown
     expect(find.textContaining('视频'), findsWidgets);
-
-    // Pause and cancel use GestureDetector with icons
     expect(find.byIcon(Icons.pause_outlined), findsOneWidget);
     expect(find.byIcon(Icons.cancel_outlined), findsOneWidget);
 
@@ -54,6 +52,61 @@ void main() {
       'https://example.com/video#1',
     ]);
   });
+
+  testWidgets('renders localized download labels in english locale', (
+    tester,
+  ) async {
+    final executor = _FakeExecutor();
+    final scheduler = DownloadScheduler(settingsProvider: _settings)
+      ..restoreHistory([
+        DownloadTask(
+          id: 'history-1',
+          title: 'Example Video',
+          source: 'https://example.com/video',
+          status: DownloadStatus.completed,
+          progress: 100,
+          variants: [
+            ResourceVariant(
+              label: '1080p',
+              description: 'mp4',
+              isRecommended: true,
+              formatId: '137',
+              type: ResourceType.video,
+            ),
+          ],
+        ),
+      ]);
+    final controller = DownloadController(
+      scheduler: scheduler,
+      executor: executor,
+      settingsProvider: _settings,
+    );
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(
+      _buildApp(
+        DownloadsPage(controller: controller),
+        locale: const Locale('en'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Downloads'), findsOneWidget);
+    expect(find.text('Completed'), findsOneWidget);
+    expect(find.textContaining('Video  1080p'), findsOneWidget);
+    expect(find.text('下载中'), findsNothing);
+    expect(find.text('已完成'), findsNothing);
+    expect(find.textContaining('视频'), findsNothing);
+  });
+}
+
+Widget _buildApp(Widget child, {Locale? locale}) {
+  return MaterialApp(
+    locale: locale,
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: child,
+  );
 }
 
 DownloadSettings _settings() {
