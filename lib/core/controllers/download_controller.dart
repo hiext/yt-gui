@@ -106,11 +106,13 @@ class DownloadController extends ChangeNotifier {
   Future<List<ResourceVariant>> inspect(
     Uri url, {
     AppLocalizations? localizations,
+    InspectLogSink? onLog,
   }) {
     return executor.inspect(
       url,
       settings: settingsProvider(),
       localizations: localizations,
+      onLog: onLog,
     );
   }
 

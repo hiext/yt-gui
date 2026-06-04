@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/controllers/download_controller.dart';
@@ -251,6 +252,9 @@ class _HomePageState extends State<HomePage> {
       final variants = await widget.controller.inspect(
         uri,
         localizations: l10n,
+        onLog: kDebugMode
+            ? (line) => debugPrint('[yt-dlp][inspect] $line')
+            : null,
       );
       if (!mounted ||
           token != _inspectToken ||

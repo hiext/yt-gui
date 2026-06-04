@@ -87,6 +87,39 @@ void main() {
     await expectLater(inspectFuture, throwsA(isA<YtDlpExecutorException>()));
   });
 
+  test('inspect forwards verbose logs through callback', () async {
+    final process = _FakeProcess(exitCodeValue: 0);
+    final executor = ProcessYtDlpExecutor(
+      toolResolver: _resolver(),
+      processRunner: (_, _) async => process,
+    );
+    final logs = <String>[];
+
+    final inspectFuture = executor.inspect(
+      Uri.parse('https://example.com/video'),
+      onLog: logs.add,
+      localizations: lookupAppLocalizations(const Locale('en')),
+    );
+    process.addStderr('[debug] Extracting URL: https://example.com/video');
+    process.addStdout(
+      '{"formats":[{"format_id":"137","height":1080,"ext":"mp4"}]}',
+    );
+    await process.close();
+
+    await inspectFuture;
+
+    expect(
+      logs,
+      contains('[debug] Extracting URL: https://example.com/video'),
+    );
+    expect(
+      logs,
+      isNot(
+        contains('{"formats":[{"format_id":"137","height":1080,"ext":"mp4"}]}'),
+      ),
+    );
+  });
+
   test('inspect uses custom yt-dlp path from settings', () async {
     final ytDlp = _createToolFile('yt-dlp');
     final process = _FakeProcess(exitCodeValue: 0);
@@ -175,7 +208,10 @@ void main() {
       Uri.parse('https://example.com/video'),
     );
 
-    expect(args, ['--dump-json', '--no-playlist', 'https://example.com/video']);
+    expect(
+      args,
+      ['--dump-json', '--verbose', '--no-playlist', 'https://example.com/video'],
+    );
   });
 
   test('builds resumable download arguments', () {
@@ -432,6 +468,10 @@ class _FakeProcess implements Process {
 
   void addStdout(String line) {
     _stdout.add('$line\n'.codeUnits);
+  }
+
+  void addStderr(String line) {
+    _stderr.add('$line\n'.codeUnits);
   }
 
   Future<void> close() async {
