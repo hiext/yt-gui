@@ -7,6 +7,45 @@
 
 #include "flutter/generated_plugin_registrant.h"
 
+namespace {
+
+constexpr char kWindowTitle[] = "Hiext YT GUI";
+
+gchar* get_icon_path() {
+  gchar* executable_path = g_file_read_link("/proc/self/exe", nullptr);
+  if (executable_path == nullptr) {
+    return nullptr;
+  }
+
+  gchar* executable_dir = g_path_get_dirname(executable_path);
+  gchar* icon_path =
+      g_build_filename(executable_dir, "data", "flutter_assets", "assets",
+                       "branding", "hiext-yt-logo-mark.png", nullptr);
+
+  g_free(executable_path);
+  g_free(executable_dir);
+  return icon_path;
+}
+
+void apply_window_icon(GtkWindow* window) {
+  gchar* icon_path = get_icon_path();
+  if (icon_path == nullptr) {
+    return;
+  }
+
+  if (g_file_test(icon_path, G_FILE_TEST_EXISTS)) {
+    g_autoptr(GError) error = nullptr;
+    gtk_window_set_icon_from_file(window, icon_path, &error);
+    if (error != nullptr) {
+      g_warning("Failed to load application icon: %s", error->message);
+    }
+  }
+
+  g_free(icon_path);
+}
+
+}  // namespace
+
 struct _MyApplication {
   GtkApplication parent_instance;
   char** dart_entrypoint_arguments;
@@ -45,14 +84,15 @@ static void my_application_activate(GApplication* application) {
   if (use_header_bar) {
     GtkHeaderBar* header_bar = GTK_HEADER_BAR(gtk_header_bar_new());
     gtk_widget_show(GTK_WIDGET(header_bar));
-    gtk_header_bar_set_title(header_bar, "hiext_yt_gui");
+    gtk_header_bar_set_title(header_bar, kWindowTitle);
     gtk_header_bar_set_show_close_button(header_bar, TRUE);
     gtk_window_set_titlebar(window, GTK_WIDGET(header_bar));
   } else {
-    gtk_window_set_title(window, "hiext_yt_gui");
+    gtk_window_set_title(window, kWindowTitle);
   }
 
   gtk_window_set_default_size(window, 1280, 720);
+  apply_window_icon(window);
 
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   fl_dart_project_set_dart_entrypoint_arguments(
