@@ -9,20 +9,24 @@ class SettingsController extends ChangeNotifier {
   SettingsController({
     DownloadSettings settings = DownloadSettings.defaults,
     this.repository,
-  }) : _settings = settings.normalized();
+  }) : _settings = settings.normalized(),
+       _hasLoaded = repository == null;
 
   final SettingsRepository? repository;
 
   DownloadSettings _settings;
+  bool _hasLoaded;
 
   DownloadSettings get settings => _settings;
+  bool get hasLoaded => _hasLoaded;
 
   Future<void> load() async {
     final loaded = await repository?.load();
     if (loaded != null) {
       _settings = loaded.normalized();
-      notifyListeners();
     }
+    _hasLoaded = true;
+    notifyListeners();
   }
 
   void updateSettings(DownloadSettings settings) {
@@ -53,6 +57,10 @@ class SettingsController extends ChangeNotifier {
 
   void updateDownloadThumbnail(bool downloadThumbnail) {
     updateSettings(_settings.copyWith(downloadThumbnail: downloadThumbnail));
+  }
+
+  void acknowledgeDisclaimer() {
+    updateSettings(_settings.copyWith(disclaimerAccepted: true));
   }
 
   void updateYtDlpPath(String ytDlpPath) {

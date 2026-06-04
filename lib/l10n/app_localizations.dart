@@ -140,6 +140,48 @@ abstract class AppLocalizations {
   /// **'帮助'**
   String get help;
 
+  /// No description provided for @aboutTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'关于'**
+  String get aboutTitle;
+
+  /// No description provided for @aboutSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'产品信息、技术来源与使用边界。'**
+  String get aboutSubtitle;
+
+  /// No description provided for @aboutAppNameLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'应用名称'**
+  String get aboutAppNameLabel;
+
+  /// No description provided for @aboutBundleIdLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'包名 / 应用标识'**
+  String get aboutBundleIdLabel;
+
+  /// No description provided for @aboutBuiltWithLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'技术组成'**
+  String get aboutBuiltWithLabel;
+
+  /// No description provided for @aboutCopyrightLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'版权所有'**
+  String get aboutCopyrightLabel;
+
+  /// No description provided for @aboutLegalNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'本工具仅用于合法授权内容的下载、整理与管理，请勿将其用于下载、传播或获取盗版数字数据。'**
+  String get aboutLegalNote;
+
   /// No description provided for @disclaimerTitle.
   ///
   /// In zh, this message translates to:
@@ -157,6 +199,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'本项目仅提供基于 yt-dlp 和 ffmpeg 的下载与管理工具，不提供任何受保护内容，也不以下载、传播或获取盗版数字数据为目的。请仅在拥有合法权利或已获得明确授权的前提下使用本工具，并自行遵守相关版权法律、平台服务条款及当地法规。'**
   String get disclaimerBody;
+
+  /// No description provided for @disclaimerAcknowledge.
+  ///
+  /// In zh, this message translates to:
+  /// **'我已知晓并继续'**
+  String get disclaimerAcknowledge;
 
   /// No description provided for @pasteLink.
   ///

@@ -281,7 +281,11 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _resetToDefaults() {
-    widget.controller.updateSettings(DownloadSettings.defaults);
+    widget.controller.updateSettings(
+      DownloadSettings.defaults.copyWith(
+        disclaimerAccepted: widget.controller.settings.disclaimerAccepted,
+      ),
+    );
   }
 
   Future<void> _importCookies(String browser, String domain) async {

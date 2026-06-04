@@ -118,6 +118,7 @@ DownloadSettings _settings() {
     defaultQuality: 'best',
     downloadSubtitles: false,
     downloadThumbnail: false,
+    disclaimerAccepted: false,
   );
 }
 

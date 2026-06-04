@@ -41,6 +41,7 @@ void main() {
       defaultQuality: 'best',
       downloadSubtitles: false,
       downloadThumbnail: false,
+      disclaimerAccepted: false,
     );
 
     await executor.startDownload(

@@ -30,6 +30,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get help => '帮助';
 
   @override
+  String get aboutTitle => '关于';
+
+  @override
+  String get aboutSubtitle => '产品信息、技术来源与使用边界。';
+
+  @override
+  String get aboutAppNameLabel => '应用名称';
+
+  @override
+  String get aboutBundleIdLabel => '包名 / 应用标识';
+
+  @override
+  String get aboutBuiltWithLabel => '技术组成';
+
+  @override
+  String get aboutCopyrightLabel => '版权所有';
+
+  @override
+  String get aboutLegalNote => '本工具仅用于合法授权内容的下载、整理与管理，请勿将其用于下载、传播或获取盗版数字数据。';
+
+  @override
   String get disclaimerTitle => '使用声明';
 
   @override
@@ -38,6 +59,9 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get disclaimerBody =>
       '本项目仅提供基于 yt-dlp 和 ffmpeg 的下载与管理工具，不提供任何受保护内容，也不以下载、传播或获取盗版数字数据为目的。请仅在拥有合法权利或已获得明确授权的前提下使用本工具，并自行遵守相关版权法律、平台服务条款及当地法规。';
+
+  @override
+  String get disclaimerAcknowledge => '我已知晓并继续';
 
   @override
   String get pasteLink => '粘贴链接';

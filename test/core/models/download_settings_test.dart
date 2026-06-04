@@ -11,6 +11,7 @@ void main() {
         defaultQuality: 'bestvideo+bestaudio',
         downloadSubtitles: true,
         downloadThumbnail: true,
+        disclaimerAccepted: true,
         ytDlpPath: '/tools/yt-dlp',
         ffmpegPath: '/tools/ffmpeg',
       );
@@ -23,6 +24,7 @@ void main() {
       expect(restored.defaultQuality, 'bestvideo+bestaudio');
       expect(restored.downloadSubtitles, isTrue);
       expect(restored.downloadThumbnail, isTrue);
+      expect(restored.disclaimerAccepted, isTrue);
       expect(restored.ytDlpPath, '/tools/yt-dlp');
       expect(restored.ffmpegPath, '/tools/ffmpeg');
     });
@@ -35,6 +37,7 @@ void main() {
         'defaultQuality': '  ',
         'downloadSubtitles': true,
         'downloadThumbnail': true,
+        'disclaimerAccepted': true,
         'ytDlpPath': '  ',
         'ffmpegPath': ' /tools/ffmpeg ',
       });
@@ -45,6 +48,7 @@ void main() {
       expect(restored.defaultQuality, 'best');
       expect(restored.downloadSubtitles, isTrue);
       expect(restored.downloadThumbnail, isTrue);
+      expect(restored.disclaimerAccepted, isTrue);
       expect(restored.ytDlpPath, isNull);
       expect(restored.ffmpegPath, '/tools/ffmpeg');
     });

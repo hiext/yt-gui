@@ -1,0 +1,28 @@
+# GitHub auto-generated release notes configuration.
+# Docs: https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+  categories:
+    - title: 新功能
+      labels:
+        - enhancement
+        - feature
+        - feat
+    - title: 问题修复
+      labels:
+        - bug
+        - bugfix
+        - fix
+    - title: 文档与维护
+      labels:
+        - documentation
+        - docs
+        - chore
+        - ci
+        - refactor
+        - test
+    - title: 其他变更
+      labels:
+        - "*"

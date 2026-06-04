@@ -33,6 +33,7 @@ class _AppShellState extends State<AppShell> {
   AppSection _section = AppSection.home;
   late final SettingsController _settingsController;
   late final DownloadController _downloadController;
+  bool _startupDisclaimerHandled = false;
 
   @override
   void initState() {
@@ -46,6 +47,7 @@ class _AppShellState extends State<AppShell> {
       unawaited(_settingsController.load());
       unawaited(_loadCookieConfigs());
     }
+    _settingsController.addListener(_handleSettingsChanged);
     _downloadController =
         widget.downloadController ??
         DownloadController(
@@ -69,6 +71,7 @@ class _AppShellState extends State<AppShell> {
 
   @override
   void dispose() {
+    _settingsController.removeListener(_handleSettingsChanged);
     _downloadController.dispose();
     _settingsController.dispose();
     super.dispose();
@@ -151,5 +154,64 @@ class _AppShellState extends State<AppShell> {
     setState(() {
       _section = section;
     });
+  }
+
+  void _handleSettingsChanged() {
+    if (_startupDisclaimerHandled ||
+        !_settingsController.hasLoaded ||
+        _settingsController.settings.disclaimerAccepted ||
+        !mounted) {
+      return;
+    }
+    _startupDisclaimerHandled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _settingsController.settings.disclaimerAccepted) {
+        return;
+      }
+      unawaited(_showStartupDisclaimerDialog());
+    });
+  }
+
+  Future<void> _showStartupDisclaimerDialog() async {
+    final l10n = AppLocalizations.of(context)!;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        final theme = Theme.of(context);
+        return AlertDialog(
+          title: Text(l10n.disclaimerTitle),
+          content: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 460),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.disclaimerSubtitle,
+                  style: theme.textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  l10n.disclaimerBody,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () {
+                _settingsController.acknowledgeDisclaimer();
+                Navigator.of(context).pop();
+              },
+              child: Text(l10n.disclaimerAcknowledge),
+            ),
+          ],
+        );
+      },
+    );
   }
 }

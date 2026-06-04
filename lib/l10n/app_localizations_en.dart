@@ -30,6 +30,29 @@ class AppLocalizationsEn extends AppLocalizations {
   String get help => 'Help';
 
   @override
+  String get aboutTitle => 'About';
+
+  @override
+  String get aboutSubtitle =>
+      'Product identity, technical sources, and usage boundaries.';
+
+  @override
+  String get aboutAppNameLabel => 'App Name';
+
+  @override
+  String get aboutBundleIdLabel => 'Bundle ID / App ID';
+
+  @override
+  String get aboutBuiltWithLabel => 'Built With';
+
+  @override
+  String get aboutCopyrightLabel => 'Copyright';
+
+  @override
+  String get aboutLegalNote =>
+      'This tool is only intended for downloading, organizing, and managing content you are legally authorized to use. Do not use it to download, distribute, or obtain pirated digital content.';
+
+  @override
   String get disclaimerTitle => 'Disclaimer';
 
   @override
@@ -39,6 +62,9 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get disclaimerBody =>
       'This project only provides download and management tools built on yt-dlp and ffmpeg. It does not provide protected content and is not intended for downloading, distributing, or obtaining pirated digital content. Use this tool only when you have the legal right or explicit authorization to do so, and make sure you comply with copyright law, platform terms, and applicable regulations.';
+
+  @override
+  String get disclaimerAcknowledge => 'I Understand';
 
   @override
   String get pasteLink => 'Paste Link';

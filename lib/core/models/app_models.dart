@@ -22,6 +22,7 @@ class DownloadSettings {
     required this.defaultQuality,
     required this.downloadSubtitles,
     required this.downloadThumbnail,
+    required this.disclaimerAccepted,
     this.ytDlpPath,
     this.ffmpegPath,
     this.cookieConfigs = const [],
@@ -35,6 +36,7 @@ class DownloadSettings {
     defaultQuality: 'best',
     downloadSubtitles: false,
     downloadThumbnail: false,
+    disclaimerAccepted: false,
   );
 
   static String defaultSaveDirectory() {
@@ -52,6 +54,7 @@ class DownloadSettings {
   final String defaultQuality;
   final bool downloadSubtitles;
   final bool downloadThumbnail;
+  final bool disclaimerAccepted;
   final String? ytDlpPath;
   final String? ffmpegPath;
   final List<CookieConfig> cookieConfigs;
@@ -64,6 +67,7 @@ class DownloadSettings {
     String? defaultQuality,
     bool? downloadSubtitles,
     bool? downloadThumbnail,
+    bool? disclaimerAccepted,
     Object? ytDlpPath = _unchanged,
     Object? ffmpegPath = _unchanged,
     Object? cookieConfigs = _unchanged,
@@ -76,6 +80,7 @@ class DownloadSettings {
       defaultQuality: defaultQuality ?? this.defaultQuality,
       downloadSubtitles: downloadSubtitles ?? this.downloadSubtitles,
       downloadThumbnail: downloadThumbnail ?? this.downloadThumbnail,
+      disclaimerAccepted: disclaimerAccepted ?? this.disclaimerAccepted,
       ytDlpPath: ytDlpPath == _unchanged
           ? this.ytDlpPath
           : ytDlpPath as String?,
@@ -108,6 +113,7 @@ class DownloadSettings {
       defaultQuality: normalizedDefaultQuality,
       downloadSubtitles: downloadSubtitles,
       downloadThumbnail: downloadThumbnail,
+      disclaimerAccepted: disclaimerAccepted,
       ytDlpPath: normalizedYtDlpPath,
       ffmpegPath: normalizedFfmpegPath,
       cookieConfigs: cookieConfigs,
@@ -128,6 +134,7 @@ class DownloadSettings {
       'defaultQuality': defaultQuality,
       'downloadSubtitles': downloadSubtitles,
       'downloadThumbnail': downloadThumbnail,
+      'disclaimerAccepted': disclaimerAccepted,
     };
     if (ytDlpPath != null) map['ytDlpPath'] = ytDlpPath!;
     if (ffmpegPath != null) map['ffmpegPath'] = ffmpegPath!;
@@ -158,6 +165,7 @@ class DownloadSettings {
           (json['defaultQuality'] as String?) ?? defaults.defaultQuality,
       downloadSubtitles: parseBool(json['downloadSubtitles']) ?? defaults.downloadSubtitles,
       downloadThumbnail: parseBool(json['downloadThumbnail']) ?? defaults.downloadThumbnail,
+      disclaimerAccepted: parseBool(json['disclaimerAccepted']) ?? defaults.disclaimerAccepted,
       ytDlpPath: json['ytDlpPath'] as String?,
       ffmpegPath: json['ffmpegPath'] as String?,
       defaultCookieBrowser: json['defaultCookieBrowser'] as String?,

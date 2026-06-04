@@ -130,6 +130,7 @@ void main() {
         defaultQuality: 'best',
         downloadSubtitles: true,
         downloadThumbnail: true,
+        disclaimerAccepted: false,
       ),
       ffmpegPath: '/tools/ffmpeg',
     );
@@ -274,6 +275,7 @@ DownloadSettings _settings({String? ytDlpPath, String? ffmpegPath}) {
     defaultQuality: 'best',
     downloadSubtitles: false,
     downloadThumbnail: false,
+    disclaimerAccepted: false,
     ytDlpPath: ytDlpPath,
     ffmpegPath: ffmpegPath,
   );

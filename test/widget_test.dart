@@ -39,6 +39,12 @@ void main() {
       tester.element(find.byType(TextField).first),
     )!;
 
+    expect(find.text(l10n.disclaimerTitle), findsOneWidget);
+    expect(find.text(l10n.disclaimerBody), findsOneWidget);
+
+    await tester.tap(find.text(l10n.disclaimerAcknowledge));
+    await tester.pumpAndSettle();
+
     expect(find.text(l10n.newDownload), findsWidgets);
     expect(find.text(l10n.downloading), findsOneWidget);
     expect(find.text(l10n.history), findsOneWidget);

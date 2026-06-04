@@ -155,6 +155,7 @@ DownloadSettings _settings(DownloadMode mode, {int concurrentCount = 1}) {
     defaultQuality: 'recommended',
     downloadSubtitles: false,
     downloadThumbnail: false,
+    disclaimerAccepted: false,
   );
 }
 

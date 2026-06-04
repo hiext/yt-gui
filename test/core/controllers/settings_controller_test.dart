@@ -11,6 +11,7 @@ void main() {
       expect(controller.settings.saveDirectory, isNotEmpty);
       expect(controller.settings.defaultQuality, 'best');
       expect(controller.settings.concurrentCount, 1);
+      expect(controller.settings.disclaimerAccepted, isFalse);
       expect(controller.settings.ytDlpPath, isNull);
       expect(controller.settings.ffmpegPath, isNull);
     });
@@ -29,6 +30,7 @@ void main() {
           defaultQuality: '  ',
           downloadSubtitles: true,
           downloadThumbnail: true,
+          disclaimerAccepted: true,
           ytDlpPath: '  ',
           ffmpegPath: ' /tools/ffmpeg ',
         ),
@@ -41,6 +43,7 @@ void main() {
       expect(controller.settings.defaultQuality, 'best');
       expect(controller.settings.downloadSubtitles, isTrue);
       expect(controller.settings.downloadThumbnail, isTrue);
+      expect(controller.settings.disclaimerAccepted, isTrue);
       expect(controller.settings.ytDlpPath, isNull);
       expect(controller.settings.ffmpegPath, '/tools/ffmpeg');
     });
@@ -55,6 +58,7 @@ void main() {
       controller.updateDefaultQuality('bestvideo+bestaudio');
       controller.updateDownloadSubtitles(true);
       controller.updateDownloadThumbnail(true);
+      controller.acknowledgeDisclaimer();
       controller.updateYtDlpPath('/tools/yt-dlp');
       controller.updateFfmpegPath('/tools/ffmpeg');
 
@@ -64,6 +68,7 @@ void main() {
       expect(controller.settings.defaultQuality, 'bestvideo+bestaudio');
       expect(controller.settings.downloadSubtitles, isTrue);
       expect(controller.settings.downloadThumbnail, isTrue);
+      expect(controller.settings.disclaimerAccepted, isTrue);
       expect(controller.settings.ytDlpPath, '/tools/yt-dlp');
       expect(controller.settings.ffmpegPath, '/tools/ffmpeg');
     });

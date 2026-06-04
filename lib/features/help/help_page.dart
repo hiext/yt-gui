@@ -16,6 +16,39 @@ class HelpPage extends StatelessWidget {
         Text(l10n.help, style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 16),
         SectionCard(
+          title: l10n.aboutTitle,
+          subtitle: l10n.aboutSubtitle,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _Faq(question: l10n.aboutAppNameLabel, answer: l10n.appTitle),
+              const SizedBox(height: 12),
+              _Faq(
+                question: l10n.aboutBundleIdLabel,
+                answer: 'com.hiext.ytgui',
+              ),
+              const SizedBox(height: 12),
+              _Faq(
+                question: l10n.aboutBuiltWithLabel,
+                answer: 'Flutter · yt-dlp · ffmpeg',
+              ),
+              const SizedBox(height: 12),
+              _Faq(
+                question: l10n.aboutCopyrightLabel,
+                answer: 'Copyright © 2026 com.hiext. All rights reserved.',
+              ),
+              const SizedBox(height: 12),
+              Text(
+                l10n.aboutLegalNote,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        SectionCard(
           title: l10n.disclaimerTitle,
           subtitle: l10n.disclaimerSubtitle,
           child: Text(
