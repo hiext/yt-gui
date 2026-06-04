@@ -240,6 +240,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get completedTasksDesc => 'Successfully downloaded tasks.';
 
   @override
+  String get downloadingTasks => 'Downloading Tasks';
+
+  @override
   String get failedTasks => 'Failed Tasks';
 
   @override
@@ -250,6 +253,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cancelledTasksDesc => 'Tasks cancelled by user.';
+
+  @override
+  String get pausedTasks => 'Paused Tasks';
 
   @override
   String get noRecordsHere => 'No records here';
@@ -431,6 +437,23 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get completedStatus => 'Completed';
+
+  @override
+  String get enterDomainHint => 'Enter domain then import';
+
+  @override
+  String get filePickerSaveDirTitle => 'Select save directory';
+
+  @override
+  String get filePickerExecutableTitle => 'Select executable file';
+
+  @override
+  String moreCookies(int count) {
+    return '... $count more cookies';
+  }
+
+  @override
   String get retry => 'Retry';
 
   @override
@@ -442,4 +465,119 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get openDownloadDir => 'Open Download Folder';
+
+  @override
+  String get downloadCompleteTitle => 'Download Complete';
+
+  @override
+  String get downloadFailedTitle => 'Download Failed';
+
+  @override
+  String get downloadFailedFallback => 'Download failed';
+
+  @override
+  String get recommendedOptionLabel => 'Recommended';
+
+  @override
+  String get recommendedOptionDesc => 'Good for most downloads';
+
+  @override
+  String bestQualityLabel(int height) {
+    return 'Best Quality (${height}p video + audio merge)';
+  }
+
+  @override
+  String get bestQualityDesc =>
+      'yt-dlp auto-selects the best video and audio streams and merges them · Recommended';
+
+  @override
+  String get recommendedSuffix => 'Recommended';
+
+  @override
+  String videoFormatWithHeight(String height) {
+    return '${height}p Video';
+  }
+
+  @override
+  String videoFormatWithId(String id) {
+    return 'Video $id';
+  }
+
+  @override
+  String audioFormatWithId(String id) {
+    return 'Audio $id';
+  }
+
+  @override
+  String get containsAudioTrack => 'With audio';
+
+  @override
+  String get videoOnly => 'Video only';
+
+  @override
+  String get cookieScriptNotFound => 'extract_cookies.py script not found';
+
+  @override
+  String get pythonNotFound => 'Python is not installed or not in PATH';
+
+  @override
+  String cookiesExtractedWithBrowserCookie3(String browser, int count) {
+    return 'Extracted $count cookies from $browser (browser_cookie3)';
+  }
+
+  @override
+  String get browserCookie3NotInstalled =>
+      'browser_cookie3 is not installed. Run: pip install browser-cookie3';
+
+  @override
+  String browserCookie3NoCookies(String browser, String domain) {
+    return '$browser: no logged-in cookies found for $domain';
+  }
+
+  @override
+  String browserCookie3Failed(String browser, String detail) {
+    return '$browser: browser_cookie3 failed: $detail';
+  }
+
+  @override
+  String cookieDecryptFailed(String browser) {
+    return '$browser: cookie encryption could not be decrypted';
+  }
+
+  @override
+  String cookieFileNotGenerated(String browser) {
+    return '$browser: cookie file was not created';
+  }
+
+  @override
+  String loggedInCookiesNotFound(String browser) {
+    return '$browser: no logged-in cookies found';
+  }
+
+  @override
+  String cookiesExtractedFromBrowser(String browser, int count) {
+    return 'Extracted $count cookies from $browser';
+  }
+
+  @override
+  String get cookieSession => 'Session';
+
+  @override
+  String get cookieExpired => 'Expired';
+
+  @override
+  String cookieExpiresInDays(int count) {
+    return 'In $count days';
+  }
+
+  @override
+  String cookieExpiresInHours(int count) {
+    return 'In $count hours';
+  }
+
+  @override
+  String get cookieExpiresSoon => 'Expires soon';
+
+  @override
+  String get ytDlpNonZeroExit => 'yt-dlp exited with a non-zero status';
 }

@@ -1,9 +1,14 @@
+import '../../l10n/app_localizations.dart';
 import '../models/app_models.dart';
 
 typedef DownloadTaskChanged = void Function(DownloadTask task);
 
 abstract class YtDlpExecutor {
-  Future<List<ResourceVariant>> inspect(Uri url, {DownloadSettings? settings});
+  Future<List<ResourceVariant>> inspect(
+    Uri url, {
+    DownloadSettings? settings,
+    AppLocalizations? localizations,
+  });
 
   Future<void> startDownload({
     required String taskId,

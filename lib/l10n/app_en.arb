@@ -92,10 +92,12 @@
   "noHistoryYet": "No history records yet",
   "completedTasks": "Completed Tasks",
   "completedTasksDesc": "Successfully downloaded tasks.",
+  "downloadingTasks": "Downloading Tasks",
   "failedTasks": "Failed Tasks",
   "failedTasksDesc": "You can re-add these to the download queue.",
   "cancelledTasks": "Cancelled Tasks",
   "cancelledTasksDesc": "Tasks cancelled by user.",
+  "pausedTasks": "Paused Tasks",
   "noRecordsHere": "No records here",
   "openFolder": "Open Folder",
   "threeSteps": "Three Steps",
@@ -196,8 +198,152 @@
       }
     }
   },
+  "completedStatus": "Completed",
+  "enterDomainHint": "Enter domain then import",
+  "filePickerSaveDirTitle": "Select save directory",
+  "filePickerExecutableTitle": "Select executable file",
+  "moreCookies": "... {count} more cookies",
+  "@moreCookies": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "retry": "Retry",
   "cancel": "Cancel",
   "additionalOptionsDesc": "Download subtitles and thumbnails along with video.",
-  "openDownloadDir": "Open Download Folder"
+  "openDownloadDir": "Open Download Folder",
+  "downloadCompleteTitle": "Download Complete",
+  "downloadFailedTitle": "Download Failed",
+  "downloadFailedFallback": "Download failed",
+  "recommendedOptionLabel": "Recommended",
+  "recommendedOptionDesc": "Good for most downloads",
+  "bestQualityLabel": "Best Quality ({height}p video + audio merge)",
+  "@bestQualityLabel": {
+    "placeholders": {
+      "height": {
+        "type": "int"
+      }
+    }
+  },
+  "bestQualityDesc": "yt-dlp auto-selects the best video and audio streams and merges them · Recommended",
+  "recommendedSuffix": "Recommended",
+  "videoFormatWithHeight": "{height}p Video",
+  "@videoFormatWithHeight": {
+    "placeholders": {
+      "height": {
+        "type": "String"
+      }
+    }
+  },
+  "videoFormatWithId": "Video {id}",
+  "@videoFormatWithId": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "audioFormatWithId": "Audio {id}",
+  "@audioFormatWithId": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "containsAudioTrack": "With audio",
+  "videoOnly": "Video only",
+  "cookieScriptNotFound": "extract_cookies.py script not found",
+  "pythonNotFound": "Python is not installed or not in PATH",
+  "cookiesExtractedWithBrowserCookie3": "Extracted {count} cookies from {browser} (browser_cookie3)",
+  "@cookiesExtractedWithBrowserCookie3": {
+    "placeholders": {
+      "browser": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "browserCookie3NotInstalled": "browser_cookie3 is not installed. Run: pip install browser-cookie3",
+  "browserCookie3NoCookies": "{browser}: no logged-in cookies found for {domain}",
+  "@browserCookie3NoCookies": {
+    "placeholders": {
+      "browser": {
+        "type": "String"
+      },
+      "domain": {
+        "type": "String"
+      }
+    }
+  },
+  "browserCookie3Failed": "{browser}: browser_cookie3 failed: {detail}",
+  "@browserCookie3Failed": {
+    "placeholders": {
+      "browser": {
+        "type": "String"
+      },
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "cookieDecryptFailed": "{browser}: cookie encryption could not be decrypted",
+  "@cookieDecryptFailed": {
+    "placeholders": {
+      "browser": {
+        "type": "String"
+      }
+    }
+  },
+  "cookieFileNotGenerated": "{browser}: cookie file was not created",
+  "@cookieFileNotGenerated": {
+    "placeholders": {
+      "browser": {
+        "type": "String"
+      }
+    }
+  },
+  "loggedInCookiesNotFound": "{browser}: no logged-in cookies found",
+  "@loggedInCookiesNotFound": {
+    "placeholders": {
+      "browser": {
+        "type": "String"
+      }
+    }
+  },
+  "cookiesExtractedFromBrowser": "Extracted {count} cookies from {browser}",
+  "@cookiesExtractedFromBrowser": {
+    "placeholders": {
+      "browser": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cookieSession": "Session",
+  "cookieExpired": "Expired",
+  "cookieExpiresInDays": "In {count} days",
+  "@cookieExpiresInDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cookieExpiresInHours": "In {count} hours",
+  "@cookieExpiresInHours": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cookieExpiresSoon": "Expires soon",
+  "ytDlpNonZeroExit": "yt-dlp exited with a non-zero status"
 }

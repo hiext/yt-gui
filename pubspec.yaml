@@ -36,7 +36,9 @@ dependencies:
   cupertino_icons: ^1.0.8
   shared_preferences: ^2.5.5
   window_manager: ^0.5.1
-  sqflite_common_ffi: ^2.4.0+3
+  sqflite_common_ffi: ^2.3.7
+  sqlite3: ^2.9.4
+  sqlite3_flutter_libs: 0.5.42
   path: ^1.9.1
   flutter_localizations:
     sdk: flutter

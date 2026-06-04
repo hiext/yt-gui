@@ -5,6 +5,7 @@ import 'package:hiext_yt_gui/core/models/app_models.dart';
 import 'package:hiext_yt_gui/core/services/download_scheduler.dart';
 import 'package:hiext_yt_gui/core/services/yt_dlp_executor.dart';
 import 'package:hiext_yt_gui/features/home/home_page.dart';
+import 'package:hiext_yt_gui/l10n/app_localizations.dart';
 
 void main() {
   testWidgets('inspects link, selects variants and queues download', (tester) async {
@@ -33,16 +34,18 @@ void main() {
     var showedDownloads = false;
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: HomePage(
+      _buildApp(
+        HomePage(
           controller: controller,
           onShowDownloads: () => showedDownloads = true,
         ),
       ),
     );
 
+    final l10n = _l10n(tester);
+
     await tester.enterText(find.byType(TextField), 'https://example.com/video');
-    await tester.tap(find.text('解析链接'));
+    await tester.tap(find.text(l10n.parseLink));
     await tester.pumpAndSettle();
 
     expect(executor.inspected, [Uri.parse('https://example.com/video')]);
@@ -57,12 +60,12 @@ void main() {
     await tester.tap(find.text('音频 140'));
     await tester.pumpAndSettle();
     await tester.dragUntilVisible(
-      find.textContaining('下载所选'),
+      find.text(l10n.downloadSelectedCount(1)),
       find.byType(ListView),
       const Offset(0, -200),
     );
     await tester.pumpAndSettle();
-    await tester.tap(find.textContaining('下载所选'));
+    await tester.tap(find.text(l10n.downloadSelectedCount(1)));
     await tester.pumpAndSettle();
 
     expect(executor.startedVariants.length, 1);
@@ -90,19 +93,19 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: HomePage(controller: controller, onShowDownloads: () {}),
-      ),
+      _buildApp(HomePage(controller: controller, onShowDownloads: () {})),
     );
 
+    final l10n = _l10n(tester);
+
     await tester.enterText(find.byType(TextField), 'https://example.com/old');
-    await tester.tap(find.text('解析链接'));
+    await tester.tap(find.text(l10n.parseLink));
     await tester.pump();
     await tester.enterText(find.byType(TextField), 'https://example.com/new');
     await tester.pumpAndSettle();
 
     expect(find.text('1080p 视频'), findsNothing);
-    expect(find.text('请先粘贴链接并解析可下载格式。'), findsOneWidget);
+    expect(find.text(l10n.selectFormatHint), findsOneWidget);
   });
 
   testWidgets('ignores stale inspect error after input changes', (
@@ -116,19 +119,19 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: HomePage(controller: controller, onShowDownloads: () {}),
-      ),
+      _buildApp(HomePage(controller: controller, onShowDownloads: () {})),
     );
 
+    final l10n = _l10n(tester);
+
     await tester.enterText(find.byType(TextField), 'https://example.com/old');
-    await tester.tap(find.text('解析链接'));
+    await tester.tap(find.text(l10n.parseLink));
     await tester.pump();
     await tester.enterText(find.byType(TextField), 'https://example.com/new');
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('解析失败'), findsNothing);
-    expect(find.text('解析链接'), findsOneWidget);
+    expect(find.textContaining('old failed'), findsNothing);
+    expect(find.text(l10n.parseLink), findsOneWidget);
   });
 
   testWidgets('shows inspect error without queueing download', (tester) async {
@@ -140,18 +143,34 @@ void main() {
     );
 
     await tester.pumpWidget(
-      MaterialApp(
-        home: HomePage(controller: controller, onShowDownloads: () {}),
-      ),
+      _buildApp(HomePage(controller: controller, onShowDownloads: () {})),
     );
 
+    final l10n = _l10n(tester);
+
     await tester.enterText(find.byType(TextField), 'https://example.com/video');
-    await tester.tap(find.text('解析链接'));
+    await tester.tap(find.text(l10n.parseLink));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('解析失败'), findsOneWidget);
+    expect(
+      find.text(l10n.parseFailed('Exception: parse failed')),
+      findsOneWidget,
+    );
     expect(executor.started, isEmpty);
   });
+}
+
+Widget _buildApp(Widget child, {Locale? locale}) {
+  return MaterialApp(
+    locale: locale,
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: child,
+  );
+}
+
+AppLocalizations _l10n(WidgetTester tester) {
+  return AppLocalizations.of(tester.element(find.byType(TextField).first))!;
 }
 
 DownloadSettings _settings() {
@@ -182,6 +201,7 @@ class _FakeExecutor implements YtDlpExecutor {
   Future<List<ResourceVariant>> inspect(
     Uri url, {
     DownloadSettings? settings,
+    AppLocalizations? localizations,
   }) async {
     await Future<void>.delayed(Duration.zero);
     inspected.add(url);

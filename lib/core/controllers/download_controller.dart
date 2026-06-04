@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../../l10n/app_localizations.dart';
+import '../../l10n/app_localizations_current.dart';
 import '../models/app_models.dart';
 import '../services/download_scheduler.dart';
 import '../services/notification_service.dart';
@@ -98,8 +100,15 @@ class DownloadController extends ChangeNotifier {
 
   bool _isDisposed = false;
 
-  Future<List<ResourceVariant>> inspect(Uri url) {
-    return executor.inspect(url, settings: settingsProvider());
+  Future<List<ResourceVariant>> inspect(
+    Uri url, {
+    AppLocalizations? localizations,
+  }) {
+    return executor.inspect(
+      url,
+      settings: settingsProvider(),
+      localizations: localizations,
+    );
   }
 
   String? resolveCookieFile(Uri url) {
@@ -203,13 +212,17 @@ class DownloadController extends ChangeNotifier {
     }
 
     if (task.status == DownloadStatus.failed) {
+      final l10n = currentAppLocalizations();
       _startedTaskIds.remove(task.id);
-      scheduler.fail(task.id, message: task.errorMessage ?? '下载失败');
+      scheduler.fail(
+        task.id,
+        message: task.errorMessage ?? l10n.downloadFailedFallback,
+      );
       _notifyChanged();
       unawaited(_startPendingRunningTasks());
       NotificationService().showDownloadFailed(
         title: task.title,
-        error: task.errorMessage ?? '未知错误',
+        error: task.errorMessage ?? l10n.unknownError,
       );
       return;
     }
@@ -279,11 +292,12 @@ class DownloadController extends ChangeNotifier {
         continue;
       }
 
+      final l10n = currentAppLocalizations();
       final variant = task.variants.isNotEmpty
           ? task.variants.first
-          : const ResourceVariant(
-              label: '推荐',
-              description: '适合大多数人',
+          : ResourceVariant(
+              label: l10n.recommendedOptionLabel,
+              description: l10n.recommendedOptionDesc,
               isRecommended: true,
             );
       _startedTaskIds.add(task.id);

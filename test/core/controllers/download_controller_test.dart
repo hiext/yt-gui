@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiext_yt_gui/core/controllers/download_controller.dart';
+import 'package:hiext_yt_gui/l10n/app_localizations.dart';
+import 'package:hiext_yt_gui/l10n/app_localizations_current.dart';
 import 'package:hiext_yt_gui/core/models/app_models.dart';
 import 'package:hiext_yt_gui/core/services/download_scheduler.dart';
 import 'package:hiext_yt_gui/core/services/yt_dlp_executor.dart';
@@ -27,6 +29,7 @@ class _FakeExecutor implements YtDlpExecutor {
   Future<List<ResourceVariant>> inspect(
     Uri url, {
     DownloadSettings? settings,
+    AppLocalizations? localizations,
   }) async {
     inspected.add(url);
     return inspectResult;
@@ -55,6 +58,8 @@ class _FakeExecutor implements YtDlpExecutor {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   test(
     'inspect returns executor variants without enqueueing download',
     () async {
@@ -209,6 +214,44 @@ void main() {
     expect(executor.started, hasLength(1));
     expect(controller.allTasks.map((task) => task.id), hasLength(2));
     expect(controller.allTasks.map((task) => task.id).toSet(), hasLength(2));
+  });
+
+  test('failed task uses localized fallback message', () {
+    final scheduler = DownloadScheduler(settingsProvider: _settings);
+    final controller = DownloadController(
+      scheduler: scheduler,
+      executor: _FakeExecutor(),
+      settingsProvider: _settings,
+    );
+    const source = 'https://example.com/video';
+
+    scheduler.enqueue(
+      DownloadTask(
+        id: 'task-1',
+        title: 'Task 1',
+        source: source,
+        status: DownloadStatus.ready,
+        progress: 0,
+        variants: [],
+      ),
+    );
+    scheduler.startNext();
+
+    controller.handleTaskChanged(
+      DownloadTask(
+        id: 'task-1',
+        title: 'Task 1',
+        source: source,
+        status: DownloadStatus.failed,
+        progress: 0,
+        variants: [],
+      ),
+    );
+
+    expect(
+      controller.failedTasks.single.errorMessage,
+      currentAppLocalizations().downloadFailedFallback,
+    );
   });
 }
 

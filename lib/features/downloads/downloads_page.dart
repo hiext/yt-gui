@@ -120,8 +120,8 @@ class _TaskGroupCardState extends State<_TaskGroupCard> {
       subtitle: [
         l10n.formatsCount(group.tasks.length),
         if (doneCount > 0) ' · $doneCount ${l10n.completedTasks}',
-        if (activeCount > 0) ' · $activeCount ${l10n.downloading}',
-        if (pausedCount > 0) ' · $pausedCount ${l10n.cancelledTasks}',
+        if (activeCount > 0) ' · $activeCount ${l10n.downloadingTasks}',
+        if (pausedCount > 0) ' · $pausedCount ${l10n.pausedTasks}',
       ].join(),
       backgroundColor: allDone ? Colors.green.withAlpha(15) : null,
       child: Column(
@@ -225,13 +225,14 @@ class _CompactTaskTile extends StatelessWidget {
     ThemeData theme,
     _StatusInfo statusInfo,
   ) {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       children: [
         Icon(statusInfo.icon, size: 16, color: Colors.green),
         const SizedBox(width: 10),
         Expanded(
           child: Text(
-            '✓ ${_taskFormatLabel(task)}',
+            '✓ ${_taskFormatLabel(context, task)}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.bodyMedium?.copyWith(
@@ -245,9 +246,9 @@ class _CompactTaskTile extends StatelessWidget {
             color: Colors.green.withAlpha(25),
             borderRadius: BorderRadius.circular(4),
           ),
-          child: const Text(
-            '已完成',
-            style: TextStyle(
+          child: Text(
+            l10n.completedStatus,
+            style: const TextStyle(
               fontSize: 11,
               color: Colors.green,
               fontWeight: FontWeight.w500,
@@ -275,7 +276,7 @@ class _CompactTaskTile extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                _taskFormatLabel(task),
+                _taskFormatLabel(context, task),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodyMedium,
@@ -326,10 +327,11 @@ class _CompactTaskTile extends StatelessWidget {
     );
   }
 
-  String _taskFormatLabel(DownloadTask task) {
+  String _taskFormatLabel(BuildContext context, DownloadTask task) {
+    final l10n = AppLocalizations.of(context)!;
     final variant = task.variants.isNotEmpty ? task.variants.first : null;
     if (variant == null) return task.title;
-    final type = variant.type == ResourceType.video ? '视频' : '音频';
+    final type = variant.type == ResourceType.video ? l10n.video : l10n.audio;
     return '$type  ${variant.label}';
   }
 
@@ -378,7 +380,7 @@ class _CompactTaskTile extends StatelessWidget {
       DownloadStatus.idle ||
       DownloadStatus.parsing ||
       DownloadStatus.ready ||
-      DownloadStatus.queued => _StatusInfo(Icons.schedule, '等待中', cs.primary),
+      DownloadStatus.queued => _StatusInfo(Icons.schedule, '', cs.primary),
       DownloadStatus.downloading => _StatusInfo(
         Icons.downloading,
         '',

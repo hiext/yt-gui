@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiext_yt_gui/core/models/app_models.dart';
+import 'package:hiext_yt_gui/l10n/app_localizations.dart';
 import 'package:hiext_yt_gui/core/services/embedded_tool_manifest.dart';
 import 'package:hiext_yt_gui/core/services/embedded_tool_resolver.dart';
 import 'package:hiext_yt_gui/core/services/process_yt_dlp_executor.dart';
@@ -19,6 +21,7 @@ void main() {
 
     final inspectFuture = executor.inspect(
       Uri.parse('https://example.com/video'),
+      localizations: lookupAppLocalizations(const Locale('en')),
     );
     process.addStdout(
       '''{"formats":[{"format_id":"137","height":1080,"ext":"mp4"},{"format_id":"140","ext":"m4a"}]}''',
@@ -29,9 +32,10 @@ void main() {
 
     expect(variants.length, greaterThanOrEqualTo(2));
     expect(variants.first.formatId, 'bestvideo+bestaudio');
+    expect(variants.first.label, 'Best Quality (1080p video + audio merge)');
     expect(variants[1].formatId, '137');
-    expect(variants[1].label, '1080p 视频 (推荐)');
-    expect(variants.last.label, '音频 140');
+    expect(variants[1].label, '1080p Video (Recommended)');
+    expect(variants.last.label, 'Audio 140');
     expect(variants.last.formatId, '140');
   });
 

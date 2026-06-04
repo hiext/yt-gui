@@ -31,22 +31,22 @@ class HelpPage extends StatelessWidget {
         SectionCard(
           title: l10n.modeHelp,
           subtitle: l10n.modeHelpDesc,
-          child: const Column(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _ModeHelp(
-                title: '串行下载',
-                description: '一次只下载一个任务，适合带宽有限的场景。',
+                title: l10n.modeSerial,
+                description: l10n.modeSerialDesc,
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               _ModeHelp(
-                title: '队列下载',
-                description: '手动管理下载次序，完成后不会自动开始下一个。',
+                title: l10n.modeQueue,
+                description: l10n.modeQueueDesc,
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               _ModeHelp(
-                title: '并发下载',
-                description: '同时下载多个任务（1-8），适合带宽充裕的场景。',
+                title: l10n.modeConcurrent,
+                description: l10n.modeConcurrentDesc,
               ),
             ],
           ),

@@ -2,11 +2,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hiext_yt_gui/core/models/app_models.dart';
 import 'package:hiext_yt_gui/core/services/database_service.dart';
 import 'package:hiext_yt_gui/core/services/settings_repository.dart';
+import '../../sqlite_test_setup.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 Future<Database> _createTestDb() async {
-  sqfliteFfiInit();
-  final db = await databaseFactoryFfi.openDatabase(
+  initTestSqlite();
+  final db = await databaseFactoryFfiNoIsolate.openDatabase(
     inMemoryDatabasePath,
     options: OpenDatabaseOptions(
       version: 1,

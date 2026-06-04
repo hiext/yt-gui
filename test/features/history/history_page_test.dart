@@ -5,6 +5,7 @@ import 'package:hiext_yt_gui/core/models/app_models.dart';
 import 'package:hiext_yt_gui/core/services/download_scheduler.dart';
 import 'package:hiext_yt_gui/core/services/yt_dlp_executor.dart';
 import 'package:hiext_yt_gui/features/history/history_page.dart';
+import 'package:hiext_yt_gui/l10n/app_localizations.dart';
 
 void main() {
   testWidgets('shows completed failed and cancelled tasks', (tester) async {
@@ -12,30 +13,34 @@ void main() {
     _seedTerminalTasks(controller.scheduler);
 
     await tester.pumpWidget(
-      MaterialApp(home: HistoryPage(controller: controller)),
+      _buildApp(HistoryPage(controller: controller)),
     );
 
-    expect(find.textContaining('已完成任务'), findsOneWidget);
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(HistoryPage)),
+    )!;
+
+    expect(find.text('${l10n.completedTasks} (1)'), findsOneWidget);
     await tester.scrollUntilVisible(
-      find.textContaining('失败任务'),
+      find.text('${l10n.failedTasks} (1)'),
       200,
       scrollable: find.byType(Scrollable),
     );
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('失败任务'), findsOneWidget);
+    expect(find.text('${l10n.failedTasks} (1)'), findsOneWidget);
     expect(find.text('Completed task'), findsOneWidget);
     expect(find.text('Failed task'), findsOneWidget);
     expect(find.textContaining('network timeout'), findsOneWidget);
 
     await tester.scrollUntilVisible(
-      find.textContaining('已取消任务'),
+      find.text('${l10n.cancelledTasks} (1)'),
       200,
       scrollable: find.byType(Scrollable),
     );
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('已取消任务'), findsOneWidget);
+    expect(find.text('${l10n.cancelledTasks} (1)'), findsOneWidget);
     expect(find.text('Cancelled task'), findsOneWidget);
   });
 
@@ -45,10 +50,14 @@ void main() {
     _seedTerminalTasks(controller.scheduler);
 
     await tester.pumpWidget(
-      MaterialApp(home: HistoryPage(controller: controller)),
+      _buildApp(HistoryPage(controller: controller)),
     );
 
-    await tester.tap(find.text('重试'));
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(HistoryPage)),
+    )!;
+
+    await tester.tap(find.text(l10n.retry));
     await tester.pumpAndSettle();
 
     expect(controller.failedTasks, isEmpty);
@@ -62,6 +71,15 @@ DownloadController _controller({_FakeExecutor? executor}) {
     scheduler: DownloadScheduler(settingsProvider: _settings),
     executor: executor ?? _FakeExecutor(),
     settingsProvider: _settings,
+  );
+}
+
+Widget _buildApp(Widget child, {Locale? locale}) {
+  return MaterialApp(
+    locale: locale,
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: child,
   );
 }
 
@@ -116,6 +134,7 @@ class _FakeExecutor implements YtDlpExecutor {
   Future<List<ResourceVariant>> inspect(
     Uri url, {
     DownloadSettings? settings,
+    AppLocalizations? localizations,
   }) async => const [];
 
   @override
