@@ -16,6 +16,17 @@ class HelpPage extends StatelessWidget {
         Text(l10n.help, style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 16),
         SectionCard(
+          title: l10n.disclaimerTitle,
+          subtitle: l10n.disclaimerSubtitle,
+          child: Text(
+            l10n.disclaimerBody,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        SectionCard(
           title: l10n.threeSteps,
           subtitle: l10n.threeStepsDesc,
           child: Column(

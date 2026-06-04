@@ -30,6 +30,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get help => 'Help';
 
   @override
+  String get disclaimerTitle => 'Disclaimer';
+
+  @override
+  String get disclaimerSubtitle =>
+      'Confirm the content source, authorization scope, and intended use comply with local law and platform rules before downloading.';
+
+  @override
+  String get disclaimerBody =>
+      'This project only provides download and management tools built on yt-dlp and ffmpeg. It does not provide protected content and is not intended for downloading, distributing, or obtaining pirated digital content. Use this tool only when you have the legal right or explicit authorization to do so, and make sure you comply with copyright law, platform terms, and applicable regulations.';
+
+  @override
   String get pasteLink => 'Paste Link';
 
   @override

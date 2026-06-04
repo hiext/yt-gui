@@ -30,6 +30,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get help => '帮助';
 
   @override
+  String get disclaimerTitle => '使用声明';
+
+  @override
+  String get disclaimerSubtitle => '请在下载前确认内容来源、授权范围和使用目的符合当地法律及平台规则。';
+
+  @override
+  String get disclaimerBody =>
+      '本项目仅提供基于 yt-dlp 和 ffmpeg 的下载与管理工具，不提供任何受保护内容，也不以下载、传播或获取盗版数字数据为目的。请仅在拥有合法权利或已获得明确授权的前提下使用本工具，并自行遵守相关版权法律、平台服务条款及当地法规。';
+
+  @override
   String get pasteLink => '粘贴链接';
 
   @override

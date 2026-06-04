@@ -140,6 +140,24 @@ abstract class AppLocalizations {
   /// **'帮助'**
   String get help;
 
+  /// No description provided for @disclaimerTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'使用声明'**
+  String get disclaimerTitle;
+
+  /// No description provided for @disclaimerSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'请在下载前确认内容来源、授权范围和使用目的符合当地法律及平台规则。'**
+  String get disclaimerSubtitle;
+
+  /// No description provided for @disclaimerBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'本项目仅提供基于 yt-dlp 和 ffmpeg 的下载与管理工具，不提供任何受保护内容，也不以下载、传播或获取盗版数字数据为目的。请仅在拥有合法权利或已获得明确授权的前提下使用本工具，并自行遵守相关版权法律、平台服务条款及当地法规。'**
+  String get disclaimerBody;
+
   /// No description provided for @pasteLink.
   ///
   /// In zh, this message translates to:
