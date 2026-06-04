@@ -245,7 +245,10 @@ class _HomePageState extends State<HomePage> {
       _videoId = null;
     });
     try {
-      final variants = await widget.controller.inspect(uri);
+      final variants = await widget.controller.inspect(
+        uri,
+        localizations: l10n,
+      );
       if (!mounted ||
           token != _inspectToken ||
           _linkController.text.trim() != uri.toString()) {

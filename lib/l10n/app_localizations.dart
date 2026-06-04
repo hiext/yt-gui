@@ -919,6 +919,180 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'打开下载目录'**
   String get openDownloadDir;
+
+  /// No description provided for @downloadCompleteTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'下载完成'**
+  String get downloadCompleteTitle;
+
+  /// No description provided for @downloadFailedTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'下载失败'**
+  String get downloadFailedTitle;
+
+  /// No description provided for @downloadFailedFallback.
+  ///
+  /// In zh, this message translates to:
+  /// **'下载失败'**
+  String get downloadFailedFallback;
+
+  /// No description provided for @recommendedOptionLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'推荐'**
+  String get recommendedOptionLabel;
+
+  /// No description provided for @recommendedOptionDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'适合大多数人'**
+  String get recommendedOptionDesc;
+
+  /// No description provided for @bestQualityLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'最佳品质（{height}p 视频+音频合并）'**
+  String bestQualityLabel(int height);
+
+  /// No description provided for @bestQualityDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'yt-dlp 自动选取最佳视频和音频流合并 · 推荐'**
+  String get bestQualityDesc;
+
+  /// No description provided for @recommendedSuffix.
+  ///
+  /// In zh, this message translates to:
+  /// **'推荐'**
+  String get recommendedSuffix;
+
+  /// No description provided for @videoFormatWithHeight.
+  ///
+  /// In zh, this message translates to:
+  /// **'{height}p 视频'**
+  String videoFormatWithHeight(String height);
+
+  /// No description provided for @videoFormatWithId.
+  ///
+  /// In zh, this message translates to:
+  /// **'视频 {id}'**
+  String videoFormatWithId(String id);
+
+  /// No description provided for @audioFormatWithId.
+  ///
+  /// In zh, this message translates to:
+  /// **'音频 {id}'**
+  String audioFormatWithId(String id);
+
+  /// No description provided for @containsAudioTrack.
+  ///
+  /// In zh, this message translates to:
+  /// **'含音轨'**
+  String get containsAudioTrack;
+
+  /// No description provided for @videoOnly.
+  ///
+  /// In zh, this message translates to:
+  /// **'仅视频'**
+  String get videoOnly;
+
+  /// No description provided for @cookieScriptNotFound.
+  ///
+  /// In zh, this message translates to:
+  /// **'extract_cookies.py 脚本未找到'**
+  String get cookieScriptNotFound;
+
+  /// No description provided for @pythonNotFound.
+  ///
+  /// In zh, this message translates to:
+  /// **'Python 未安装或不在 PATH 中'**
+  String get pythonNotFound;
+
+  /// No description provided for @cookiesExtractedWithBrowserCookie3.
+  ///
+  /// In zh, this message translates to:
+  /// **'已从 {browser} 提取 {count} 个 cookie（browser_cookie3）'**
+  String cookiesExtractedWithBrowserCookie3(String browser, int count);
+
+  /// No description provided for @browserCookie3NotInstalled.
+  ///
+  /// In zh, this message translates to:
+  /// **'browser_cookie3 未安装。运行: pip install browser-cookie3'**
+  String get browserCookie3NotInstalled;
+
+  /// No description provided for @browserCookie3NoCookies.
+  ///
+  /// In zh, this message translates to:
+  /// **'{browser}: 未找到 {domain} 的已登录 cookie'**
+  String browserCookie3NoCookies(String browser, String domain);
+
+  /// No description provided for @browserCookie3Failed.
+  ///
+  /// In zh, this message translates to:
+  /// **'{browser}: browser_cookie3 失败: {detail}'**
+  String browserCookie3Failed(String browser, String detail);
+
+  /// No description provided for @cookieDecryptFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'{browser}: cookie 加密无法解密'**
+  String cookieDecryptFailed(String browser);
+
+  /// No description provided for @cookieFileNotGenerated.
+  ///
+  /// In zh, this message translates to:
+  /// **'{browser}: 未生成 cookie 文件'**
+  String cookieFileNotGenerated(String browser);
+
+  /// No description provided for @loggedInCookiesNotFound.
+  ///
+  /// In zh, this message translates to:
+  /// **'{browser}: 未找到已登录的 cookie'**
+  String loggedInCookiesNotFound(String browser);
+
+  /// No description provided for @cookiesExtractedFromBrowser.
+  ///
+  /// In zh, this message translates to:
+  /// **'已从 {browser} 提取 {count} 个 cookie'**
+  String cookiesExtractedFromBrowser(String browser, int count);
+
+  /// No description provided for @cookieSession.
+  ///
+  /// In zh, this message translates to:
+  /// **'会话'**
+  String get cookieSession;
+
+  /// No description provided for @cookieExpired.
+  ///
+  /// In zh, this message translates to:
+  /// **'已过期'**
+  String get cookieExpired;
+
+  /// No description provided for @cookieExpiresInDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 天后'**
+  String cookieExpiresInDays(int count);
+
+  /// No description provided for @cookieExpiresInHours.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 小时后'**
+  String cookieExpiresInHours(int count);
+
+  /// No description provided for @cookieExpiresSoon.
+  ///
+  /// In zh, this message translates to:
+  /// **'即将过期'**
+  String get cookieExpiresSoon;
+
+  /// No description provided for @ytDlpNonZeroExit.
+  ///
+  /// In zh, this message translates to:
+  /// **'yt-dlp 以非零状态退出'**
+  String get ytDlpNonZeroExit;
 }
 
 class _AppLocalizationsDelegate

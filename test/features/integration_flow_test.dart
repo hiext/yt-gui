@@ -8,12 +8,13 @@ import 'package:hiext_yt_gui/core/services/download_scheduler.dart';
 import 'package:hiext_yt_gui/core/services/yt_dlp_executor.dart';
 import 'package:hiext_yt_gui/core/services/database_service.dart';
 import 'package:hiext_yt_gui/l10n/app_localizations.dart';
+import '../sqlite_test_setup.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 Future<void> _setupTestDb() async {
-  sqfliteFfiInit();
-  final db = await databaseFactoryFfi.openDatabase(
+  initTestSqlite();
+  final db = await databaseFactoryFfiNoIsolate.openDatabase(
     inMemoryDatabasePath,
     options: OpenDatabaseOptions(
       version: 1,
@@ -68,14 +69,18 @@ void main() {
     );
     await tester.pump();
 
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(TextField).first),
+    )!;
+
     // Phase 1: Verify home page shows
-    expect(find.text('New Download'), findsWidgets);
-    expect(find.text('请先粘贴链接并解析可下载格式。'), findsOneWidget);
+    expect(find.text(l10n.newDownload), findsWidgets);
+    expect(find.text(l10n.selectFormatHint), findsOneWidget);
 
     // Phase 2: Enter URL and parse
     await tester.enterText(find.byType(TextField), 'https://example.com/video');
     await tester.pump();
-    await tester.tap(find.text('解析链接'));
+    await tester.tap(find.text(l10n.parseLink));
     await tester.pump();
 
     // Phase 3: Verify formats appear
@@ -86,7 +91,7 @@ void main() {
     // Phase 4: Select format and download
     await tester.tap(find.text('1080p 视频'));
     await tester.pump();
-    final dlBtn = find.textContaining('下载所选');
+    final dlBtn = find.text(l10n.downloadSelectedCount(1));
     await tester.scrollUntilVisible(dlBtn, 300, scrollable: find.byType(Scrollable).first);
     await tester.pump();
     await tester.tap(dlBtn);
@@ -103,11 +108,11 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.settings_outlined));
     await tester.pump();
-    expect(find.text('保存与画质'), findsOneWidget);
+    expect(find.text(l10n.saveAndQuality), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.help_outline));
     await tester.pump();
-    expect(find.text('帮助'), findsWidgets);
+    expect(find.text(l10n.help), findsWidgets);
   });
 
   testWidgets('settings modifications persist', (tester) async {
@@ -158,6 +163,7 @@ class _ImmediateFake implements YtDlpExecutor {
   Future<List<ResourceVariant>> inspect(
     Uri url, {
     DownloadSettings? settings,
+    AppLocalizations? localizations,
   }) async {
     inspected.add(url);
     return const [

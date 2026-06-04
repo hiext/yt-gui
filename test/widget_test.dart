@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiext_yt_gui/app/hiext_yt_app.dart';
 import 'package:hiext_yt_gui/core/services/database_service.dart';
+import 'package:hiext_yt_gui/l10n/app_localizations.dart';
+import 'sqlite_test_setup.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
   setUp(() async {
-    sqfliteFfiInit();
-    final db = await databaseFactoryFfi.openDatabase(
+    initTestSqlite();
+    final db = await databaseFactoryFfiNoIsolate.openDatabase(
       inMemoryDatabasePath,
       options: OpenDatabaseOptions(
         version: 1,
@@ -33,20 +35,24 @@ void main() {
       await tester.pumpAndSettle();
     });
 
-    expect(find.text('New Download'), findsWidgets);
-    expect(find.text('Downloads'), findsOneWidget);
-    expect(find.text('History'), findsOneWidget);
-    expect(find.text('Settings'), findsOneWidget);
-    expect(find.text('Help'), findsOneWidget);
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(TextField).first),
+    )!;
+
+    expect(find.text(l10n.newDownload), findsWidgets);
+    expect(find.text(l10n.downloading), findsOneWidget);
+    expect(find.text(l10n.history), findsOneWidget);
+    expect(find.text(l10n.settings), findsOneWidget);
+    expect(find.text(l10n.help), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.settings_outlined));
     await tester.pumpAndSettle();
 
-    expect(find.text('保存与画质'), findsOneWidget);
+    expect(find.text(l10n.saveAndQuality), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.history_outlined));
     await tester.pumpAndSettle();
 
-    expect(find.text('没有历史'), findsOneWidget);
+    expect(find.text(l10n.noHistory), findsOneWidget);
   });
 }

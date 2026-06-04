@@ -4,6 +4,8 @@ import 'dart:io';
 
 import 'package:flutter/services.dart' show rootBundle;
 
+import '../../l10n/app_localizations.dart';
+import '../../l10n/app_localizations_current.dart';
 import '../models/app_models.dart';
 import 'embedded_tool_resolver.dart';
 import 'yt_dlp_progress_parser.dart';
@@ -50,6 +52,7 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
   Future<List<ResourceVariant>> inspect(
     Uri url, {
     DownloadSettings? settings,
+    AppLocalizations? localizations,
   }) async {
     final tools = _toolResolver.resolveBundle(
       settings: settings ?? DownloadSettings.defaults,
@@ -63,6 +66,7 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       ytDlpPath,
       buildInspectArguments(url, cookieFile: cookieFile),
     );
+    final l10n = localizations ?? currentAppLocalizations();
 
     final outputLines = <String>[];
     final session = YtDlpSession.forTesting(
@@ -82,17 +86,16 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     await Future.wait([stdoutFuture, stderrFuture]);
 
     if (exitCode != 0) {
-      final message =
-          session.errorMessage ?? 'yt-dlp exited with a non-zero status';
+      final message = session.errorMessage ?? l10n.ytDlpNonZeroExit;
       throw YtDlpExecutorException(message);
     }
 
-    final variants = _parseInspectVariants(outputLines);
+    final variants = _parseInspectVariants(outputLines, l10n);
     return variants.isEmpty
-        ? const [
+        ? [
             ResourceVariant(
-              label: '推荐',
-              description: '适合大多数人',
+              label: l10n.recommendedOptionLabel,
+              description: l10n.recommendedOptionDesc,
               isRecommended: true,
             ),
           ]
@@ -247,9 +250,9 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
 
     if (session.status != DownloadStatus.failed) {
       session.handleEvent(
-        const YtDlpProgressEvent(
+        YtDlpProgressEvent(
           type: YtDlpProgressEventType.error,
-          message: 'yt-dlp exited with a non-zero status',
+          message: currentAppLocalizations().ytDlpNonZeroExit,
         ),
       );
       onTaskChanged?.call(session.task);
@@ -279,7 +282,10 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     }
   }
 
-  static List<ResourceVariant> _parseInspectVariants(List<String> lines) {
+  static List<ResourceVariant> _parseInspectVariants(
+    List<String> lines,
+    AppLocalizations l10n,
+  ) {
     for (final line in lines) {
       try {
         final decoded = jsonDecode(line);
@@ -313,16 +319,18 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
           final type = hasVideo ? ResourceType.video : ResourceType.audio;
 
           final label = switch (type) {
-            ResourceType.video => height != null ? '${height}p 视频' : '视频 $id',
-            ResourceType.audio => '音频 $id',
+            ResourceType.video => height != null
+                ? l10n.videoFormatWithHeight(height)
+                : l10n.videoFormatWithId(id ?? ''),
+            ResourceType.audio => l10n.audioFormatWithId(id ?? ''),
           };
 
           final parts = <String>[];
           if (ext != null) parts.add(ext);
           if (hasVideo && hasAudio) {
-            parts.add('含音轨');
+            parts.add(l10n.containsAudioTrack);
           } else if (hasVideo && !hasAudio) {
-            parts.add('仅视频');
+            parts.add(l10n.videoOnly);
           } else if (!hasVideo && hasAudio) {
             parts.add(ext == 'm4a' ? 'AAC' : ext?.toUpperCase() ?? '');
           }
@@ -366,8 +374,8 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
         variants.insert(
           0,
           ResourceVariant(
-            label: '最佳品质（${maxHeight}p 视频+音频合并）',
-            description: 'yt-dlp 自动选取最佳视频和音频流合并 · 推荐',
+            label: l10n.bestQualityLabel(maxHeight),
+            description: l10n.bestQualityDesc,
             isRecommended: true,
             formatId: 'bestvideo+bestaudio',
             type: ResourceType.video,
@@ -381,13 +389,15 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
         final bestIdx = variants.indexOf(bestVideo);
         if (bestIdx >= 0) {
           variants[bestIdx] = ResourceVariant(
-            label: '${bestVideo.label} (推荐)',
+            label: '${bestVideo.label} (${l10n.recommendedSuffix})',
             description: bestVideo.description,
             isRecommended: true,
             formatId: bestVideo.formatId,
             type: bestVideo.type,
             height: bestVideo.height,
             filesize: bestVideo.filesize,
+            videoId: bestVideo.videoId,
+            videoTitle: bestVideo.videoTitle,
           );
         }
 

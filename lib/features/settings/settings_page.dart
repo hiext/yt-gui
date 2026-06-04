@@ -70,20 +70,45 @@ class _SettingsPageState extends State<SettingsPage> {
         return ListView(
           padding: const EdgeInsets.all(24),
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    l10n.settings,
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
-                ),
-                TextButton.icon(
-                  onPressed: _resetToDefaults,
-                  icon: const Icon(Icons.restore_outlined),
-                  label: Text(l10n.restoreDefaults),
-                ),
-              ],
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxWidth < 420;
+                if (compact) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.settings,
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          onPressed: _resetToDefaults,
+                          icon: const Icon(Icons.restore_outlined),
+                          label: Text(l10n.restoreDefaults),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+                return Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        l10n.settings,
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: _resetToDefaults,
+                      icon: const Icon(Icons.restore_outlined),
+                      label: Text(l10n.restoreDefaults),
+                    ),
+                  ],
+                );
+              },
             ),
             const SizedBox(height: 16),
             SectionCard(
@@ -172,6 +197,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     key: const Key('download-mode-field'),
                     // ignore: deprecated_member_use
                     value: settings.downloadMode,
+                    isExpanded: true,
                     decoration: InputDecoration(
                       labelText: l10n.scheduleMode,
                       border: const OutlineInputBorder(),
@@ -179,15 +205,27 @@ class _SettingsPageState extends State<SettingsPage> {
                     items: [
                       DropdownMenuItem(
                         value: DownloadMode.serial,
-                        child: Text(l10n.serialDownload),
+                        child: Text(
+                          l10n.serialDownload,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       DropdownMenuItem(
                         value: DownloadMode.queue,
-                        child: Text(l10n.queueDownload),
+                        child: Text(
+                          l10n.queueDownload,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                       DropdownMenuItem(
                         value: DownloadMode.concurrent,
-                        child: Text(l10n.concurrentDownload),
+                        child: Text(
+                          l10n.concurrentDownload,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                     onChanged: (mode) {
@@ -260,6 +298,7 @@ class _SettingsPageState extends State<SettingsPage> {
       domain: domain,
       ytDlpPath: ytDlpPath,
       outputFile: cookieFile,
+      localizations: l10n,
     );
     if (!result.success) {
       if (mounted) {
@@ -432,56 +471,77 @@ class _CookieSectionState extends State<_CookieSection> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Browser selector + import
-          Row(
-            children: [
-              Expanded(
-                flex: 2,
-                child: DropdownButtonFormField<String>(
-                  initialValue: _browser,
-                  decoration: InputDecoration(
-                    labelText: l10n.browser,
-                    border: OutlineInputBorder(),
-                    isDense: true,
-                  ),
-                  items: const [
-                    DropdownMenuItem(value: 'chrome', child: Text('Chrome')),
-                    DropdownMenuItem(value: 'firefox', child: Text('Firefox')),
-                    DropdownMenuItem(value: 'edge', child: Text('Edge')),
-                    DropdownMenuItem(value: 'brave', child: Text('Brave')),
-                    DropdownMenuItem(value: 'opera', child: Text('Opera')),
-                  ],
-                  onChanged: (v) {
-                    if (v != null) setState(() => _browser = v);
-                  },
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = constraints.maxWidth < 520;
+              final browserField = DropdownButtonFormField<String>(
+                initialValue: _browser,
+                isExpanded: true,
+                decoration: InputDecoration(
+                  labelText: l10n.browser,
+                  border: const OutlineInputBorder(),
+                  isDense: true,
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                flex: 3,
-                child: Row(
+                items: const [
+                  DropdownMenuItem(value: 'chrome', child: Text('Chrome')),
+                  DropdownMenuItem(value: 'firefox', child: Text('Firefox')),
+                  DropdownMenuItem(value: 'edge', child: Text('Edge')),
+                  DropdownMenuItem(value: 'brave', child: Text('Brave')),
+                  DropdownMenuItem(value: 'opera', child: Text('Opera')),
+                ],
+                onChanged: (v) {
+                  if (v != null) setState(() => _browser = v);
+                },
+              );
+              final domainField = TextFormField(
+                controller: _domainCtrl,
+                decoration: InputDecoration(
+                  labelText: l10n.domain,
+                  hintText: l10n.enterDomainHint,
+                  border: const OutlineInputBorder(),
+                  isDense: true,
+                ),
+                onFieldSubmitted: (v) => _doImport(v.trim()),
+              );
+              final importButton = FilledButton.tonalIcon(
+                onPressed: () => _doImport(_domainCtrl.text.trim()),
+                icon: const Icon(Icons.file_download_outlined, size: 18),
+                label: Text(l10n.importBtn),
+              );
+
+              if (compact) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _domainCtrl,
-                        decoration: InputDecoration(
-                          labelText: l10n.domain,
-                          hintText: l10n.enterDomainHint,
-                          border: OutlineInputBorder(),
-                          isDense: true,
-                        ),
-                        onFieldSubmitted: (v) => _doImport(v.trim()),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    FilledButton.tonalIcon(
-                      onPressed: () => _doImport(_domainCtrl.text.trim()),
-                      icon: const Icon(Icons.file_download_outlined, size: 18),
-                      label: Text(l10n.importBtn),
+                    browserField,
+                    const SizedBox(height: 12),
+                    domainField,
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: importButton,
                     ),
                   ],
-                ),
-              ),
-            ],
+                );
+              }
+
+              return Row(
+                children: [
+                  Expanded(flex: 2, child: browserField),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 3,
+                    child: Row(
+                      children: [
+                        Expanded(child: domainField),
+                        const SizedBox(width: 8),
+                        importButton,
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
           // Preset sites
           if (_availablePresets.isNotEmpty) ...[
@@ -699,7 +759,7 @@ class _CookieTileState extends State<_CookieTile> {
                               ),
                             ),
                             Text(
-                              e.expiryText,
+                              e.expiryText(l10n),
                               style: TextStyle(
                                 fontSize: 10,
                                 color: e.isExpired

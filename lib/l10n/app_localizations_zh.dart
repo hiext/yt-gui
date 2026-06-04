@@ -443,4 +443,118 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get openDownloadDir => '打开下载目录';
+
+  @override
+  String get downloadCompleteTitle => '下载完成';
+
+  @override
+  String get downloadFailedTitle => '下载失败';
+
+  @override
+  String get downloadFailedFallback => '下载失败';
+
+  @override
+  String get recommendedOptionLabel => '推荐';
+
+  @override
+  String get recommendedOptionDesc => '适合大多数人';
+
+  @override
+  String bestQualityLabel(int height) {
+    return '最佳品质（${height}p 视频+音频合并）';
+  }
+
+  @override
+  String get bestQualityDesc => 'yt-dlp 自动选取最佳视频和音频流合并 · 推荐';
+
+  @override
+  String get recommendedSuffix => '推荐';
+
+  @override
+  String videoFormatWithHeight(String height) {
+    return '${height}p 视频';
+  }
+
+  @override
+  String videoFormatWithId(String id) {
+    return '视频 $id';
+  }
+
+  @override
+  String audioFormatWithId(String id) {
+    return '音频 $id';
+  }
+
+  @override
+  String get containsAudioTrack => '含音轨';
+
+  @override
+  String get videoOnly => '仅视频';
+
+  @override
+  String get cookieScriptNotFound => 'extract_cookies.py 脚本未找到';
+
+  @override
+  String get pythonNotFound => 'Python 未安装或不在 PATH 中';
+
+  @override
+  String cookiesExtractedWithBrowserCookie3(String browser, int count) {
+    return '已从 $browser 提取 $count 个 cookie（browser_cookie3）';
+  }
+
+  @override
+  String get browserCookie3NotInstalled =>
+      'browser_cookie3 未安装。运行: pip install browser-cookie3';
+
+  @override
+  String browserCookie3NoCookies(String browser, String domain) {
+    return '$browser: 未找到 $domain 的已登录 cookie';
+  }
+
+  @override
+  String browserCookie3Failed(String browser, String detail) {
+    return '$browser: browser_cookie3 失败: $detail';
+  }
+
+  @override
+  String cookieDecryptFailed(String browser) {
+    return '$browser: cookie 加密无法解密';
+  }
+
+  @override
+  String cookieFileNotGenerated(String browser) {
+    return '$browser: 未生成 cookie 文件';
+  }
+
+  @override
+  String loggedInCookiesNotFound(String browser) {
+    return '$browser: 未找到已登录的 cookie';
+  }
+
+  @override
+  String cookiesExtractedFromBrowser(String browser, int count) {
+    return '已从 $browser 提取 $count 个 cookie';
+  }
+
+  @override
+  String get cookieSession => '会话';
+
+  @override
+  String get cookieExpired => '已过期';
+
+  @override
+  String cookieExpiresInDays(int count) {
+    return '$count 天后';
+  }
+
+  @override
+  String cookieExpiresInHours(int count) {
+    return '$count 小时后';
+  }
+
+  @override
+  String get cookieExpiresSoon => '即将过期';
+
+  @override
+  String get ytDlpNonZeroExit => 'yt-dlp 以非零状态退出';
 }

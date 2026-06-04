@@ -213,5 +213,137 @@
   "retry": "重试",
   "cancel": "取消",
   "additionalOptionsDesc": "下载时附带字幕和封面文件。",
-  "openDownloadDir": "打开下载目录"
+  "openDownloadDir": "打开下载目录",
+  "downloadCompleteTitle": "下载完成",
+  "downloadFailedTitle": "下载失败",
+  "downloadFailedFallback": "下载失败",
+  "recommendedOptionLabel": "推荐",
+  "recommendedOptionDesc": "适合大多数人",
+  "bestQualityLabel": "最佳品质（{height}p 视频+音频合并）",
+  "@bestQualityLabel": {
+    "placeholders": {
+      "height": {
+        "type": "int"
+      }
+    }
+  },
+  "bestQualityDesc": "yt-dlp 自动选取最佳视频和音频流合并 · 推荐",
+  "recommendedSuffix": "推荐",
+  "videoFormatWithHeight": "{height}p 视频",
+  "@videoFormatWithHeight": {
+    "placeholders": {
+      "height": {
+        "type": "String"
+      }
+    }
+  },
+  "videoFormatWithId": "视频 {id}",
+  "@videoFormatWithId": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "audioFormatWithId": "音频 {id}",
+  "@audioFormatWithId": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "containsAudioTrack": "含音轨",
+  "videoOnly": "仅视频",
+  "cookieScriptNotFound": "extract_cookies.py 脚本未找到",
+  "pythonNotFound": "Python 未安装或不在 PATH 中",
+  "cookiesExtractedWithBrowserCookie3": "已从 {browser} 提取 {count} 个 cookie（browser_cookie3）",
+  "@cookiesExtractedWithBrowserCookie3": {
+    "placeholders": {
+      "browser": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "browserCookie3NotInstalled": "browser_cookie3 未安装。运行: pip install browser-cookie3",
+  "browserCookie3NoCookies": "{browser}: 未找到 {domain} 的已登录 cookie",
+  "@browserCookie3NoCookies": {
+    "placeholders": {
+      "browser": {
+        "type": "String"
+      },
+      "domain": {
+        "type": "String"
+      }
+    }
+  },
+  "browserCookie3Failed": "{browser}: browser_cookie3 失败: {detail}",
+  "@browserCookie3Failed": {
+    "placeholders": {
+      "browser": {
+        "type": "String"
+      },
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "cookieDecryptFailed": "{browser}: cookie 加密无法解密",
+  "@cookieDecryptFailed": {
+    "placeholders": {
+      "browser": {
+        "type": "String"
+      }
+    }
+  },
+  "cookieFileNotGenerated": "{browser}: 未生成 cookie 文件",
+  "@cookieFileNotGenerated": {
+    "placeholders": {
+      "browser": {
+        "type": "String"
+      }
+    }
+  },
+  "loggedInCookiesNotFound": "{browser}: 未找到已登录的 cookie",
+  "@loggedInCookiesNotFound": {
+    "placeholders": {
+      "browser": {
+        "type": "String"
+      }
+    }
+  },
+  "cookiesExtractedFromBrowser": "已从 {browser} 提取 {count} 个 cookie",
+  "@cookiesExtractedFromBrowser": {
+    "placeholders": {
+      "browser": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cookieSession": "会话",
+  "cookieExpired": "已过期",
+  "cookieExpiresInDays": "{count} 天后",
+  "@cookieExpiresInDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cookieExpiresInHours": "{count} 小时后",
+  "@cookieExpiresInHours": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cookieExpiresSoon": "即将过期",
+  "ytDlpNonZeroExit": "yt-dlp 以非零状态退出"
 }

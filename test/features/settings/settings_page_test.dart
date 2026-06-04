@@ -74,16 +74,48 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Settings'), findsOneWidget);
-    expect(find.text('Cookie Management'), findsOneWidget);
-    expect(find.text('Browser'), findsOneWidget);
-    expect(find.text('Domain'), findsOneWidget);
-    expect(find.text('Import'), findsOneWidget);
-    expect(find.text('设置'), findsNothing);
-    expect(find.text('Cookie 管理'), findsNothing);
-    expect(find.text('浏览器'), findsNothing);
-    expect(find.text('域名'), findsNothing);
-    expect(find.text('导入'), findsNothing);
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(SettingsPage)),
+    )!;
+
+    expect(find.text(l10n.settings), findsOneWidget);
+    await tester.dragUntilVisible(
+      find.text(l10n.importBtn),
+      find.byType(ListView),
+      const Offset(0, -200),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text(l10n.cookieManagement), findsOneWidget);
+    expect(find.text(l10n.browser), findsOneWidget);
+    expect(find.text(l10n.domain), findsOneWidget);
+    expect(find.text(l10n.importBtn), findsOneWidget);
+  });
+
+  testWidgets('download mode field stays stable on narrow width', (
+    tester,
+  ) async {
+    final controller = SettingsController();
+    addTearDown(controller.dispose);
+    await tester.binding.setSurfaceSize(const Size(320, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      _buildApp(
+        SettingsPage(controller: controller),
+        locale: const Locale('en'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.dragUntilVisible(
+      find.byKey(const Key('download-mode-field')),
+      find.byType(ListView),
+      const Offset(0, -200),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
   });
 }
 

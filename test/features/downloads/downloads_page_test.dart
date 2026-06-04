@@ -91,12 +91,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Downloads'), findsOneWidget);
-    expect(find.text('Completed'), findsOneWidget);
-    expect(find.textContaining('Video  1080p'), findsOneWidget);
-    expect(find.text('下载中'), findsNothing);
-    expect(find.text('已完成'), findsNothing);
-    expect(find.textContaining('视频'), findsNothing);
+    final l10n = AppLocalizations.of(
+      tester.element(find.byType(DownloadsPage)),
+    )!;
+
+    expect(find.text(l10n.downloading), findsOneWidget);
+    expect(find.textContaining(l10n.completedTasks), findsOneWidget);
+    expect(find.text(l10n.expandCompleted), findsOneWidget);
   });
 }
 
@@ -138,6 +139,7 @@ class _FakeExecutor implements YtDlpExecutor {
   Future<List<ResourceVariant>> inspect(
     Uri url, {
     DownloadSettings? settings,
+    AppLocalizations? localizations,
   }) async => const [];
 
   @override

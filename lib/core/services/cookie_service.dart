@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import '../../l10n/app_localizations.dart';
+import '../../l10n/app_localizations_current.dart';
 import '../models/app_models.dart';
 import 'database_service.dart';
 
@@ -49,13 +51,14 @@ class CookieService {
     required String domain,
     required String outputFile,
     required String actualBrowser,
+    required AppLocalizations l10n,
   }) async {
     final script = _findExtractScript();
     if (script == null) {
-      return const CookieImportResult(
+      return CookieImportResult(
         success: false,
         reason: 'no_script',
-        detail: 'extract_cookies.py 脚本未找到',
+        detail: l10n.cookieScriptNotFound,
       );
     }
 
@@ -80,7 +83,7 @@ class CookieService {
         return CookieImportResult(
           success: false,
           reason: 'no_python',
-          detail: 'Python 未安装或不在 PATH 中',
+          detail: l10n.pythonNotFound,
         );
       }
     }
@@ -90,29 +93,29 @@ class CookieService {
       final count = _parseBrowserCookie3Count(stderr);
       return CookieImportResult(
         success: true,
-        detail: '已从 $actualBrowser 提取 $count 个 cookie (browser_cookie3)',
+        detail: l10n.cookiesExtractedWithBrowserCookie3(actualBrowser, count),
       );
     }
 
     final stderr = result.stderr.toString();
     if (stderr.contains('NO_MODULE')) {
-      return const CookieImportResult(
+      return CookieImportResult(
         success: false,
         reason: 'no_module',
-        detail: 'browser_cookie3 未安装。运行: pip install browser-cookie3',
+        detail: l10n.browserCookie3NotInstalled,
       );
     }
     if (stderr.contains('NO_COOKIES')) {
       return CookieImportResult(
         success: false,
         reason: 'no_cookies',
-        detail: '$actualBrowser: 未找到 $domain 的已登录 cookie',
+        detail: l10n.browserCookie3NoCookies(actualBrowser, domain),
       );
     }
     return CookieImportResult(
       success: false,
       reason: 'error',
-      detail: '$actualBrowser: browser_cookie3 失败: ${stderr.trim()}',
+      detail: l10n.browserCookie3Failed(actualBrowser, stderr.trim()),
     );
   }
 
@@ -140,7 +143,9 @@ class CookieService {
     required String domain,
     required String ytDlpPath,
     required String outputFile,
+    AppLocalizations? localizations,
   }) async {
+    final l10n = localizations ?? currentAppLocalizations();
     final file = File(outputFile);
     if (!file.parent.existsSync()) {
       file.parent.createSync(recursive: true);
@@ -205,22 +210,23 @@ class CookieService {
             domain: domain,
             outputFile: outputFile,
             actualBrowser: br,
+            l10n: l10n,
           );
           if (bc3.success) return bc3;
           failures.add(bc3.detail!);
           continue;
         }
-        failures.add('$br: cookie 加密无法解密');
+        failures.add(l10n.cookieDecryptFailed(br));
         continue;
       }
 
       if (!fileCreated) {
-        failures.add('$br: 未生成 cookie 文件');
+        failures.add(l10n.cookieFileNotGenerated(br));
         continue;
       }
 
       if (extractedCount == 0) {
-        failures.add('$br: 未找到已登录的 cookie');
+        failures.add(l10n.loggedInCookiesNotFound(br));
         continue;
       }
 
@@ -228,7 +234,7 @@ class CookieService {
       final actualBr = br;
       return CookieImportResult(
         success: true,
-        detail: '已从 $actualBr 提取 $extractedCount 个 cookie',
+        detail: l10n.cookiesExtractedFromBrowser(actualBr, extractedCount),
       );
     }
 
@@ -314,12 +320,12 @@ class CookieEntry {
 
   bool get isExpired => expiry != null && expiry!.isBefore(DateTime.now());
 
-  String get expiryText {
-    if (expiry == null) return '会话';
-    if (isExpired) return '已过期';
+  String expiryText(AppLocalizations l10n) {
+    if (expiry == null) return l10n.cookieSession;
+    if (isExpired) return l10n.cookieExpired;
     final diff = expiry!.difference(DateTime.now());
-    if (diff.inDays > 0) return '${diff.inDays} 天后';
-    if (diff.inHours > 0) return '${diff.inHours} 小时后';
-    return '即将过期';
+    if (diff.inDays > 0) return l10n.cookieExpiresInDays(diff.inDays);
+    if (diff.inHours > 0) return l10n.cookieExpiresInHours(diff.inHours);
+    return l10n.cookieExpiresSoon;
   }
 }
