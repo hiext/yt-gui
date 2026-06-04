@@ -1,0 +1,16 @@
+- main [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - heading "Hiext YT Logo Concept" [level=1] [ref=e5]
+      - paragraph [ref=e6]: 关键词：下载、媒体、桌面工具、可靠、清晰。
+    - generic [ref=e7]:
+      - generic [ref=e8]: "Seed Blue #2563EB"
+      - generic [ref=e9]: Video Play Cue
+      - generic [ref=e10]: Download Arrow + Tray
+  - generic [ref=e11]:
+    - article [ref=e12]:
+      - heading "Primary Lockup" [level=2] [ref=e13]
+      - img "Hiext YT primary logo" [ref=e14]
+    - article [ref=e15]:
+      - heading "App Mark" [level=2] [ref=e16]
+      - img "Hiext YT logo mark" [ref=e18]

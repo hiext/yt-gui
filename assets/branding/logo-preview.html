@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hiext YT Logo Preview</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f8fafc;
+        --panel: rgba(255, 255, 255, 0.76);
+        --line: rgba(37, 99, 235, 0.12);
+        --ink: #0f172a;
+        --muted: #475569;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "SF Pro Display", "Segoe UI", sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top right, rgba(56, 189, 248, 0.18), transparent 26%),
+          radial-gradient(circle at left 20%, rgba(37, 99, 235, 0.14), transparent 24%),
+          linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%);
+        display: grid;
+        place-items: center;
+        padding: 40px;
+      }
+
+      .panel {
+        width: min(1200px, 100%);
+        border: 1px solid var(--line);
+        border-radius: 32px;
+        background: var(--panel);
+        backdrop-filter: blur(24px);
+        box-shadow: 0 28px 90px rgba(15, 23, 42, 0.12);
+        padding: 36px;
+      }
+
+      .meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: end;
+        gap: 24px;
+        margin-bottom: 28px;
+      }
+
+      .meta h1 {
+        margin: 0 0 8px;
+        font-size: 32px;
+      }
+
+      .meta p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 16px;
+      }
+
+      .chips {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .chip {
+        border-radius: 999px;
+        padding: 10px 14px;
+        font-size: 14px;
+        background: rgba(37, 99, 235, 0.08);
+        color: #1d4ed8;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1.45fr 1fr;
+        gap: 24px;
+      }
+
+      .card {
+        border-radius: 24px;
+        padding: 28px;
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(148, 163, 184, 0.18);
+      }
+
+      .card h2 {
+        margin: 0 0 14px;
+        font-size: 18px;
+      }
+
+      .logo-primary {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+
+      .mark-wrap {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 520px;
+        background:
+          linear-gradient(135deg, rgba(15, 23, 42, 0.04), rgba(37, 99, 235, 0.08)),
+          linear-gradient(0deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.9));
+        border-radius: 20px;
+      }
+
+      .logo-mark {
+        width: min(100%, 420px);
+        height: auto;
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="panel">
+      <section class="meta">
+        <div>
+          <h1>Hiext YT Logo Concept</h1>
+          <p>关键词：下载、媒体、桌面工具、可靠、清晰。</p>
+        </div>
+        <div class="chips">
+          <span class="chip">Seed Blue #2563EB</span>
+          <span class="chip">Video Play Cue</span>
+          <span class="chip">Download Arrow + Tray</span>
+        </div>
+      </section>
+
+      <section class="grid">
+        <article class="card">
+          <h2>Primary Lockup</h2>
+          <img class="logo-primary" src="./hiext-yt-logo-primary.svg" alt="Hiext YT primary logo" />
+        </article>
+        <article class="card">
+          <h2>App Mark</h2>
+          <div class="mark-wrap">
+            <img class="logo-mark" src="./hiext-yt-logo-mark.svg" alt="Hiext YT logo mark" />
+          </div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>
