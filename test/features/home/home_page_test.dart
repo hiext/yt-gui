@@ -202,6 +202,7 @@ class _FakeExecutor implements YtDlpExecutor {
     Uri url, {
     DownloadSettings? settings,
     AppLocalizations? localizations,
+    InspectLogSink? onLog,
   }) async {
     await Future<void>.delayed(Duration.zero);
     inspected.add(url);

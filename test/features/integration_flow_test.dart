@@ -164,6 +164,7 @@ class _ImmediateFake implements YtDlpExecutor {
     Uri url, {
     DownloadSettings? settings,
     AppLocalizations? localizations,
+    InspectLogSink? onLog,
   }) async {
     inspected.add(url);
     return const [

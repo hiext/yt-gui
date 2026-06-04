@@ -265,9 +265,15 @@ class CookieService {
     if (!file.existsSync()) return const [];
     try {
       final entries = <CookieEntry>[];
-      for (final line in file.readAsLinesSync()) {
-        if (line.startsWith('#') || line.trim().isEmpty) continue;
-        final parts = line.split('\t');
+      for (final rawLine in file.readAsLinesSync()) {
+        if (rawLine.trim().isEmpty) continue;
+        if (rawLine.startsWith('#') && !rawLine.startsWith('#HttpOnly_')) {
+          continue;
+        }
+        final normalizedLine = rawLine.startsWith('#HttpOnly_')
+            ? rawLine.substring('#HttpOnly_'.length)
+            : rawLine;
+        final parts = normalizedLine.split('\t');
         if (parts.length < 7) continue;
         final expUnix = int.tryParse(parts[4]) ?? 0;
         entries.add(
