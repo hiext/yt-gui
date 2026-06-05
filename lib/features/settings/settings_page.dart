@@ -195,6 +195,28 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     onChanged: widget.controller.updateDefaultQuality,
                   ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: 240,
+                    child: TextFormField(
+                      key: const Key('recommended-variant-count-field'),
+                      initialValue: settings.recommendedVariantCount.toString(),
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: l10n.recommendedVariantCount,
+                        helperText: l10n.recommendedVariantCountHint,
+                        border: const OutlineInputBorder(),
+                      ),
+                      onChanged: (value) {
+                        final count = int.tryParse(value);
+                        if (count != null) {
+                          widget.controller.updateRecommendedVariantCount(
+                            count,
+                          );
+                        }
+                      },
+                    ),
+                  ),
                 ],
               ),
             ),

@@ -356,6 +356,18 @@ abstract class AppLocalizations {
   /// **'例如 best、bestvideo+bestaudio 或 yt-dlp format id'**
   String get defaultQualityHint;
 
+  /// No description provided for @recommendedVariantCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'推荐数量'**
+  String get recommendedVariantCount;
+
+  /// No description provided for @recommendedVariantCountHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'推荐区显示 1-5 个选项，默认 2 个'**
+  String get recommendedVariantCountHint;
+
   /// No description provided for @externalTools.
   ///
   /// In zh, this message translates to:

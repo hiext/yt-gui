@@ -51,6 +51,10 @@ class SettingsController extends ChangeNotifier {
     updateSettings(_settings.copyWith(defaultQuality: defaultQuality));
   }
 
+  void updateRecommendedVariantCount(int count) {
+    updateSettings(_settings.copyWith(recommendedVariantCount: count));
+  }
+
   void updateDownloadSubtitles(bool downloadSubtitles) {
     updateSettings(_settings.copyWith(downloadSubtitles: downloadSubtitles));
   }

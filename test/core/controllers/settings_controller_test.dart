@@ -10,6 +10,7 @@ void main() {
 
       expect(controller.settings.saveDirectory, isNotEmpty);
       expect(controller.settings.defaultQuality, 'best');
+      expect(controller.settings.recommendedVariantCount, 2);
       expect(controller.settings.concurrentCount, 1);
       expect(controller.settings.disclaimerAccepted, isFalse);
       expect(
@@ -36,6 +37,7 @@ void main() {
           downloadMode: DownloadMode.concurrent,
           concurrentCount: 99,
           defaultQuality: '  ',
+          recommendedVariantCount: 0,
           downloadSubtitles: true,
           downloadThumbnail: true,
           disclaimerAccepted: true,
@@ -52,6 +54,7 @@ void main() {
       expect(controller.settings.downloadMode, DownloadMode.concurrent);
       expect(controller.settings.concurrentCount, 8);
       expect(controller.settings.defaultQuality, 'best');
+      expect(controller.settings.recommendedVariantCount, 1);
       expect(controller.settings.downloadSubtitles, isTrue);
       expect(controller.settings.downloadThumbnail, isTrue);
       expect(controller.settings.disclaimerAccepted, isTrue);
@@ -84,6 +87,7 @@ void main() {
       controller.updateDownloadMode(DownloadMode.concurrent);
       controller.updateConcurrentCount(3);
       controller.updateDefaultQuality('bestvideo+bestaudio');
+      controller.updateRecommendedVariantCount(4);
       controller.updateDownloadSubtitles(true);
       controller.updateDownloadThumbnail(true);
       controller.acknowledgeDisclaimer();
@@ -102,6 +106,7 @@ void main() {
       expect(controller.settings.downloadMode, DownloadMode.concurrent);
       expect(controller.settings.concurrentCount, 3);
       expect(controller.settings.defaultQuality, 'bestvideo+bestaudio');
+      expect(controller.settings.recommendedVariantCount, 4);
       expect(controller.settings.downloadSubtitles, isTrue);
       expect(controller.settings.downloadThumbnail, isTrue);
       expect(controller.settings.disclaimerAccepted, isTrue);

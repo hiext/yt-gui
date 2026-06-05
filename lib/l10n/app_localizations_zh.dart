@@ -142,6 +142,12 @@ class AppLocalizationsZh extends AppLocalizations {
       '例如 best、bestvideo+bestaudio 或 yt-dlp format id';
 
   @override
+  String get recommendedVariantCount => '推荐数量';
+
+  @override
+  String get recommendedVariantCountHint => '推荐区显示 1-5 个选项，默认 2 个';
+
+  @override
   String get externalTools => '外部工具';
 
   @override

@@ -213,6 +213,7 @@ class DownloadSettings {
     required this.downloadSubtitles,
     required this.downloadThumbnail,
     required this.disclaimerAccepted,
+    this.recommendedVariantCount = 2,
     this.aiAnalysisProvider = AiAnalysisProvider.builtIn,
     this.builtInClipAnalyzerMode = BuiltInClipAnalyzerMode.balanced,
     this.ytDlpPath,
@@ -232,6 +233,7 @@ class DownloadSettings {
     downloadMode: DownloadMode.serial,
     concurrentCount: 1,
     defaultQuality: 'best',
+    recommendedVariantCount: 2,
     downloadSubtitles: false,
     downloadThumbnail: false,
     disclaimerAccepted: false,
@@ -250,6 +252,7 @@ class DownloadSettings {
   final DownloadMode downloadMode;
   final int concurrentCount;
   final String defaultQuality;
+  final int recommendedVariantCount;
   final bool downloadSubtitles;
   final bool downloadThumbnail;
   final bool disclaimerAccepted;
@@ -296,6 +299,7 @@ class DownloadSettings {
     DownloadMode? downloadMode,
     int? concurrentCount,
     String? defaultQuality,
+    int? recommendedVariantCount,
     bool? downloadSubtitles,
     bool? downloadThumbnail,
     bool? disclaimerAccepted,
@@ -317,6 +321,8 @@ class DownloadSettings {
       downloadMode: downloadMode ?? this.downloadMode,
       concurrentCount: concurrentCount ?? this.concurrentCount,
       defaultQuality: defaultQuality ?? this.defaultQuality,
+      recommendedVariantCount:
+          recommendedVariantCount ?? this.recommendedVariantCount,
       downloadSubtitles: downloadSubtitles ?? this.downloadSubtitles,
       downloadThumbnail: downloadThumbnail ?? this.downloadThumbnail,
       disclaimerAccepted: disclaimerAccepted ?? this.disclaimerAccepted,
@@ -391,6 +397,7 @@ class DownloadSettings {
       downloadMode: downloadMode,
       concurrentCount: concurrentCount.clamp(1, 8).toInt(),
       defaultQuality: normalizedDefaultQuality,
+      recommendedVariantCount: recommendedVariantCount.clamp(1, 5).toInt(),
       downloadSubtitles: downloadSubtitles,
       downloadThumbnail: downloadThumbnail,
       disclaimerAccepted: disclaimerAccepted,
@@ -421,6 +428,7 @@ class DownloadSettings {
       'downloadMode': downloadMode.name,
       'concurrentCount': concurrentCount,
       'defaultQuality': defaultQuality,
+      'recommendedVariantCount': recommendedVariantCount,
       'downloadSubtitles': downloadSubtitles,
       'downloadThumbnail': downloadThumbnail,
       'disclaimerAccepted': disclaimerAccepted,
@@ -501,6 +509,9 @@ class DownloadSettings {
           parseCount(json['concurrentCount']) ?? defaults.concurrentCount,
       defaultQuality:
           (json['defaultQuality'] as String?) ?? defaults.defaultQuality,
+      recommendedVariantCount:
+          parseCount(json['recommendedVariantCount']) ??
+          defaults.recommendedVariantCount,
       downloadSubtitles:
           parseBool(json['downloadSubtitles']) ?? defaults.downloadSubtitles,
       downloadThumbnail:

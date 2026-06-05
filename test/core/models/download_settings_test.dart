@@ -9,6 +9,7 @@ void main() {
         downloadMode: DownloadMode.concurrent,
         concurrentCount: 4,
         defaultQuality: 'bestvideo+bestaudio',
+        recommendedVariantCount: 3,
         downloadSubtitles: true,
         downloadThumbnail: true,
         disclaimerAccepted: true,
@@ -44,6 +45,7 @@ void main() {
       expect(restored.downloadMode, DownloadMode.concurrent);
       expect(restored.concurrentCount, 4);
       expect(restored.defaultQuality, 'bestvideo+bestaudio');
+      expect(restored.recommendedVariantCount, 3);
       expect(restored.downloadSubtitles, isTrue);
       expect(restored.downloadThumbnail, isTrue);
       expect(restored.disclaimerAccepted, isTrue);
@@ -72,6 +74,7 @@ void main() {
         'downloadMode': 'unknown',
         'concurrentCount': 99,
         'defaultQuality': '  ',
+        'recommendedVariantCount': 99,
         'downloadSubtitles': true,
         'downloadThumbnail': true,
         'disclaimerAccepted': true,
@@ -87,6 +90,7 @@ void main() {
       expect(restored.downloadMode, DownloadMode.serial);
       expect(restored.concurrentCount, 8);
       expect(restored.defaultQuality, 'best');
+      expect(restored.recommendedVariantCount, 5);
       expect(restored.downloadSubtitles, isTrue);
       expect(restored.downloadThumbnail, isTrue);
       expect(restored.disclaimerAccepted, isTrue);

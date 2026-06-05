@@ -50,6 +50,8 @@
   "saveDirectory": "保存目录",
   "defaultQuality": "默认画质 / 格式",
   "defaultQualityHint": "例如 best、bestvideo+bestaudio 或 yt-dlp format id",
+  "recommendedVariantCount": "推荐数量",
+  "recommendedVariantCountHint": "推荐区显示 1-5 个选项，默认 2 个",
   "externalTools": "外部工具",
   "externalToolsDesc": "yt-dlp 和 ffmpeg 的路径，留空则使用应用内置版本。",
   "ytDlpPath": "yt-dlp 路径",

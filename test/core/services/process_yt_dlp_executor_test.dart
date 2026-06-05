@@ -31,12 +31,41 @@ void main() {
     final variants = await inspectFuture;
 
     expect(variants.length, greaterThanOrEqualTo(2));
+    expect(variants.where((v) => v.isRecommended), hasLength(2));
     expect(variants.first.formatId, 'bestvideo+bestaudio');
     expect(variants.first.label, 'Best Quality (1080p video + audio merge)');
     expect(variants[1].formatId, '137');
     expect(variants[1].label, '1080p Video (Recommended)');
     expect(variants.last.label, 'Audio 140');
     expect(variants.last.formatId, '140');
+  });
+
+  test('inspect honors configured recommended variant count', () async {
+    final process = _FakeProcess(exitCodeValue: 0);
+    final executor = ProcessYtDlpExecutor(
+      toolResolver: _resolver(),
+      processRunner: (_, _) async => process,
+    );
+
+    final inspectFuture = executor.inspect(
+      Uri.parse('https://example.com/video'),
+      settings: DownloadSettings.defaults.copyWith(recommendedVariantCount: 3),
+      localizations: lookupAppLocalizations(const Locale('en')),
+    );
+    process.addStdout(
+      '''{"formats":[{"format_id":"313","height":2160,"ext":"webm"},{"format_id":"137","height":1080,"ext":"mp4"},{"format_id":"140","ext":"m4a"}]}''',
+    );
+    await process.close();
+
+    final variants = await inspectFuture;
+    final recommended = variants.where((v) => v.isRecommended).toList();
+
+    expect(recommended, hasLength(3));
+    expect(recommended.map((v) => v.formatId), [
+      'bestvideo+bestaudio',
+      '313',
+      '137',
+    ]);
   });
 
   test('inspect throws when yt-dlp exits with a non-zero status', () async {

@@ -10,9 +10,7 @@ void main() {
     final controller = SettingsController();
     addTearDown(controller.dispose);
 
-    await tester.pumpWidget(
-      _buildApp(SettingsPage(controller: controller)),
-    );
+    await tester.pumpWidget(_buildApp(SettingsPage(controller: controller)));
 
     final saveField = find.byKey(const Key('save-directory-field'));
     await tester.enterText(saveField, '/home/user/downloads');
@@ -22,6 +20,14 @@ void main() {
     await tester.ensureVisible(qualityField);
     await tester.pumpAndSettle();
     await tester.enterText(qualityField, 'bestvideo+bestaudio');
+    await tester.pump();
+
+    final recommendedCountField = find.byKey(
+      const Key('recommended-variant-count-field'),
+    );
+    await tester.ensureVisible(recommendedCountField);
+    await tester.pumpAndSettle();
+    await tester.enterText(recommendedCountField, '4');
     await tester.pump();
 
     final ytField = find.byKey(const Key('yt-dlp-path-field'));
@@ -38,6 +44,7 @@ void main() {
 
     expect(controller.settings.saveDirectory, '/home/user/downloads');
     expect(controller.settings.defaultQuality, 'bestvideo+bestaudio');
+    expect(controller.settings.recommendedVariantCount, 4);
     expect(controller.settings.ytDlpPath, '/tools/yt-dlp');
     expect(controller.settings.ffmpegPath, '/tools/ffmpeg');
   });
@@ -46,9 +53,7 @@ void main() {
     final controller = SettingsController();
     addTearDown(controller.dispose);
 
-    await tester.pumpWidget(
-      _buildApp(SettingsPage(controller: controller)),
-    );
+    await tester.pumpWidget(_buildApp(SettingsPage(controller: controller)));
 
     controller.updateDownloadSubtitles(true);
     controller.updateDownloadThumbnail(true);
@@ -61,9 +66,7 @@ void main() {
   });
 
   testWidgets('renders cookie section in english locale', (tester) async {
-    final controller = SettingsController(
-      settings: DownloadSettings.defaults,
-    );
+    final controller = SettingsController(settings: DownloadSettings.defaults);
     addTearDown(controller.dispose);
 
     await tester.pumpWidget(

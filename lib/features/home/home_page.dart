@@ -35,16 +35,19 @@ class _HomePageState extends State<HomePage> {
     super.dispose();
   }
 
-  List<ResourceVariant> get _mergeVariant =>
-      _variants.where((v) => v.formatId == 'bestvideo+bestaudio').toList();
+  List<ResourceVariant> get _recommendedVariants =>
+      _variants.where((v) => v.isRecommended).toList();
   List<ResourceVariant> get _videoVariants => _variants
       .where(
         (v) =>
             v.type == ResourceType.video && v.formatId != 'bestvideo+bestaudio',
       )
+      .where((v) => !v.isRecommended)
       .toList();
-  List<ResourceVariant> get _audioVariants =>
-      _variants.where((v) => v.type == ResourceType.audio).toList();
+  List<ResourceVariant> get _audioVariants => _variants
+      .where((v) => v.type == ResourceType.audio)
+      .where((v) => !v.isRecommended)
+      .toList();
 
   @override
   Widget build(BuildContext context) {
@@ -145,11 +148,11 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ),
-          if (_mergeVariant.isNotEmpty)
+          if (_recommendedVariants.isNotEmpty)
             _VariantGroup(
               title: l10n.recommendedQuality,
               icon: Icons.star_outlined,
-              variants: _mergeVariant,
+              variants: _recommendedVariants,
               selected: _selected,
               onToggle: _toggle,
               highlight: true,

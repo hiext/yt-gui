@@ -151,6 +151,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'e.g. best, bestvideo+bestaudio, or yt-dlp format id';
 
   @override
+  String get recommendedVariantCount => 'Recommended Count';
+
+  @override
+  String get recommendedVariantCountHint =>
+      'Show 1-5 options in Recommended Quality. Default is 2.';
+
+  @override
   String get externalTools => 'External Tools';
 
   @override

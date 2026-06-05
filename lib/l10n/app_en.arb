@@ -50,6 +50,8 @@
   "saveDirectory": "Save Directory",
   "defaultQuality": "Default Quality / Format",
   "defaultQualityHint": "e.g. best, bestvideo+bestaudio, or yt-dlp format id",
+  "recommendedVariantCount": "Recommended Count",
+  "recommendedVariantCountHint": "Show 1-5 options in Recommended Quality. Default is 2.",
   "externalTools": "External Tools",
   "externalToolsDesc": "Paths to yt-dlp and ffmpeg. Leave empty to use bundled versions.",
   "ytDlpPath": "yt-dlp Path",

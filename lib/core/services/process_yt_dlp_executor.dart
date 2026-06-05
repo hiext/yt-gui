@@ -57,14 +57,11 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     DownloadSettings? settings,
     AppLocalizations? localizations,
   }) async {
-    final tools = _toolResolver.resolveBundle(
-      settings: settings ?? DownloadSettings.defaults,
-    );
+    final normalizedSettings = (settings ?? DownloadSettings.defaults)
+        .normalized();
+    final tools = _toolResolver.resolveBundle(settings: normalizedSettings);
     final ytDlpPath = await _ensureExecutable(tools.ytDlp);
-    final cookieFile = _resolveCookieFile(
-      url,
-      settings ?? DownloadSettings.defaults,
-    );
+    final cookieFile = _resolveCookieFile(url, normalizedSettings);
     final process = await _processRunner(
       ytDlpPath,
       buildInspectArguments(url, cookieFile: cookieFile),
@@ -93,7 +90,11 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       throw YtDlpExecutorException(message);
     }
 
-    final variants = _parseInspectVariants(outputLines, l10n);
+    final variants = _parseInspectVariants(
+      outputLines,
+      l10n,
+      recommendedVariantCount: normalizedSettings.recommendedVariantCount,
+    );
     return variants.isEmpty
         ? [
             ResourceVariant(
@@ -296,8 +297,9 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
 
   static List<ResourceVariant> _parseInspectVariants(
     List<String> lines,
-    AppLocalizations l10n,
-  ) {
+    AppLocalizations l10n, {
+    int recommendedVariantCount = 1,
+  }) {
     for (final line in lines) {
       try {
         final decoded = jsonDecode(line);
@@ -378,6 +380,10 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
           return (b.filesize ?? 0).compareTo(a.filesize ?? 0);
         });
 
+        final normalizedRecommendedCount = recommendedVariantCount
+            .clamp(1, 5)
+            .toInt();
+
         // Insert synthetic "bestvideo+bestaudio" merge option at top
         final bestVideo = variants.firstWhere(
           (v) => v.type == ResourceType.video,
@@ -398,20 +404,26 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
           ),
         );
 
-        // Mark best quality video as recommended
-        final bestIdx = variants.indexOf(bestVideo);
-        if (bestIdx >= 0) {
-          variants[bestIdx] = ResourceVariant(
-            label: '${bestVideo.label} (${l10n.recommendedSuffix})',
-            description: bestVideo.description,
-            isRecommended: true,
-            formatId: bestVideo.formatId,
-            type: bestVideo.type,
-            height: bestVideo.height,
-            filesize: bestVideo.filesize,
-            videoId: bestVideo.videoId,
-            videoTitle: bestVideo.videoTitle,
-          );
+        final recommendedVideoCount = normalizedRecommendedCount - 1;
+        if (recommendedVideoCount > 0) {
+          var marked = 0;
+          for (var index = 1; index < variants.length; index += 1) {
+            final variant = variants[index];
+            if (variant.type != ResourceType.video) continue;
+            variants[index] = ResourceVariant(
+              label: '${variant.label} (${l10n.recommendedSuffix})',
+              description: variant.description,
+              isRecommended: true,
+              formatId: variant.formatId,
+              type: variant.type,
+              height: variant.height,
+              filesize: variant.filesize,
+              videoId: variant.videoId,
+              videoTitle: variant.videoTitle,
+            );
+            marked++;
+            if (marked >= recommendedVideoCount) break;
+          }
         }
 
         return variants;
