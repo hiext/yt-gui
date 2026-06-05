@@ -71,6 +71,10 @@ class SettingsController extends ChangeNotifier {
     updateSettings(_settings.copyWith(ffmpegPath: ffmpegPath));
   }
 
+  void updateAiAnalyzerCommand(String command) {
+    updateSettings(_settings.copyWith(aiAnalyzerCommand: command));
+  }
+
   void _save() {
     final repo = repository;
     if (repo == null) return;

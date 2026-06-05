@@ -23,6 +23,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _qualityCtrl;
   late final TextEditingController _ytDlpCtrl;
   late final TextEditingController _ffmpegCtrl;
+  late final TextEditingController _aiAnalyzerCtrl;
 
   @override
   void initState() {
@@ -32,6 +33,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _qualityCtrl = TextEditingController(text: s.defaultQuality);
     _ytDlpCtrl = TextEditingController(text: s.ytDlpPath ?? '');
     _ffmpegCtrl = TextEditingController(text: s.ffmpegPath ?? '');
+    _aiAnalyzerCtrl = TextEditingController(text: s.aiAnalyzerCommand ?? '');
     widget.controller.addListener(_syncFromSettings);
   }
 
@@ -42,6 +44,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _qualityCtrl.dispose();
     _ytDlpCtrl.dispose();
     _ffmpegCtrl.dispose();
+    _aiAnalyzerCtrl.dispose();
     super.dispose();
   }
 
@@ -51,6 +54,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _updateCtrlIfChanged(_qualityCtrl, s.defaultQuality);
     _updateCtrlIfChanged(_ytDlpCtrl, s.ytDlpPath ?? '');
     _updateCtrlIfChanged(_ffmpegCtrl, s.ffmpegPath ?? '');
+    _updateCtrlIfChanged(_aiAnalyzerCtrl, s.aiAnalyzerCommand ?? '');
   }
 
   void _updateCtrlIfChanged(TextEditingController ctrl, String value) {
@@ -182,6 +186,17 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                     ),
                     onChanged: widget.controller.updateFfmpegPath,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    key: const Key('ai-analyzer-command-field'),
+                    controller: _aiAnalyzerCtrl,
+                    decoration: InputDecoration(
+                      labelText: l10n.aiAnalyzerCommand,
+                      helperText: l10n.aiAnalyzerCommandHint,
+                      border: const OutlineInputBorder(),
+                    ),
+                    onChanged: widget.controller.updateAiAnalyzerCommand,
                   ),
                 ],
               ),
@@ -550,7 +565,10 @@ class _CookieSectionState extends State<_CookieSection> {
           // Preset sites
           if (_availablePresets.isNotEmpty) ...[
             const SizedBox(height: 12),
-            Text(l10n.commonSites, style: Theme.of(context).textTheme.labelMedium),
+            Text(
+              l10n.commonSites,
+              style: Theme.of(context).textTheme.labelMedium,
+            ),
             const SizedBox(height: 8),
             Wrap(
               spacing: 8,

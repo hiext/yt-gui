@@ -591,4 +591,68 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ytDlpNonZeroExit => 'yt-dlp 以非零状态退出';
+
+  @override
+  String get clips => '切片';
+
+  @override
+  String get aiAnalyzerCommand => 'AI 分析命令';
+
+  @override
+  String get aiAnalyzerCommandHint =>
+      '可选，例如 python3 tools/ai_clip_analyzer.py --yolo-model yolov8n.pt --whisper-model small';
+
+  @override
+  String get clipLibrary => 'AI 切片库';
+
+  @override
+  String get clipLibraryDesc => '由视觉识别、音频转写和场景边界生成的结构化切片。';
+
+  @override
+  String get clipSearch => '检索切片';
+
+  @override
+  String get clipSearchHint => '搜索关键词、目标物体、转写文本、摘要或标签';
+
+  @override
+  String aiQueuedTasks(int count) {
+    return '$count 个排队';
+  }
+
+  @override
+  String aiRunningTasks(int count) {
+    return '$count 个分析中';
+  }
+
+  @override
+  String clipSegmentsCount(int count) {
+    return '$count 个切片';
+  }
+
+  @override
+  String get noClipSegments => '暂无 AI 切片';
+
+  @override
+  String get noClipSegmentsHint => '下载完成并获得媒体文件路径后，会自动进入 AI 分析任务。';
+
+  @override
+  String get clipReason => '切片原因';
+
+  @override
+  String get clipTranscript => '音频转写';
+
+  @override
+  String get clipConfidence => '置信度';
+
+  @override
+  String get clipStartEarlier => '开始 -1秒';
+
+  @override
+  String get clipStartLater => '开始 +1秒';
+
+  @override
+  String get clipEndEarlier => '结束 -1秒';
+
+  @override
+  String get clipEndLater => '结束 +1秒';
 }

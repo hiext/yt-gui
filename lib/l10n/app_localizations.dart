@@ -1159,6 +1159,120 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'yt-dlp 以非零状态退出'**
   String get ytDlpNonZeroExit;
+
+  /// No description provided for @clips.
+  ///
+  /// In zh, this message translates to:
+  /// **'切片'**
+  String get clips;
+
+  /// No description provided for @aiAnalyzerCommand.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 分析命令'**
+  String get aiAnalyzerCommand;
+
+  /// No description provided for @aiAnalyzerCommandHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'可选，例如 python3 tools/ai_clip_analyzer.py --yolo-model yolov8n.pt --whisper-model small'**
+  String get aiAnalyzerCommandHint;
+
+  /// No description provided for @clipLibrary.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 切片库'**
+  String get clipLibrary;
+
+  /// No description provided for @clipLibraryDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'由视觉识别、音频转写和场景边界生成的结构化切片。'**
+  String get clipLibraryDesc;
+
+  /// No description provided for @clipSearch.
+  ///
+  /// In zh, this message translates to:
+  /// **'检索切片'**
+  String get clipSearch;
+
+  /// No description provided for @clipSearchHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'搜索关键词、目标物体、转写文本、摘要或标签'**
+  String get clipSearchHint;
+
+  /// No description provided for @aiQueuedTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 个排队'**
+  String aiQueuedTasks(int count);
+
+  /// No description provided for @aiRunningTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 个分析中'**
+  String aiRunningTasks(int count);
+
+  /// No description provided for @clipSegmentsCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 个切片'**
+  String clipSegmentsCount(int count);
+
+  /// No description provided for @noClipSegments.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无 AI 切片'**
+  String get noClipSegments;
+
+  /// No description provided for @noClipSegmentsHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'下载完成并获得媒体文件路径后，会自动进入 AI 分析任务。'**
+  String get noClipSegmentsHint;
+
+  /// No description provided for @clipReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'切片原因'**
+  String get clipReason;
+
+  /// No description provided for @clipTranscript.
+  ///
+  /// In zh, this message translates to:
+  /// **'音频转写'**
+  String get clipTranscript;
+
+  /// No description provided for @clipConfidence.
+  ///
+  /// In zh, this message translates to:
+  /// **'置信度'**
+  String get clipConfidence;
+
+  /// No description provided for @clipStartEarlier.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始 -1秒'**
+  String get clipStartEarlier;
+
+  /// No description provided for @clipStartLater.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始 +1秒'**
+  String get clipStartLater;
+
+  /// No description provided for @clipEndEarlier.
+  ///
+  /// In zh, this message translates to:
+  /// **'结束 -1秒'**
+  String get clipEndEarlier;
+
+  /// No description provided for @clipEndLater.
+  ///
+  /// In zh, this message translates to:
+  /// **'结束 +1秒'**
+  String get clipEndLater;
 }
 
 class _AppLocalizationsDelegate

@@ -617,4 +617,71 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ytDlpNonZeroExit => 'yt-dlp exited with a non-zero status';
+
+  @override
+  String get clips => 'Clips';
+
+  @override
+  String get aiAnalyzerCommand => 'AI Analyzer Command';
+
+  @override
+  String get aiAnalyzerCommandHint =>
+      'Optional, e.g. python3 tools/ai_clip_analyzer.py --yolo-model yolov8n.pt --whisper-model small';
+
+  @override
+  String get clipLibrary => 'AI Clip Library';
+
+  @override
+  String get clipLibraryDesc =>
+      'Structured clips generated from visual detection, transcript analysis, and scene boundaries.';
+
+  @override
+  String get clipSearch => 'Search Clips';
+
+  @override
+  String get clipSearchHint =>
+      'Search keywords, objects, transcript text, summaries, or tags';
+
+  @override
+  String aiQueuedTasks(int count) {
+    return '$count queued';
+  }
+
+  @override
+  String aiRunningTasks(int count) {
+    return '$count analyzing';
+  }
+
+  @override
+  String clipSegmentsCount(int count) {
+    return '$count clips';
+  }
+
+  @override
+  String get noClipSegments => 'No AI clips yet';
+
+  @override
+  String get noClipSegmentsHint =>
+      'Downloaded videos with a final media path will be analyzed after download completion.';
+
+  @override
+  String get clipReason => 'Reason';
+
+  @override
+  String get clipTranscript => 'Transcript';
+
+  @override
+  String get clipConfidence => 'Confidence';
+
+  @override
+  String get clipStartEarlier => 'Start -1s';
+
+  @override
+  String get clipStartLater => 'Start +1s';
+
+  @override
+  String get clipEndEarlier => 'End -1s';
+
+  @override
+  String get clipEndLater => 'End +1s';
 }

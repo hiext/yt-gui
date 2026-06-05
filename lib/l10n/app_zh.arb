@@ -356,5 +356,45 @@
     }
   },
   "cookieExpiresSoon": "即将过期",
-  "ytDlpNonZeroExit": "yt-dlp 以非零状态退出"
+  "ytDlpNonZeroExit": "yt-dlp 以非零状态退出",
+  "clips": "切片",
+  "aiAnalyzerCommand": "AI 分析命令",
+  "aiAnalyzerCommandHint": "可选，例如 python3 tools/ai_clip_analyzer.py --yolo-model yolov8n.pt --whisper-model small",
+  "clipLibrary": "AI 切片库",
+  "clipLibraryDesc": "由视觉识别、音频转写和场景边界生成的结构化切片。",
+  "clipSearch": "检索切片",
+  "clipSearchHint": "搜索关键词、目标物体、转写文本、摘要或标签",
+  "aiQueuedTasks": "{count} 个排队",
+  "@aiQueuedTasks": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiRunningTasks": "{count} 个分析中",
+  "@aiRunningTasks": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clipSegmentsCount": "{count} 个切片",
+  "@clipSegmentsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noClipSegments": "暂无 AI 切片",
+  "noClipSegmentsHint": "下载完成并获得媒体文件路径后，会自动进入 AI 分析任务。",
+  "clipReason": "切片原因",
+  "clipTranscript": "音频转写",
+  "clipConfidence": "置信度",
+  "clipStartEarlier": "开始 -1秒",
+  "clipStartLater": "开始 +1秒",
+  "clipEndEarlier": "结束 -1秒",
+  "clipEndLater": "结束 +1秒"
 }

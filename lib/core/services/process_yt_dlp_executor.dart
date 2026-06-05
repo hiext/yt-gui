@@ -207,6 +207,8 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       '--part',
       '--ffmpeg-location',
       ffmpegPath,
+      '--print',
+      'after_move:$_filepathPrefix%(filepath)s',
       if (settings.downloadSubtitles) '--write-subs',
       if (settings.downloadThumbnail) '--write-thumbnail',
       if (cookieFile != null) ...['--cookies', cookieFile],
@@ -274,6 +276,13 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
             .transform(SystemEncoding().decoder)
             .transform(LineSplitter())) {
       collectedLines?.add(line);
+      if (line.startsWith(_filepathPrefix)) {
+        session.task = session.task.copyWith(
+          mediaPath: line.substring(_filepathPrefix.length).trim(),
+        );
+        onTaskChanged?.call(session.task);
+        continue;
+      }
       session.handleLine(line);
       if (_intentionalStops.contains(session.task.id)) {
         continue;
@@ -319,9 +328,10 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
           final type = hasVideo ? ResourceType.video : ResourceType.audio;
 
           final label = switch (type) {
-            ResourceType.video => height != null
-                ? l10n.videoFormatWithHeight(height)
-                : l10n.videoFormatWithId(id ?? ''),
+            ResourceType.video =>
+              height != null
+                  ? l10n.videoFormatWithHeight(height)
+                  : l10n.videoFormatWithId(id ?? ''),
             ResourceType.audio => l10n.audioFormatWithId(id ?? ''),
           };
 
@@ -437,6 +447,8 @@ String _formatFileSize(int bytes) {
 
 typedef ProcessRunner =
     Future<Process> Function(String executable, List<String> arguments);
+
+const _filepathPrefix = '__HIEYT_FILEPATH__:';
 
 class YtDlpExecutorException implements Exception {
   const YtDlpExecutorException(this.message);

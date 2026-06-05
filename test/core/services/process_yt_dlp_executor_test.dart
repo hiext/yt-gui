@@ -139,6 +139,10 @@ void main() {
       args,
       containsAll(['--newline', '--continue', '--part', '--ffmpeg-location']),
     );
+    expect(
+      args,
+      containsAll(['--print', 'after_move:__HIEYT_FILEPATH__:%(filepath)s']),
+    );
     expect(args, containsAll(['/tools/ffmpeg', '--write-subs']));
     expect(
       args,
@@ -264,6 +268,38 @@ void main() {
     expect(starts.first, starts.last);
     expect(starts.last, contains('--continue'));
     expect(starts.last, contains('--part'));
+  });
+
+  test('reports final media path printed by yt-dlp', () async {
+    final process = _FakeProcess(exitCodeValue: 0);
+    final executor = ProcessYtDlpExecutor(
+      toolResolver: _resolver(),
+      processRunner: (_, _) async => process,
+    );
+    final changes = <DownloadTask>[];
+
+    await executor.startDownload(
+      taskId: 'task-1',
+      url: Uri.parse('https://example.com/video'),
+      variant: const ResourceVariant(
+        label: '推荐',
+        description: '适合大多数人',
+        isRecommended: true,
+        formatId: 'best',
+      ),
+      settings: _settings(),
+      onTaskChanged: changes.add,
+    );
+    process.addStdout('__HIEYT_FILEPATH__:/downloads/video.mp4');
+    await process.close();
+    await pumpEventQueue();
+
+    expect(
+      changes.where((task) => task.mediaPath == '/downloads/video.mp4'),
+      isNotEmpty,
+    );
+    expect(changes.last.status, DownloadStatus.completed);
+    expect(changes.last.mediaPath, '/downloads/video.mp4');
   });
 }
 

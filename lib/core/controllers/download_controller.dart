@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../l10n/app_localizations_current.dart';
+import 'post_process_controller.dart';
 import '../models/app_models.dart';
 import '../services/download_scheduler.dart';
 import '../services/notification_service.dart';
@@ -17,12 +18,14 @@ class DownloadController extends ChangeNotifier {
     required this.executor,
     required this.settingsProvider,
     this.taskRepository,
+    this.postProcessController,
   });
 
   final DownloadScheduler scheduler;
   final YtDlpExecutor executor;
   final DownloadSettings Function() settingsProvider;
   final TaskRepository? taskRepository;
+  final PostProcessController? postProcessController;
   final Set<String> _startedTaskIds = {};
   int _taskSequence = 0;
 
@@ -203,11 +206,7 @@ class DownloadController extends ChangeNotifier {
     }
 
     if (task.status == DownloadStatus.completed) {
-      _startedTaskIds.remove(task.id);
-      scheduler.complete(task.id);
-      _notifyChanged();
-      unawaited(_startPendingRunningTasks());
-      NotificationService().showDownloadComplete(title: task.title);
+      _handleCompletedTask(task);
       return;
     }
 
@@ -232,10 +231,9 @@ class DownloadController extends ChangeNotifier {
   }
 
   void handleCompleted(String taskId) {
-    _startedTaskIds.remove(taskId);
-    scheduler.complete(taskId);
-    _notifyChanged();
-    unawaited(_startPendingRunningTasks());
+    final task = _findTask(taskId);
+    if (task == null) return;
+    _handleCompletedTask(task.copyWith(status: DownloadStatus.completed));
   }
 
   void handleFailed(String taskId, String message) {
@@ -309,6 +307,20 @@ class DownloadController extends ChangeNotifier {
         onTaskChanged: handleTaskChanged,
       );
     }
+  }
+
+  void _handleCompletedTask(DownloadTask task) {
+    _startedTaskIds.remove(task.id);
+    scheduler.updateTask(task);
+    scheduler.complete(task.id);
+    final completedTask = scheduler.completedTasks.firstWhere(
+      (candidate) => candidate.id == task.id,
+      orElse: () => task,
+    );
+    _notifyChanged();
+    unawaited(postProcessController?.enqueueClipForDownload(completedTask));
+    unawaited(_startPendingRunningTasks());
+    NotificationService().showDownloadComplete(title: task.title);
   }
 
   @override

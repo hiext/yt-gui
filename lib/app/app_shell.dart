@@ -3,12 +3,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../core/controllers/download_controller.dart';
+import '../core/controllers/post_process_controller.dart';
 import '../core/controllers/settings_controller.dart';
+import '../core/services/ai_clip_analyzer_executor.dart';
 import '../core/services/cookie_service.dart';
 import '../core/services/download_scheduler.dart';
+import '../core/services/post_process_repository.dart';
 import '../core/services/process_yt_dlp_executor.dart';
 import '../core/services/settings_repository.dart';
 import '../core/services/task_repository.dart';
+import '../features/clips/clip_library_page.dart';
 import '../l10n/app_localizations.dart';
 import '../features/downloads/downloads_page.dart';
 import '../features/help/help_page.dart';
@@ -17,7 +21,7 @@ import '../features/home/home_page.dart';
 import '../features/settings/settings_page.dart';
 import '../shared/widgets/section_card.dart';
 
-enum AppSection { home, downloads, history, settings, help }
+enum AppSection { home, downloads, clips, history, settings, help }
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key, this.settingsController, this.downloadController});
@@ -33,6 +37,7 @@ class _AppShellState extends State<AppShell> {
   AppSection _section = AppSection.home;
   late final SettingsController _settingsController;
   late final DownloadController _downloadController;
+  late final PostProcessController _postProcessController;
   bool _startupDisclaimerHandled = false;
 
   @override
@@ -48,6 +53,11 @@ class _AppShellState extends State<AppShell> {
       unawaited(_loadCookieConfigs());
     }
     _settingsController.addListener(_handleSettingsChanged);
+    _postProcessController = PostProcessController(
+      executor: AiClipAnalyzerExecutor(),
+      settingsProvider: () => _settingsController.settings,
+      repository: PostProcessRepository(),
+    );
     _downloadController =
         widget.downloadController ??
         DownloadController(
@@ -57,7 +67,9 @@ class _AppShellState extends State<AppShell> {
           executor: ProcessYtDlpExecutor(),
           settingsProvider: () => _settingsController.settings,
           taskRepository: TaskRepository(),
+          postProcessController: _postProcessController,
         );
+    unawaited(_postProcessController.loadPendingTasks());
     unawaited(_downloadController.loadPendingTasks());
   }
 
@@ -73,6 +85,7 @@ class _AppShellState extends State<AppShell> {
   void dispose() {
     _settingsController.removeListener(_handleSettingsChanged);
     _downloadController.dispose();
+    _postProcessController.dispose();
     _settingsController.dispose();
     super.dispose();
   }
@@ -85,6 +98,7 @@ class _AppShellState extends State<AppShell> {
         onShowDownloads: () => _selectSection(AppSection.downloads),
       ),
       DownloadsPage(controller: _downloadController),
+      ClipLibraryPage(controller: _postProcessController),
       HistoryPage(controller: _downloadController),
       SettingsPage(controller: _settingsController),
       const HelpPage(),
@@ -122,6 +136,11 @@ class _AppShellState extends State<AppShell> {
                   icon: const Icon(Icons.downloading_outlined),
                   selectedIcon: const Icon(Icons.downloading),
                   label: Text(l10n.downloading),
+                ),
+                NavigationRailDestination(
+                  icon: const Icon(Icons.auto_awesome_motion_outlined),
+                  selectedIcon: const Icon(Icons.auto_awesome_motion),
+                  label: Text(l10n.clips),
                 ),
                 NavigationRailDestination(
                   icon: const Icon(Icons.history_outlined),

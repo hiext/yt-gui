@@ -356,5 +356,45 @@
     }
   },
   "cookieExpiresSoon": "Expires soon",
-  "ytDlpNonZeroExit": "yt-dlp exited with a non-zero status"
+  "ytDlpNonZeroExit": "yt-dlp exited with a non-zero status",
+  "clips": "Clips",
+  "aiAnalyzerCommand": "AI Analyzer Command",
+  "aiAnalyzerCommandHint": "Optional, e.g. python3 tools/ai_clip_analyzer.py --yolo-model yolov8n.pt --whisper-model small",
+  "clipLibrary": "AI Clip Library",
+  "clipLibraryDesc": "Structured clips generated from visual detection, transcript analysis, and scene boundaries.",
+  "clipSearch": "Search Clips",
+  "clipSearchHint": "Search keywords, objects, transcript text, summaries, or tags",
+  "aiQueuedTasks": "{count} queued",
+  "@aiQueuedTasks": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "aiRunningTasks": "{count} analyzing",
+  "@aiRunningTasks": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clipSegmentsCount": "{count} clips",
+  "@clipSegmentsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noClipSegments": "No AI clips yet",
+  "noClipSegmentsHint": "Downloaded videos with a final media path will be analyzed after download completion.",
+  "clipReason": "Reason",
+  "clipTranscript": "Transcript",
+  "clipConfidence": "Confidence",
+  "clipStartEarlier": "Start -1s",
+  "clipStartLater": "Start +1s",
+  "clipEndEarlier": "End -1s",
+  "clipEndLater": "End +1s"
 }

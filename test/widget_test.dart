@@ -15,11 +15,18 @@ void main() {
         version: 1,
         onCreate: (db, version) async {
           await db.execute(
-            'CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
+            'CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)',
+          );
           await db.execute(
-            'CREATE TABLE tasks (id TEXT PRIMARY KEY, title TEXT NOT NULL, source TEXT NOT NULL, status TEXT NOT NULL, progress REAL NOT NULL DEFAULT 0, data TEXT NOT NULL)');
+            'CREATE TABLE tasks (id TEXT PRIMARY KEY, title TEXT NOT NULL, source TEXT NOT NULL, status TEXT NOT NULL, progress REAL NOT NULL DEFAULT 0, data TEXT NOT NULL)',
+          );
           await db.execute(
-            'CREATE TABLE cookie_configs (id INTEGER PRIMARY KEY AUTOINCREMENT, domain TEXT NOT NULL UNIQUE, data TEXT NOT NULL)');
+            'CREATE TABLE cookie_configs (id INTEGER PRIMARY KEY AUTOINCREMENT, domain TEXT NOT NULL UNIQUE, data TEXT NOT NULL)',
+          );
+          await db.execute(
+            'CREATE TABLE post_process_tasks (id TEXT PRIMARY KEY, source_task_id TEXT NOT NULL, type TEXT NOT NULL, status TEXT NOT NULL, progress REAL NOT NULL DEFAULT 0, data TEXT NOT NULL)',
+          );
+          await createClipAnalysisTestSchema(db);
         },
       ),
     );
@@ -47,6 +54,7 @@ void main() {
 
     expect(find.text(l10n.newDownload), findsWidgets);
     expect(find.text(l10n.downloading), findsOneWidget);
+    expect(find.text(l10n.clips), findsOneWidget);
     expect(find.text(l10n.history), findsOneWidget);
     expect(find.text(l10n.settings), findsOneWidget);
     expect(find.text(l10n.help), findsOneWidget);

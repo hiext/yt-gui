@@ -28,6 +28,10 @@ Future<void> _setupTestDb() async {
         await db.execute(
           'CREATE TABLE cookie_configs (id INTEGER PRIMARY KEY AUTOINCREMENT, domain TEXT NOT NULL UNIQUE, data TEXT NOT NULL)',
         );
+        await db.execute(
+          'CREATE TABLE post_process_tasks (id TEXT PRIMARY KEY, source_task_id TEXT NOT NULL, type TEXT NOT NULL, status TEXT NOT NULL, progress REAL NOT NULL DEFAULT 0, data TEXT NOT NULL)',
+        );
+        await createClipAnalysisTestSchema(db);
       },
     ),
   );
@@ -92,7 +96,11 @@ void main() {
     await tester.tap(find.text('1080p 视频'));
     await tester.pump();
     final dlBtn = find.text(l10n.downloadSelectedCount(1));
-    await tester.scrollUntilVisible(dlBtn, 300, scrollable: find.byType(Scrollable).first);
+    await tester.scrollUntilVisible(
+      dlBtn,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.pump();
     await tester.tap(dlBtn);
     await tester.pump();

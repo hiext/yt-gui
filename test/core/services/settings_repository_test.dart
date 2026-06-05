@@ -21,6 +21,10 @@ Future<Database> _createTestDb() async {
         await db.execute(
           'CREATE TABLE cookie_configs (id INTEGER PRIMARY KEY AUTOINCREMENT, domain TEXT NOT NULL UNIQUE, data TEXT NOT NULL)',
         );
+        await db.execute(
+          'CREATE TABLE post_process_tasks (id TEXT PRIMARY KEY, source_task_id TEXT NOT NULL, type TEXT NOT NULL, status TEXT NOT NULL, progress REAL NOT NULL DEFAULT 0, data TEXT NOT NULL)',
+        );
+        await createClipAnalysisTestSchema(db);
       },
     ),
   );
@@ -49,6 +53,7 @@ void main() {
       expect(settings.defaultQuality, 'best');
       expect(settings.ytDlpPath, isNull);
       expect(settings.ffmpegPath, isNull);
+      expect(settings.aiAnalyzerCommand, isNull);
     });
 
     test('saves and loads settings', () async {
@@ -63,6 +68,7 @@ void main() {
         disclaimerAccepted: true,
         ytDlpPath: '/tools/yt-dlp',
         ffmpegPath: '/tools/ffmpeg',
+        aiAnalyzerCommand: 'python3 tools/ai_clip_analyzer.py',
       );
 
       await repository.save(settings);
@@ -77,6 +83,7 @@ void main() {
       expect(restored.disclaimerAccepted, isTrue);
       expect(restored.ytDlpPath, '/tools/yt-dlp');
       expect(restored.ffmpegPath, '/tools/ffmpeg');
+      expect(restored.aiAnalyzerCommand, 'python3 tools/ai_clip_analyzer.py');
     });
 
     test('removes optional tool paths when they are cleared', () async {
@@ -85,6 +92,7 @@ void main() {
         DownloadSettings.defaults.copyWith(
           ytDlpPath: '/tools/yt-dlp',
           ffmpegPath: '/tools/ffmpeg',
+          aiAnalyzerCommand: 'python3 tools/ai_clip_analyzer.py',
         ),
       );
 
@@ -93,6 +101,7 @@ void main() {
 
       expect(restored.ytDlpPath, isNull);
       expect(restored.ffmpegPath, isNull);
+      expect(restored.aiAnalyzerCommand, isNull);
     });
   });
 }

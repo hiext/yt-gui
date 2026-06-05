@@ -25,6 +25,7 @@ class DownloadSettings {
     required this.disclaimerAccepted,
     this.ytDlpPath,
     this.ffmpegPath,
+    this.aiAnalyzerCommand,
     this.cookieConfigs = const [],
     this.defaultCookieBrowser,
   });
@@ -57,6 +58,7 @@ class DownloadSettings {
   final bool disclaimerAccepted;
   final String? ytDlpPath;
   final String? ffmpegPath;
+  final String? aiAnalyzerCommand;
   final List<CookieConfig> cookieConfigs;
   final String? defaultCookieBrowser;
 
@@ -70,6 +72,7 @@ class DownloadSettings {
     bool? disclaimerAccepted,
     Object? ytDlpPath = _unchanged,
     Object? ffmpegPath = _unchanged,
+    Object? aiAnalyzerCommand = _unchanged,
     Object? cookieConfigs = _unchanged,
     Object? defaultCookieBrowser = _unchanged,
   }) {
@@ -87,6 +90,9 @@ class DownloadSettings {
       ffmpegPath: ffmpegPath == _unchanged
           ? this.ffmpegPath
           : ffmpegPath as String?,
+      aiAnalyzerCommand: aiAnalyzerCommand == _unchanged
+          ? this.aiAnalyzerCommand
+          : aiAnalyzerCommand as String?,
       cookieConfigs: cookieConfigs == _unchanged
           ? this.cookieConfigs
           : cookieConfigs as List<CookieConfig>,
@@ -105,6 +111,9 @@ class DownloadSettings {
         : defaultQuality.trim();
     final normalizedYtDlpPath = _normalizeOptionalPath(ytDlpPath);
     final normalizedFfmpegPath = _normalizeOptionalPath(ffmpegPath);
+    final normalizedAiAnalyzerCommand = _normalizeOptionalPath(
+      aiAnalyzerCommand,
+    );
 
     return DownloadSettings(
       saveDirectory: normalizedSaveDirectory,
@@ -116,6 +125,7 @@ class DownloadSettings {
       disclaimerAccepted: disclaimerAccepted,
       ytDlpPath: normalizedYtDlpPath,
       ffmpegPath: normalizedFfmpegPath,
+      aiAnalyzerCommand: normalizedAiAnalyzerCommand,
       cookieConfigs: cookieConfigs,
       defaultCookieBrowser: defaultCookieBrowser,
     );
@@ -138,6 +148,9 @@ class DownloadSettings {
     };
     if (ytDlpPath != null) map['ytDlpPath'] = ytDlpPath!;
     if (ffmpegPath != null) map['ffmpegPath'] = ffmpegPath!;
+    if (aiAnalyzerCommand != null) {
+      map['aiAnalyzerCommand'] = aiAnalyzerCommand!;
+    }
     if (defaultCookieBrowser != null) {
       map['defaultCookieBrowser'] = defaultCookieBrowser!;
     }
@@ -150,6 +163,7 @@ class DownloadSettings {
       if (v is String) return int.tryParse(v);
       return null;
     }
+
     bool? parseBool(dynamic v) {
       if (v is bool) return v;
       if (v is String) return v == 'true' || v == '1';
@@ -160,14 +174,19 @@ class DownloadSettings {
       saveDirectory:
           (json['saveDirectory'] as String?) ?? defaultSaveDirectory(),
       downloadMode: _parseDownloadMode(json['downloadMode']),
-      concurrentCount: parseCount(json['concurrentCount']) ?? defaults.concurrentCount,
+      concurrentCount:
+          parseCount(json['concurrentCount']) ?? defaults.concurrentCount,
       defaultQuality:
           (json['defaultQuality'] as String?) ?? defaults.defaultQuality,
-      downloadSubtitles: parseBool(json['downloadSubtitles']) ?? defaults.downloadSubtitles,
-      downloadThumbnail: parseBool(json['downloadThumbnail']) ?? defaults.downloadThumbnail,
-      disclaimerAccepted: parseBool(json['disclaimerAccepted']) ?? defaults.disclaimerAccepted,
+      downloadSubtitles:
+          parseBool(json['downloadSubtitles']) ?? defaults.downloadSubtitles,
+      downloadThumbnail:
+          parseBool(json['downloadThumbnail']) ?? defaults.downloadThumbnail,
+      disclaimerAccepted:
+          parseBool(json['disclaimerAccepted']) ?? defaults.disclaimerAccepted,
       ytDlpPath: json['ytDlpPath'] as String?,
       ffmpegPath: json['ffmpegPath'] as String?,
+      aiAnalyzerCommand: json['aiAnalyzerCommand'] as String?,
       defaultCookieBrowser: json['defaultCookieBrowser'] as String?,
     ).normalized();
   }
@@ -310,6 +329,7 @@ class DownloadTask {
     this.errorMessage,
     this.speed,
     this.eta,
+    this.mediaPath,
   }) : variants = List.unmodifiable(variants);
 
   final String id;
@@ -321,6 +341,7 @@ class DownloadTask {
   final String? errorMessage;
   final String? speed;
   final String? eta;
+  final String? mediaPath;
 
   DownloadTask copyWith({
     DownloadStatus? status,
@@ -328,6 +349,7 @@ class DownloadTask {
     Object? errorMessage = _unchanged,
     Object? speed = _unchanged,
     Object? eta = _unchanged,
+    Object? mediaPath = _unchanged,
   }) {
     return DownloadTask(
       id: id,
@@ -341,6 +363,9 @@ class DownloadTask {
           : errorMessage as String?,
       speed: speed == _unchanged ? this.speed : speed as String?,
       eta: eta == _unchanged ? this.eta : eta as String?,
+      mediaPath: mediaPath == _unchanged
+          ? this.mediaPath
+          : mediaPath as String?,
     );
   }
 
@@ -354,6 +379,7 @@ class DownloadTask {
     if (errorMessage != null) 'errorMessage': errorMessage,
     if (speed != null) 'speed': speed,
     if (eta != null) 'eta': eta,
+    if (mediaPath != null) 'mediaPath': mediaPath,
   };
 
   factory DownloadTask.fromJson(Map<String, Object?> json) {
@@ -379,6 +405,348 @@ class DownloadTask {
       errorMessage: json['errorMessage'] as String?,
       speed: json['speed'] as String?,
       eta: json['eta'] as String?,
+      mediaPath: json['mediaPath'] as String?,
+    );
+  }
+}
+
+enum PostProcessTaskType { clip, aiClipAnalysis }
+
+enum PostProcessStatus { queued, running, completed, failed, cancelled }
+
+class ClipDetection {
+  ClipDetection({
+    required this.id,
+    required this.segmentId,
+    required this.timestampMs,
+    required this.label,
+    required this.confidence,
+    List<double> bbox = const [],
+    this.trackId,
+  }) : bbox = List.unmodifiable(bbox);
+
+  final String id;
+  final String segmentId;
+  final int timestampMs;
+  final String label;
+  final double confidence;
+  final List<double> bbox;
+  final String? trackId;
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'segmentId': segmentId,
+    'timestampMs': timestampMs,
+    'label': label,
+    'confidence': confidence,
+    'bbox': bbox,
+    if (trackId != null) 'trackId': trackId,
+  };
+
+  factory ClipDetection.fromJson(Map<String, Object?> json) {
+    return ClipDetection(
+      id: json['id'] as String? ?? '',
+      segmentId: json['segmentId'] as String? ?? '',
+      timestampMs: (json['timestampMs'] as num?)?.toInt() ?? 0,
+      label: json['label'] as String? ?? '',
+      confidence: (json['confidence'] as num?)?.toDouble() ?? 0,
+      bbox:
+          (json['bbox'] as List<Object?>?)
+              ?.whereType<num>()
+              .map((v) => v.toDouble())
+              .toList() ??
+          const <double>[],
+      trackId: json['trackId'] as String?,
+    );
+  }
+}
+
+class ClipTranscript {
+  ClipTranscript({
+    required this.id,
+    required this.segmentId,
+    required this.startMs,
+    required this.endMs,
+    required this.text,
+    List<String> words = const [],
+  }) : words = List.unmodifiable(words);
+
+  final String id;
+  final String segmentId;
+  final int startMs;
+  final int endMs;
+  final String text;
+  final List<String> words;
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'segmentId': segmentId,
+    'startMs': startMs,
+    'endMs': endMs,
+    'text': text,
+    'words': words,
+  };
+
+  factory ClipTranscript.fromJson(Map<String, Object?> json) {
+    return ClipTranscript(
+      id: json['id'] as String? ?? '',
+      segmentId: json['segmentId'] as String? ?? '',
+      startMs: (json['startMs'] as num?)?.toInt() ?? 0,
+      endMs: (json['endMs'] as num?)?.toInt() ?? 0,
+      text: json['text'] as String? ?? '',
+      words:
+          (json['words'] as List<Object?>?)?.whereType<String>().toList() ??
+          const <String>[],
+    );
+  }
+}
+
+class ClipSegment {
+  ClipSegment({
+    required this.id,
+    required this.sourceTaskId,
+    required this.postProcessTaskId,
+    required this.sourcePath,
+    required this.startMs,
+    required this.endMs,
+    required this.title,
+    required this.summary,
+    List<String> keywords = const [],
+    List<String> tags = const [],
+    required this.confidence,
+    required this.reason,
+    List<ClipDetection> detections = const [],
+    List<ClipTranscript> transcripts = const [],
+    this.adjustedStartMs,
+    this.adjustedEndMs,
+    this.outputPath,
+    DateTime? createdAt,
+  }) : keywords = List.unmodifiable(keywords),
+       tags = List.unmodifiable(tags),
+       detections = List.unmodifiable(detections),
+       transcripts = List.unmodifiable(transcripts),
+       createdAt = createdAt ?? DateTime.now();
+
+  final String id;
+  final String sourceTaskId;
+  final String postProcessTaskId;
+  final String sourcePath;
+  final int startMs;
+  final int endMs;
+  final int? adjustedStartMs;
+  final int? adjustedEndMs;
+  final String title;
+  final String summary;
+  final List<String> keywords;
+  final List<String> tags;
+  final double confidence;
+  final String reason;
+  final List<ClipDetection> detections;
+  final List<ClipTranscript> transcripts;
+  final String? outputPath;
+  final DateTime createdAt;
+
+  int get effectiveStartMs => adjustedStartMs ?? startMs;
+  int get effectiveEndMs => adjustedEndMs ?? endMs;
+
+  ClipSegment copyWith({
+    Object? adjustedStartMs = _unchanged,
+    Object? adjustedEndMs = _unchanged,
+    Object? outputPath = _unchanged,
+  }) {
+    return ClipSegment(
+      id: id,
+      sourceTaskId: sourceTaskId,
+      postProcessTaskId: postProcessTaskId,
+      sourcePath: sourcePath,
+      startMs: startMs,
+      endMs: endMs,
+      adjustedStartMs: adjustedStartMs == _unchanged
+          ? this.adjustedStartMs
+          : adjustedStartMs as int?,
+      adjustedEndMs: adjustedEndMs == _unchanged
+          ? this.adjustedEndMs
+          : adjustedEndMs as int?,
+      title: title,
+      summary: summary,
+      keywords: keywords,
+      tags: tags,
+      confidence: confidence,
+      reason: reason,
+      detections: detections,
+      transcripts: transcripts,
+      outputPath: outputPath == _unchanged
+          ? this.outputPath
+          : outputPath as String?,
+      createdAt: createdAt,
+    );
+  }
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'sourceTaskId': sourceTaskId,
+    'postProcessTaskId': postProcessTaskId,
+    'sourcePath': sourcePath,
+    'startMs': startMs,
+    'endMs': endMs,
+    if (adjustedStartMs != null) 'adjustedStartMs': adjustedStartMs,
+    if (adjustedEndMs != null) 'adjustedEndMs': adjustedEndMs,
+    'title': title,
+    'summary': summary,
+    'keywords': keywords,
+    'tags': tags,
+    'confidence': confidence,
+    'reason': reason,
+    'detections': detections.map((d) => d.toJson()).toList(),
+    'transcripts': transcripts.map((t) => t.toJson()).toList(),
+    if (outputPath != null) 'outputPath': outputPath,
+    'createdAt': createdAt.toIso8601String(),
+  };
+
+  factory ClipSegment.fromJson(Map<String, Object?> json) {
+    final createdAtStr = json['createdAt'] as String?;
+    return ClipSegment(
+      id: json['id'] as String? ?? '',
+      sourceTaskId: json['sourceTaskId'] as String? ?? '',
+      postProcessTaskId: json['postProcessTaskId'] as String? ?? '',
+      sourcePath: json['sourcePath'] as String? ?? '',
+      startMs: (json['startMs'] as num?)?.toInt() ?? 0,
+      endMs: (json['endMs'] as num?)?.toInt() ?? 0,
+      adjustedStartMs: (json['adjustedStartMs'] as num?)?.toInt(),
+      adjustedEndMs: (json['adjustedEndMs'] as num?)?.toInt(),
+      title: json['title'] as String? ?? '',
+      summary: json['summary'] as String? ?? '',
+      keywords:
+          (json['keywords'] as List<Object?>?)?.whereType<String>().toList() ??
+          const <String>[],
+      tags:
+          (json['tags'] as List<Object?>?)?.whereType<String>().toList() ??
+          const <String>[],
+      confidence: (json['confidence'] as num?)?.toDouble() ?? 0,
+      reason: json['reason'] as String? ?? '',
+      detections:
+          (json['detections'] as List<Object?>?)
+              ?.whereType<Map<String, Object?>>()
+              .map(ClipDetection.fromJson)
+              .toList() ??
+          const <ClipDetection>[],
+      transcripts:
+          (json['transcripts'] as List<Object?>?)
+              ?.whereType<Map<String, Object?>>()
+              .map(ClipTranscript.fromJson)
+              .toList() ??
+          const <ClipTranscript>[],
+      outputPath: json['outputPath'] as String?,
+      createdAt: createdAtStr != null ? DateTime.tryParse(createdAtStr) : null,
+    );
+  }
+}
+
+class PostProcessTask {
+  PostProcessTask({
+    required this.id,
+    required this.sourceTaskId,
+    required this.title,
+    required this.type,
+    required this.status,
+    required this.progress,
+    required this.sourcePath,
+    required this.outputDirectory,
+    List<String> outputPaths = const [],
+    List<ClipSegment> clipSegments = const [],
+    this.errorMessage,
+  }) : outputPaths = List.unmodifiable(outputPaths),
+       clipSegments = List.unmodifiable(clipSegments);
+
+  final String id;
+  final String sourceTaskId;
+  final String title;
+  final PostProcessTaskType type;
+  final PostProcessStatus status;
+  final double progress;
+  final String sourcePath;
+  final String outputDirectory;
+  final List<String> outputPaths;
+  final List<ClipSegment> clipSegments;
+  final String? errorMessage;
+
+  PostProcessTask copyWith({
+    PostProcessStatus? status,
+    double? progress,
+    Object? outputPaths = _unchanged,
+    Object? clipSegments = _unchanged,
+    Object? errorMessage = _unchanged,
+  }) {
+    return PostProcessTask(
+      id: id,
+      sourceTaskId: sourceTaskId,
+      title: title,
+      type: type,
+      status: status ?? this.status,
+      progress: progress ?? this.progress,
+      sourcePath: sourcePath,
+      outputDirectory: outputDirectory,
+      outputPaths: outputPaths == _unchanged
+          ? this.outputPaths
+          : outputPaths as List<String>,
+      clipSegments: clipSegments == _unchanged
+          ? this.clipSegments
+          : clipSegments as List<ClipSegment>,
+      errorMessage: errorMessage == _unchanged
+          ? this.errorMessage
+          : errorMessage as String?,
+    );
+  }
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'sourceTaskId': sourceTaskId,
+    'title': title,
+    'type': type.name,
+    'status': status.name,
+    'progress': progress,
+    'sourcePath': sourcePath,
+    'outputDirectory': outputDirectory,
+    'outputPaths': outputPaths,
+    'clipSegments': clipSegments.map((s) => s.toJson()).toList(),
+    if (errorMessage != null) 'errorMessage': errorMessage,
+  };
+
+  factory PostProcessTask.fromJson(Map<String, Object?> json) {
+    final typeStr = json['type'] as String?;
+    final statusStr = json['status'] as String?;
+    final outputs =
+        (json['outputPaths'] as List<Object?>?)?.whereType<String>().toList() ??
+        const <String>[];
+    final segments =
+        (json['clipSegments'] as List<Object?>?)
+            ?.whereType<Map<String, Object?>>()
+            .map(ClipSegment.fromJson)
+            .toList() ??
+        const <ClipSegment>[];
+
+    return PostProcessTask(
+      id: json['id'] as String? ?? '',
+      sourceTaskId: json['sourceTaskId'] as String? ?? '',
+      title: json['title'] as String? ?? '',
+      type: typeStr != null
+          ? PostProcessTaskType.values.firstWhere(
+              (t) => t.name == typeStr,
+              orElse: () => PostProcessTaskType.clip,
+            )
+          : PostProcessTaskType.clip,
+      status: statusStr != null
+          ? PostProcessStatus.values.firstWhere(
+              (s) => s.name == statusStr,
+              orElse: () => PostProcessStatus.queued,
+            )
+          : PostProcessStatus.queued,
+      progress: (json['progress'] as num?)?.toDouble() ?? 0,
+      sourcePath: json['sourcePath'] as String? ?? '',
+      outputDirectory: json['outputDirectory'] as String? ?? '',
+      outputPaths: outputs,
+      clipSegments: segments,
+      errorMessage: json['errorMessage'] as String?,
     );
   }
 }

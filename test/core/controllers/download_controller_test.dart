@@ -1,9 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiext_yt_gui/core/controllers/download_controller.dart';
+import 'package:hiext_yt_gui/core/controllers/post_process_controller.dart';
 import 'package:hiext_yt_gui/l10n/app_localizations.dart';
 import 'package:hiext_yt_gui/l10n/app_localizations_current.dart';
 import 'package:hiext_yt_gui/core/models/app_models.dart';
 import 'package:hiext_yt_gui/core/services/download_scheduler.dart';
+import 'package:hiext_yt_gui/core/services/post_process_executor.dart';
 import 'package:hiext_yt_gui/core/services/yt_dlp_executor.dart';
 
 class _FakeExecutor implements YtDlpExecutor {
@@ -54,6 +56,25 @@ class _FakeExecutor implements YtDlpExecutor {
     DownloadTaskChanged? onTaskChanged,
   }) async {
     started.add(taskId);
+  }
+}
+
+class _FakePostProcessExecutor implements PostProcessExecutor {
+  final List<String> started = [];
+
+  @override
+  Future<void> cancel(String taskId) async {}
+
+  @override
+  Future<void> dispose() async {}
+
+  @override
+  Future<void> startTask({
+    required PostProcessTask task,
+    required DownloadSettings settings,
+    PostProcessTaskChanged? onTaskChanged,
+  }) async {
+    started.add(task.id);
   }
 }
 
@@ -253,6 +274,57 @@ void main() {
       currentAppLocalizations().downloadFailedFallback,
     );
   });
+
+  test(
+    'completed download with media path queues ai clip analysis task',
+    () async {
+      final scheduler = DownloadScheduler(settingsProvider: _settings);
+      final postExecutor = _FakePostProcessExecutor();
+      final postController = PostProcessController(
+        executor: postExecutor,
+        settingsProvider: _settings,
+      );
+      final controller = DownloadController(
+        scheduler: scheduler,
+        executor: _FakeExecutor(),
+        settingsProvider: _settings,
+        postProcessController: postController,
+      );
+      addTearDown(controller.dispose);
+      addTearDown(postController.dispose);
+
+      scheduler.enqueue(
+        DownloadTask(
+          id: 'task-1',
+          title: 'Task 1',
+          source: 'https://example.com',
+          status: DownloadStatus.ready,
+          progress: 0,
+          variants: const [],
+        ),
+      );
+      scheduler.startNext();
+
+      controller.handleTaskChanged(
+        DownloadTask(
+          id: 'task-1',
+          title: 'Task 1',
+          source: 'https://example.com',
+          status: DownloadStatus.completed,
+          progress: 100,
+          variants: const [],
+          mediaPath: '/downloads/task-1.mp4',
+        ),
+      );
+      await pumpEventQueue();
+
+      expect(
+        controller.completedTasks.single.mediaPath,
+        '/downloads/task-1.mp4',
+      );
+      expect(postExecutor.started, ['task-1#ai-clip-analysis']);
+    },
+  );
 }
 
 DownloadSettings _settings() {
