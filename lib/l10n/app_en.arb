@@ -241,6 +241,15 @@
     }
   },
   "bestQualityDesc": "yt-dlp auto-selects the best video and audio streams and merges them · Recommended",
+  "recommendedQualityWithHeightLabel": "{height}p Video + Audio Merge",
+  "@recommendedQualityWithHeightLabel": {
+    "placeholders": {
+      "height": {
+        "type": "int"
+      }
+    }
+  },
+  "recommendedQualityWithHeightDesc": "Use this video stream and auto-select the best audio stream to merge into one file · Recommended",
   "recommendedSuffix": "Recommended",
   "videoFormatWithHeight": "{height}p Video",
   "@videoFormatWithHeight": {

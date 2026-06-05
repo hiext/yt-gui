@@ -384,59 +384,78 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
           return (b.filesize ?? 0).compareTo(a.filesize ?? 0);
         });
 
-        final normalizedRecommendedCount = recommendedVariantCount
-            .clamp(1, 5)
-            .toInt();
-
-        // Insert synthetic "bestvideo+bestaudio" merge option at top
-        final bestVideo = variants.firstWhere(
-          (v) => v.type == ResourceType.video,
-          orElse: () => variants.first,
-        );
-        final maxHeight = bestVideo.height ?? 1080;
-        variants.insert(
-          0,
-          ResourceVariant(
-            label: l10n.bestQualityLabel(maxHeight),
-            description: l10n.bestQualityDesc,
-            isRecommended: true,
-            formatId: 'bestvideo+bestaudio',
-            type: ResourceType.video,
-            height: maxHeight,
-            videoId: videoId,
-            videoTitle: videoTitle,
-          ),
+        final recommendedVariants = _buildRecommendedMergeVariants(
+          variants,
+          l10n,
+          count: recommendedVariantCount,
+          videoId: videoId,
+          videoTitle: videoTitle,
         );
 
-        final recommendedVideoCount = normalizedRecommendedCount - 1;
-        if (recommendedVideoCount > 0) {
-          var marked = 0;
-          for (var index = 1; index < variants.length; index += 1) {
-            final variant = variants[index];
-            if (variant.type != ResourceType.video) continue;
-            variants[index] = ResourceVariant(
-              label: '${variant.label} (${l10n.recommendedSuffix})',
-              description: variant.description,
-              isRecommended: true,
-              formatId: variant.formatId,
-              type: variant.type,
-              height: variant.height,
-              filesize: variant.filesize,
-              videoId: variant.videoId,
-              videoTitle: variant.videoTitle,
-            );
-            marked++;
-            if (marked >= recommendedVideoCount) break;
-          }
-        }
-
-        return variants;
+        final seenFormatIds = <String?>{};
+        return [
+          ...recommendedVariants,
+          ...variants.where((variant) => seenFormatIds.add(variant.formatId)),
+        ];
       } on FormatException {
         continue;
       }
     }
 
     return const [];
+  }
+
+  static List<ResourceVariant> _buildRecommendedMergeVariants(
+    List<ResourceVariant> variants,
+    AppLocalizations l10n, {
+    required int count,
+    required String? videoId,
+    required String? videoTitle,
+  }) {
+    final videoVariants = variants
+        .where((variant) => variant.type == ResourceType.video)
+        .toList(growable: false);
+    if (videoVariants.isEmpty) return const [];
+
+    final normalizedCount = count.clamp(1, 5).toInt();
+    final bestVideo = videoVariants.first;
+    final maxHeight = bestVideo.height ?? 1080;
+    final recommended = <ResourceVariant>[
+      ResourceVariant(
+        label: l10n.bestQualityLabel(maxHeight),
+        description: l10n.bestQualityDesc,
+        isRecommended: true,
+        formatId: 'bestvideo+bestaudio',
+        type: ResourceType.video,
+        height: maxHeight,
+        videoId: videoId,
+        videoTitle: videoTitle,
+      ),
+    ];
+
+    for (final variant in videoVariants) {
+      if (recommended.length >= normalizedCount) break;
+      final formatId = variant.formatId;
+      final height = variant.height;
+      if (formatId == null || formatId.trim().isEmpty) continue;
+      recommended.add(
+        ResourceVariant(
+          label: height != null
+              ? l10n.recommendedQualityWithHeightLabel(height)
+              : '${variant.label} (${l10n.recommendedSuffix})',
+          description: l10n.recommendedQualityWithHeightDesc,
+          isRecommended: true,
+          formatId: '$formatId+bestaudio/best',
+          type: ResourceType.video,
+          height: height,
+          filesize: variant.filesize,
+          videoId: variant.videoId,
+          videoTitle: variant.videoTitle,
+        ),
+      );
+    }
+
+    return recommended;
   }
 }
 

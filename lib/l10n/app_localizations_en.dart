@@ -535,6 +535,15 @@ class AppLocalizationsEn extends AppLocalizations {
       'yt-dlp auto-selects the best video and audio streams and merges them · Recommended';
 
   @override
+  String recommendedQualityWithHeightLabel(int height) {
+    return '${height}p Video + Audio Merge';
+  }
+
+  @override
+  String get recommendedQualityWithHeightDesc =>
+      'Use this video stream and auto-select the best audio stream to merge into one file · Recommended';
+
+  @override
   String get recommendedSuffix => 'Recommended';
 
   @override

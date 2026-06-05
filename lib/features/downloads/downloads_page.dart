@@ -105,11 +105,23 @@ class _TaskGroupCardState extends State<_TaskGroupCard> {
     final pausedCount = group.tasks
         .where((t) => t.status == DownloadStatus.paused)
         .length;
-    final allDone = doneCount == group.tasks.length;
-    final totalProgress = group.tasks.isEmpty
+    final cancelledCount = group.tasks
+        .where((t) => t.status == DownloadStatus.cancelled)
+        .length;
+    final progressTasks = group.tasks
+        .where((t) => t.status != DownloadStatus.cancelled)
+        .toList(growable: false);
+    final allDone =
+        progressTasks.isNotEmpty && doneCount == progressTasks.length;
+    final totalProgress = progressTasks.isEmpty
         ? 0.0
-        : group.tasks.fold<double>(0, (sum, t) => sum + t.progress) /
-              group.tasks.length;
+        : progressTasks.fold<double>(0, (sum, t) => sum + t.progress) /
+              progressTasks.length;
+    final visibleTasks = allDone && _collapsed
+        ? group.tasks
+              .where((t) => t.status != DownloadStatus.completed)
+              .toList(growable: false)
+        : group.tasks;
 
     if (allDone && !_collapsed) {
       _collapsed = true;
@@ -122,6 +134,7 @@ class _TaskGroupCardState extends State<_TaskGroupCard> {
         if (doneCount > 0) ' · $doneCount ${l10n.completedTasks}',
         if (activeCount > 0) ' · $activeCount ${l10n.downloadingTasks}',
         if (pausedCount > 0) ' · $pausedCount ${l10n.pausedTasks}',
+        if (cancelledCount > 0) ' · $cancelledCount ${l10n.cancelledTasks}',
       ].join(),
       backgroundColor: allDone ? Colors.green.withAlpha(15) : null,
       child: Column(
@@ -164,9 +177,9 @@ class _TaskGroupCardState extends State<_TaskGroupCard> {
               ),
             ],
           ),
-          if (activeCount + pausedCount > 0 || !_collapsed) ...[
+          if (visibleTasks.isNotEmpty) ...[
             const SizedBox(height: 8),
-            for (final task in group.tasks)
+            for (final task in visibleTasks)
               _CompactTaskTile(task: task, controller: controller),
           ],
           if (allDone)
@@ -374,6 +387,12 @@ class _CompactTaskTile extends StatelessWidget {
         GestureDetector(
           onTap: () => controller.openDownloadFolder(task),
           child: const Icon(Icons.folder_open_outlined, size: 18),
+        ),
+      ],
+      DownloadStatus.cancelled => [
+        GestureDetector(
+          onTap: () => controller.deleteFromHistory(task.id),
+          child: const Icon(Icons.delete_outline, size: 18),
         ),
       ],
       _ => const [],

@@ -29,6 +29,17 @@ void main() {
       expect(event.eta, isNull);
     });
 
+    test('normalizes unknown custom progress fields', () {
+      const line = '__HIEYT_PROGRESS__:downloading| 0.1%| Unknown B/s|Unknown';
+
+      final event = YtDlpProgressParser.parse(line);
+
+      expect(event, isA<YtDlpProgressEvent>());
+      expect(event!.percent, closeTo(0.1, 0.01));
+      expect(event.speed, isNull);
+      expect(event.eta, isNull);
+    });
+
     test('parses default download output as fallback', () {
       const line = '[download]  42.5% of  1.23GiB at  3.45MiB/s ETA 00:18';
 

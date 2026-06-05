@@ -1040,6 +1040,18 @@ abstract class AppLocalizations {
   /// **'yt-dlp 自动选取最佳视频和音频流合并 · 推荐'**
   String get bestQualityDesc;
 
+  /// No description provided for @recommendedQualityWithHeightLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'{height}p 视频+音频合并'**
+  String recommendedQualityWithHeightLabel(int height);
+
+  /// No description provided for @recommendedQualityWithHeightDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'使用该视频流并自动选取最佳音频流合并输出单个文件 · 推荐'**
+  String get recommendedQualityWithHeightDesc;
+
   /// No description provided for @recommendedSuffix.
   ///
   /// In zh, this message translates to:

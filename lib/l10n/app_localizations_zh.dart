@@ -508,6 +508,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get bestQualityDesc => 'yt-dlp 自动选取最佳视频和音频流合并 · 推荐';
 
   @override
+  String recommendedQualityWithHeightLabel(int height) {
+    return '${height}p 视频+音频合并';
+  }
+
+  @override
+  String get recommendedQualityWithHeightDesc =>
+      '使用该视频流并自动选取最佳音频流合并输出单个文件 · 推荐';
+
+  @override
   String get recommendedSuffix => '推荐';
 
   @override

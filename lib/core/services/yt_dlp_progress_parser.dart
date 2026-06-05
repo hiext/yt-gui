@@ -100,7 +100,9 @@ class YtDlpProgressParser {
 
   static String? _normalizeField(String value) {
     final normalized = value.trim();
-    if (normalized.isEmpty || normalized == 'NA') {
+    if (normalized.isEmpty ||
+        normalized == 'NA' ||
+        normalized.toLowerCase().startsWith('unknown')) {
       return null;
     }
     return normalized;

@@ -82,6 +82,7 @@ CI 还会在 GitHub Actions 中执行 Linux 测试，以及 Linux、macOS、Wind
 ## 验证边界
 
 - `test/core/services/smoke_test.dart` 默认跳过，因为它需要真实网络、真实 `yt-dlp` / `ffmpeg` 二进制和平台环境。
+- 可用 `https://www.youtube.com/watch?v=AQB6dVt-t64` 做手工链接解析验证；该视频约 1 小时 40 分钟，最高格式体积很大，不应用作 CI、自动化下载或默认回归下载样例。
 - 自动化测试不调用真实云厂商 API，也不验证真实账号 Cookie；这些场景必须用测试 Key、测试账号或本地 mock 服务验证。
 - 构建通过不等于平台签名、安装器、公证或 AppImage/DMG/EXE 分发流程完成；发布前仍需按目标平台单独验证。
 - 本项目只提供工具能力。回归下载流程时必须使用拥有合法权利或明确授权的测试资源。

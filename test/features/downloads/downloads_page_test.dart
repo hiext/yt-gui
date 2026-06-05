@@ -8,7 +8,9 @@ import 'package:hiext_yt_gui/features/downloads/downloads_page.dart';
 import 'package:hiext_yt_gui/l10n/app_localizations.dart';
 
 void main() {
-  testWidgets('shows pause and resume actions for download tasks', (tester) async {
+  testWidgets('shows pause and resume actions for download tasks', (
+    tester,
+  ) async {
     final executor = _FakeExecutor();
     final controller = DownloadController(
       scheduler: DownloadScheduler(settingsProvider: _settings),
@@ -28,9 +30,7 @@ void main() {
       ),
     );
 
-    await tester.pumpWidget(
-      _buildApp(DownloadsPage(controller: controller)),
-    );
+    await tester.pumpWidget(_buildApp(DownloadsPage(controller: controller)));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('example.com'), findsWidgets);
@@ -99,6 +99,68 @@ void main() {
     expect(find.textContaining(l10n.completedTasks), findsOneWidget);
     expect(find.text(l10n.expandCompleted), findsOneWidget);
   });
+
+  testWidgets('excludes cancelled tasks from group progress', (tester) async {
+    final executor = _FakeExecutor();
+    final scheduler = DownloadScheduler(settingsProvider: _settings)
+      ..restoreHistory([
+        _historyTask(
+          id: 'completed-video',
+          status: DownloadStatus.completed,
+          progress: 100,
+        ),
+        _historyTask(
+          id: 'completed-audio',
+          status: DownloadStatus.completed,
+          progress: 100,
+          type: ResourceType.audio,
+        ),
+        _historyTask(id: 'cancelled-video', status: DownloadStatus.cancelled),
+        _historyTask(
+          id: 'cancelled-audio',
+          status: DownloadStatus.cancelled,
+          type: ResourceType.audio,
+        ),
+      ]);
+    final controller = DownloadController(
+      scheduler: scheduler,
+      executor: executor,
+      settingsProvider: _settings,
+    );
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(_buildApp(DownloadsPage(controller: controller)));
+    await tester.pumpAndSettle();
+
+    expect(find.text('50%'), findsNothing);
+    expect(find.text('✓'), findsOneWidget);
+    expect(find.byIcon(Icons.delete_outline), findsNWidgets(2));
+  });
+
+  testWidgets('deletes cancelled task from downloads page', (tester) async {
+    final executor = _FakeExecutor();
+    final scheduler = DownloadScheduler(settingsProvider: _settings)
+      ..restoreHistory([
+        _historyTask(id: 'cancelled-video', status: DownloadStatus.cancelled),
+      ]);
+    final controller = DownloadController(
+      scheduler: scheduler,
+      executor: executor,
+      settingsProvider: _settings,
+    );
+    addTearDown(controller.dispose);
+
+    await tester.pumpWidget(_buildApp(DownloadsPage(controller: controller)));
+    await tester.pumpAndSettle();
+
+    expect(controller.cancelledTasks, hasLength(1));
+
+    await tester.tap(find.byIcon(Icons.delete_outline));
+    await tester.pumpAndSettle();
+
+    expect(controller.cancelledTasks, isEmpty);
+    expect(find.byIcon(Icons.delete_outline), findsNothing);
+  });
 }
 
 Widget _buildApp(Widget child, {Locale? locale}) {
@@ -119,6 +181,30 @@ DownloadSettings _settings() {
     downloadSubtitles: false,
     downloadThumbnail: false,
     disclaimerAccepted: false,
+  );
+}
+
+DownloadTask _historyTask({
+  required String id,
+  required DownloadStatus status,
+  double progress = 0,
+  ResourceType type = ResourceType.video,
+}) {
+  return DownloadTask(
+    id: id,
+    title: 'Example Video',
+    source: 'https://example.com/video',
+    status: status,
+    progress: progress,
+    variants: [
+      ResourceVariant(
+        label: type == ResourceType.video ? '1080p 视频' : '音频 140',
+        description: 'test',
+        isRecommended: true,
+        formatId: type == ResourceType.video ? '137' : '140',
+        type: type,
+      ),
+    ],
   );
 }
 
