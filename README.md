@@ -37,7 +37,20 @@ flutter doctor
 
 ### 方式一：使用应用内置工具（推荐）
 
-将对应平台的二进制文件放入 `assets/bin/<platform>/` 目录：
+发布前运行脚本，将锁定版本的工具下载到 `assets/bin/<platform>/`：
+
+```bash
+# 查看计划下载项
+dart run tools/fetch_embedded_tools.dart --dry-run
+
+# 只准备当前 macOS 包需要的 yt-dlp
+dart run tools/fetch_embedded_tools.dart --platform=macos --tool=yt-dlp
+
+# 准备 Linux / Windows 已锁定的 yt-dlp 与 LGPL ffmpeg
+dart run tools/fetch_embedded_tools.dart --platform=linux,windows
+```
+
+脚本读取 `tools/embedded_tools.lock.json`，下载后校验 SHA256，再放入对应目录：
 
 ```
 assets/bin/
@@ -48,6 +61,8 @@ assets/bin/
   windows/yt-dlp.exe
   windows/ffmpeg.exe
 ```
+
+这些二进制体积较大，默认被 `.gitignore` 排除；请只提交锁文件、脚本和许可证说明。macOS 的 `ffmpeg` 目前不默认内置，发布前需先在锁文件中补充已确认许可证、签名/公证和 SHA256 的供应源，或继续使用 Homebrew / 自定义路径。
 
 然后在 `pubspec.yaml` 中确认资产声明（已默认包含）：
 
@@ -61,9 +76,13 @@ flutter:
 
 ### 方式二：在设置页指定自定义路径
 
-打开应用 → 设置，在「yt-dlp 路径」和「ffmpeg 路径」输入框中填写系统中已安装的工具路径，留空则回退到内置工具。
+打开应用 → 设置，在「yt-dlp 路径」和「ffmpeg 路径」输入框中填写系统中已安装的工具路径，留空则优先使用内置工具，再回退到系统 `PATH` 和常见目录（如 `/opt/homebrew/bin`、`/usr/local/bin`）。
 
 > 自定义路径优先于内置工具。路径不存在时，启动下载会给出明确错误提示。
+
+### 第三方工具许可证
+
+内置工具发布前必须同步更新 [第三方工具声明](docs/third-party-tools.md)。`yt-dlp` 使用官方 release；`ffmpeg` 优先选择 LGPL 构建，禁止在未评审的情况下打包 GPL 或 nonfree 构建。
 
 ## AI 切片与云端模型配置
 

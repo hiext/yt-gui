@@ -10,6 +10,13 @@
 - Windows：
 - Linux：
 
+## 内置工具
+
+- yt-dlp：
+- FFmpeg：
+- 工具来源与 SHA256：见 `tools/embedded_tools.lock.json`
+- 许可证说明：见 `docs/third-party-tools.md`
+
 ## 使用说明
 
 Hiext YT GUI 是一个基于 `yt-dlp` 和 `ffmpeg` 的桌面下载管理工具，提供链接解析、格式选择、下载调度、断点续传和历史记录能力。
@@ -21,5 +28,6 @@ Hiext YT GUI 是一个基于 `yt-dlp` 和 `ffmpeg` 的桌面下载管理工具�
 ## 校验与反馈
 
 - 已验证平台：
+- 已验证内置工具：
 - 已知问题：
 - 反馈方式：

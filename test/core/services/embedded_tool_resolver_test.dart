@@ -107,25 +107,30 @@ void main() {
       expect(bundle.ffmpeg.path, 'assets/bin/linux/ffmpeg');
     });
 
-    test('falls back to PATH tools when embedded assets are absent', () {
-      final tempDir = Directory.systemTemp.createTempSync('tool-path-');
-      addTearDown(() => tempDir.deleteSync(recursive: true));
-      final ytDlp = File('${tempDir.path}/yt-dlp')..writeAsStringSync('');
-      final ffmpeg = File('${tempDir.path}/ffmpeg')..writeAsStringSync('');
-      final resolver = EmbeddedToolResolver(
-        manifest: EmbeddedToolManifest.bundled,
-        platformOverride: EmbeddedToolPlatform.macos,
-        environment: {'PATH': tempDir.path},
-        fileExists: (path) => path == ytDlp.path || path == ffmpeg.path,
-      );
+    test(
+      'keeps embedded asset path with PATH fallback when assets are absent',
+      () {
+        final tempDir = Directory.systemTemp.createTempSync('tool-path-');
+        addTearDown(() => tempDir.deleteSync(recursive: true));
+        final ytDlp = File('${tempDir.path}/yt-dlp')..writeAsStringSync('');
+        final ffmpeg = File('${tempDir.path}/ffmpeg')..writeAsStringSync('');
+        final resolver = EmbeddedToolResolver(
+          manifest: EmbeddedToolManifest.bundled,
+          platformOverride: EmbeddedToolPlatform.macos,
+          environment: {'PATH': tempDir.path},
+          fileExists: (path) => path == ytDlp.path || path == ffmpeg.path,
+        );
 
-      final bundle = resolver.resolveBundle();
+        final bundle = resolver.resolveBundle();
 
-      expect(bundle.ytDlp.path, ytDlp.absolute.path);
-      expect(bundle.ffmpeg.path, ffmpeg.absolute.path);
-      expect(bundle.ytDlp.isCustom, isFalse);
-      expect(bundle.ffmpeg.isCustom, isFalse);
-    });
+        expect(bundle.ytDlp.path, 'assets/bin/macos/yt-dlp');
+        expect(bundle.ffmpeg.path, 'assets/bin/macos/ffmpeg');
+        expect(bundle.ytDlp.fallbackPath, ytDlp.absolute.path);
+        expect(bundle.ffmpeg.fallbackPath, ffmpeg.absolute.path);
+        expect(bundle.ytDlp.isCustom, isFalse);
+        expect(bundle.ffmpeg.isCustom, isFalse);
+      },
+    );
 
     test('checks common Homebrew path when app PATH omits it', () {
       final resolver = EmbeddedToolResolver(
@@ -139,8 +144,10 @@ void main() {
 
       final bundle = resolver.resolveBundle();
 
-      expect(bundle.ytDlp.path, '/opt/homebrew/bin/yt-dlp');
-      expect(bundle.ffmpeg.path, '/opt/homebrew/bin/ffmpeg');
+      expect(bundle.ytDlp.path, 'assets/bin/macos/yt-dlp');
+      expect(bundle.ffmpeg.path, 'assets/bin/macos/ffmpeg');
+      expect(bundle.ytDlp.fallbackPath, '/opt/homebrew/bin/yt-dlp');
+      expect(bundle.ffmpeg.fallbackPath, '/opt/homebrew/bin/ffmpeg');
     });
 
     test('prefers embedded assets over PATH tools when assets exist', () {
@@ -163,6 +170,8 @@ void main() {
 
       expect(bundle.ytDlp.path, 'assets/bin/macos/yt-dlp');
       expect(bundle.ffmpeg.path, 'assets/bin/macos/ffmpeg');
+      expect(bundle.ytDlp.fallbackPath, ytDlp.absolute.path);
+      expect(bundle.ffmpeg.fallbackPath, ffmpeg.absolute.path);
     });
   });
 }

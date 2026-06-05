@@ -15,11 +15,13 @@ class ResolvedEmbeddedTool {
     required this.kind,
     required this.path,
     required this.isCustom,
+    this.fallbackPath,
   });
 
   final EmbeddedToolKind kind;
   final String path;
   final bool isCustom;
+  final String? fallbackPath;
 }
 
 class EmbeddedToolResolver {
@@ -86,24 +88,27 @@ class EmbeddedToolResolver {
     }
 
     final spec = manifest.resolve(platform: platform, kind: kind);
-    if (_fileExists(spec.assetPath)) {
-      return ResolvedEmbeddedTool(
-        kind: kind,
-        path: spec.assetPath,
-        isCustom: false,
-      );
-    }
-
     final systemPath = _findExecutableOnPath(
       platform: platform,
       spec: spec,
       environment: environment ?? Platform.environment,
     );
+
+    if (_fileExists(spec.assetPath)) {
+      return ResolvedEmbeddedTool(
+        kind: kind,
+        path: spec.assetPath,
+        isCustom: false,
+        fallbackPath: systemPath,
+      );
+    }
+
     if (systemPath != null) {
       return ResolvedEmbeddedTool(
         kind: kind,
-        path: systemPath,
+        path: spec.assetPath,
         isCustom: false,
+        fallbackPath: systemPath,
       );
     }
 

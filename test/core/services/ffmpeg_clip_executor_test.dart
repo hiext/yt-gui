@@ -71,6 +71,42 @@ void main() {
     expect(changes.last.status, PostProcessStatus.completed);
     expect(changes.last.outputPaths.single, endsWith('source_clip_001.mp4'));
   });
+
+  test('uses PATH fallback when bundled ffmpeg asset is unavailable', () async {
+    final tempDir = Directory.systemTemp.createTempSync('ffmpeg-fallback-');
+    addTearDown(() => tempDir.deleteSync(recursive: true));
+    File('${tempDir.path}/yt-dlp').writeAsStringSync('');
+    final ffmpeg = File('${tempDir.path}/ffmpeg')..writeAsStringSync('');
+    final process = _FakeProcess(exitCodeValue: 0);
+    String? executable;
+    final executor = FfmpegClipExecutor(
+      toolResolver: EmbeddedToolResolver(
+        platformOverride: EmbeddedToolPlatform.macos,
+        environment: {'PATH': tempDir.path},
+      ),
+      processRunner: (path, _) async {
+        executable = path;
+        return process;
+      },
+    );
+    final task = PostProcessTask(
+      id: 'clip-fallback',
+      sourceTaskId: 'download-1',
+      title: 'Example',
+      type: PostProcessTaskType.clip,
+      status: PostProcessStatus.queued,
+      progress: 0,
+      sourcePath: '/downloads/source.mp4',
+      outputDirectory: Directory.systemTemp.createTempSync('clips-').path,
+    );
+    addTearDown(() => executor.dispose());
+
+    await executor.startTask(task: task, settings: _settings());
+    await process.close();
+    await pumpEventQueue();
+
+    expect(executable, ffmpeg.absolute.path);
+  });
 }
 
 DownloadSettings _settings({String? ffmpegPath}) {

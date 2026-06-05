@@ -76,6 +76,37 @@ void main() {
     expect(executable, ytDlp.path);
   });
 
+  test(
+    'inspect uses PATH fallback when bundled asset is unavailable',
+    () async {
+      final tempDir = Directory.systemTemp.createTempSync('yt-dlp-fallback-');
+      addTearDown(() => tempDir.deleteSync(recursive: true));
+      final ytDlp = File('${tempDir.path}/yt-dlp.exe')..writeAsStringSync('');
+      File('${tempDir.path}/ffmpeg.exe').writeAsStringSync('');
+      final process = _FakeProcess(exitCodeValue: 0);
+      String? executable;
+      final executor = ProcessYtDlpExecutor(
+        toolResolver: EmbeddedToolResolver(
+          platformOverride: EmbeddedToolPlatform.windows,
+          environment: {'PATH': tempDir.path},
+        ),
+        processRunner: (path, _) async {
+          executable = path;
+          return process;
+        },
+      );
+
+      final inspectFuture = executor.inspect(
+        Uri.parse('https://example.com/video'),
+        localizations: lookupAppLocalizations(const Locale('en')),
+      );
+      await process.close();
+      await inspectFuture;
+
+      expect(executable, ytDlp.absolute.path);
+    },
+  );
+
   test('startDownload uses custom yt-dlp and ffmpeg paths', () async {
     final ytDlp = _createToolFile('yt-dlp');
     final ffmpeg = _createToolFile('ffmpeg');

@@ -83,10 +83,19 @@ REFACTORING_SUMMARY.md
 START_HERE_SINGBOX_SPLIT.md
 TECHNICAL_INVENTORY.md
 build_log.txt
-build_output.txt# Bundled tool binaries (too large for git; see README for download instructions)
+build_output.txt
+
+# Bundled tool binaries (too large for git; see README for download instructions)
 assets/bin/linux/yt-dlp
 assets/bin/linux/ffmpeg
 assets/bin/linux/ffprobe
+assets/bin/macos/yt-dlp
+assets/bin/macos/ffmpeg
+assets/bin/macos/ffprobe
+assets/bin/windows/yt-dlp.exe
+assets/bin/windows/ffmpeg.exe
+assets/bin/windows/ffprobe.exe
+
 # Runtime cookie data
 .cookies/
 .playwright-mcp/
