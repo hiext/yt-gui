@@ -93,7 +93,11 @@ File _createToolFile(String name) {
 }
 
 EmbeddedToolResolver _resolver() {
-  return const EmbeddedToolResolver(
+  final tempDir = Directory.systemTemp.createTempSync('embedded-tool-path-');
+  addTearDown(() => tempDir.deleteSync(recursive: true));
+  File('${tempDir.path}/yt-dlp').writeAsStringSync('');
+  File('${tempDir.path}/ffmpeg').writeAsStringSync('');
+  return EmbeddedToolResolver(
     manifest: EmbeddedToolManifest(
       specs: [
         EmbeddedToolSpec(
@@ -109,6 +113,7 @@ EmbeddedToolResolver _resolver() {
       ],
     ),
     platformOverride: EmbeddedToolPlatform.linux,
+    environment: {'PATH': tempDir.path},
   );
 }
 

@@ -68,7 +68,11 @@ void main() {
 }
 
 EmbeddedToolResolver _resolver() {
-  return const EmbeddedToolResolver(
+  final tempDir = Directory.systemTemp.createTempSync('embedded-tool-path-');
+  addTearDown(() => tempDir.deleteSync(recursive: true));
+  File('${tempDir.path}/yt-dlp').writeAsStringSync('');
+  File('${tempDir.path}/ffmpeg').writeAsStringSync('');
+  return EmbeddedToolResolver(
     manifest: EmbeddedToolManifest(
       specs: [
         EmbeddedToolSpec(
@@ -84,12 +88,15 @@ EmbeddedToolResolver _resolver() {
       ],
     ),
     platformOverride: EmbeddedToolPlatform.linux,
+    environment: {'PATH': tempDir.path},
   );
 }
 
 void _seedResumeFiles(Directory tempDir) {
   File('${tempDir.path}/sample.part').writeAsStringSync('partial');
-  File('${tempDir.path}/sample.ytdl').writeAsStringSync('{"fragment_index": 1}');
+  File(
+    '${tempDir.path}/sample.ytdl',
+  ).writeAsStringSync('{"fragment_index": 1}');
 }
 
 class _FakeProcess implements Process {

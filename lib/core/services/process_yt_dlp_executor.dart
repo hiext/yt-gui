@@ -42,9 +42,9 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       _extractedPaths[tool.path] = filePath;
       return filePath;
     } catch (_) {
-      // rootBundle.load fails in test environments without Flutter assets
-      // Return the original path; it may work if the file exists at that path
-      return tool.path;
+      throw EmbeddedToolResolutionException(
+        'Missing ${tool.kind.baseExecutableName}. Install ${tool.kind.baseExecutableName} on PATH, add ${tool.path} to the app bundle, or set a custom path in Settings.',
+      );
     }
   }
 

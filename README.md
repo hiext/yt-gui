@@ -77,6 +77,10 @@ flutter:
 
 不要提交真实 API Key、Cookie 或个人账号数据。发布包只提供工具能力，AI 切片结果仍需用户确认其来源与使用权限。
 
+## 项目文档
+
+- [功能回归指南](docs/functional-regression.md)：发布前自动化回归、手工冒烟、AI 切片验收和验证边界。
+
 ## 运行与测试
 
 ```bash

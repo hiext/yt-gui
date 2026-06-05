@@ -37,7 +37,9 @@ class FfmpegClipExecutor implements PostProcessExecutor {
       _extractedPaths[tool.path] = filePath;
       return filePath;
     } catch (_) {
-      return tool.path;
+      throw EmbeddedToolResolutionException(
+        'Missing ${tool.kind.baseExecutableName}. Install ${tool.kind.baseExecutableName} on PATH, add ${tool.path} to the app bundle, or set a custom path in Settings.',
+      );
     }
   }
 
