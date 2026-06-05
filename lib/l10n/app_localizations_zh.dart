@@ -596,11 +596,59 @@ class AppLocalizationsZh extends AppLocalizations {
   String get clips => '切片';
 
   @override
+  String get aiClipAnalysis => 'AI 切片分析';
+
+  @override
+  String get aiClipAnalysisDesc => '选择内置本地分析、Python sidecar，或云端大模型地址来生成语义切片。';
+
+  @override
+  String get aiAnalysisProvider => '分析提供方';
+
+  @override
+  String get aiProviderBuiltIn => '内置本地分析';
+
+  @override
+  String get aiProviderExternalCommand => '外部命令 / Python sidecar';
+
+  @override
+  String get aiProviderCloudEndpoint => '云端大模型地址';
+
+  @override
+  String get builtInClipAnalyzerMode => '内置分析策略';
+
+  @override
+  String get builtInBalanced => '均衡 — 视觉 + 音频候选';
+
+  @override
+  String get builtInVisualFocused => '偏视觉 — 场景候选';
+
+  @override
+  String get builtInAudioFocused => '偏音频 — 语音候选';
+
+  @override
   String get aiAnalyzerCommand => 'AI 分析命令';
 
   @override
   String get aiAnalyzerCommandHint =>
       '可选，例如 python3 tools/ai_clip_analyzer.py --yolo-model yolov8n.pt --whisper-model small';
+
+  @override
+  String get aiCloudEndpoint => '云端 AI 地址';
+
+  @override
+  String get aiCloudEndpointHint => '返回 segments JSON manifest 的 HTTPS 接口地址';
+
+  @override
+  String get aiCloudApiKey => '云端 AI API Key';
+
+  @override
+  String get aiCloudApiKeyHint => '可选，用于云端分析服务的 Bearer Token';
+
+  @override
+  String get aiCloudModel => '云端 AI 模型';
+
+  @override
+  String get aiCloudModelHint => '可选，例如 gpt-4.1-mini 或你的网关模型 ID';
 
   @override
   String get clipLibrary => 'AI 切片库';

@@ -12,6 +12,14 @@ void main() {
       expect(controller.settings.defaultQuality, 'best');
       expect(controller.settings.concurrentCount, 1);
       expect(controller.settings.disclaimerAccepted, isFalse);
+      expect(
+        controller.settings.aiAnalysisProvider,
+        AiAnalysisProvider.builtIn,
+      );
+      expect(
+        controller.settings.builtInClipAnalyzerMode,
+        BuiltInClipAnalyzerMode.balanced,
+      );
       expect(controller.settings.ytDlpPath, isNull);
       expect(controller.settings.ffmpegPath, isNull);
     });
@@ -31,8 +39,11 @@ void main() {
           downloadSubtitles: true,
           downloadThumbnail: true,
           disclaimerAccepted: true,
+          aiAnalysisProvider: AiAnalysisProvider.cloudEndpoint,
+          builtInClipAnalyzerMode: BuiltInClipAnalyzerMode.visualFocused,
           ytDlpPath: '  ',
           ffmpegPath: ' /tools/ffmpeg ',
+          aiCloudEndpoint: ' https://ai.example.com/analyze ',
         ),
       );
 
@@ -44,8 +55,20 @@ void main() {
       expect(controller.settings.downloadSubtitles, isTrue);
       expect(controller.settings.downloadThumbnail, isTrue);
       expect(controller.settings.disclaimerAccepted, isTrue);
+      expect(
+        controller.settings.aiAnalysisProvider,
+        AiAnalysisProvider.cloudEndpoint,
+      );
+      expect(
+        controller.settings.builtInClipAnalyzerMode,
+        BuiltInClipAnalyzerMode.visualFocused,
+      );
       expect(controller.settings.ytDlpPath, isNull);
       expect(controller.settings.ffmpegPath, '/tools/ffmpeg');
+      expect(
+        controller.settings.aiCloudEndpoint,
+        'https://ai.example.com/analyze',
+      );
     });
 
     test('updates individual settings fields', () {
@@ -61,6 +84,14 @@ void main() {
       controller.acknowledgeDisclaimer();
       controller.updateYtDlpPath('/tools/yt-dlp');
       controller.updateFfmpegPath('/tools/ffmpeg');
+      controller.updateAiAnalysisProvider(AiAnalysisProvider.cloudEndpoint);
+      controller.updateBuiltInClipAnalyzerMode(
+        BuiltInClipAnalyzerMode.audioFocused,
+      );
+      controller.updateAiAnalyzerCommand('python3 tools/ai_clip_analyzer.py');
+      controller.updateAiCloudEndpoint('https://ai.example.com/analyze');
+      controller.updateAiCloudApiKey('token');
+      controller.updateAiCloudModel('clip-model');
 
       expect(controller.settings.saveDirectory, '/downloads');
       expect(controller.settings.downloadMode, DownloadMode.concurrent);
@@ -71,6 +102,24 @@ void main() {
       expect(controller.settings.disclaimerAccepted, isTrue);
       expect(controller.settings.ytDlpPath, '/tools/yt-dlp');
       expect(controller.settings.ffmpegPath, '/tools/ffmpeg');
+      expect(
+        controller.settings.aiAnalysisProvider,
+        AiAnalysisProvider.cloudEndpoint,
+      );
+      expect(
+        controller.settings.builtInClipAnalyzerMode,
+        BuiltInClipAnalyzerMode.audioFocused,
+      );
+      expect(
+        controller.settings.aiAnalyzerCommand,
+        'python3 tools/ai_clip_analyzer.py',
+      );
+      expect(
+        controller.settings.aiCloudEndpoint,
+        'https://ai.example.com/analyze',
+      );
+      expect(controller.settings.aiCloudApiKey, 'token');
+      expect(controller.settings.aiCloudModel, 'clip-model');
     });
   });
 }

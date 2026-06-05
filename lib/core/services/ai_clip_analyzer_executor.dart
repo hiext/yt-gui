@@ -9,13 +9,23 @@ import 'process_yt_dlp_executor.dart' show ProcessRunner;
 class AiClipAnalyzerExecutor implements PostProcessExecutor {
   AiClipAnalyzerExecutor({
     ProcessRunner? processRunner,
-    Future<List<ClipSegment>> Function(PostProcessTask task)? fallbackBuilder,
+    Future<List<ClipSegment>> Function(
+      PostProcessTask task,
+      BuiltInClipAnalyzerMode mode,
+    )?
+    builtInBuilder,
+    HttpClient Function()? httpClientFactory,
   }) : _processRunner = processRunner ?? _defaultProcessRunner,
-       _fallbackBuilder = fallbackBuilder ?? _buildFallbackSegments;
+       _builtInBuilder = builtInBuilder ?? _buildBuiltInSegments,
+       _httpClientFactory = httpClientFactory ?? HttpClient.new;
 
   final ProcessRunner _processRunner;
-  final Future<List<ClipSegment>> Function(PostProcessTask task)
-  _fallbackBuilder;
+  final Future<List<ClipSegment>> Function(
+    PostProcessTask task,
+    BuiltInClipAnalyzerMode mode,
+  )
+  _builtInBuilder;
+  final HttpClient Function() _httpClientFactory;
   final Map<String, Process> _processes = {};
   final Set<String> _intentionalStops = {};
 
@@ -33,23 +43,49 @@ class AiClipAnalyzerExecutor implements PostProcessExecutor {
       task.copyWith(status: PostProcessStatus.running, progress: 10),
     );
 
-    final command = settings.aiAnalyzerCommand;
-    if (command == null || command.trim().isEmpty) {
-      final segments = await _fallbackBuilder(task);
-      onTaskChanged?.call(
-        task.copyWith(
-          status: PostProcessStatus.completed,
-          progress: 100,
-          clipSegments: segments,
-        ),
-      );
-      return;
+    switch (settings.aiAnalysisProvider) {
+      case AiAnalysisProvider.builtIn:
+        await _completeWithBuiltIn(task, settings, onTaskChanged);
+      case AiAnalysisProvider.externalCommand:
+        final command = settings.aiAnalyzerCommand;
+        if (command == null || command.trim().isEmpty) {
+          onTaskChanged?.call(
+            task.copyWith(
+              status: PostProcessStatus.failed,
+              errorMessage: 'AI analyzer command is not configured',
+            ),
+          );
+          return;
+        }
+        await _startExternalAnalyzer(
+          command: command,
+          task: task,
+          onTaskChanged: onTaskChanged,
+        );
+      case AiAnalysisProvider.cloudEndpoint:
+        await _startCloudAnalyzer(
+          settings: settings,
+          task: task,
+          onTaskChanged: onTaskChanged,
+        );
     }
+  }
 
-    await _startExternalAnalyzer(
-      command: command,
-      task: task,
-      onTaskChanged: onTaskChanged,
+  Future<void> _completeWithBuiltIn(
+    PostProcessTask task,
+    DownloadSettings settings,
+    PostProcessTaskChanged? onTaskChanged,
+  ) async {
+    final segments = await _builtInBuilder(
+      task,
+      settings.builtInClipAnalyzerMode,
+    );
+    onTaskChanged?.call(
+      task.copyWith(
+        status: PostProcessStatus.completed,
+        progress: 100,
+        clipSegments: segments,
+      ),
     );
   }
 
@@ -128,6 +164,83 @@ class AiClipAnalyzerExecutor implements PostProcessExecutor {
     }
   }
 
+  Future<void> _startCloudAnalyzer({
+    required DownloadSettings settings,
+    required PostProcessTask task,
+    PostProcessTaskChanged? onTaskChanged,
+  }) async {
+    final endpoint = settings.aiCloudEndpoint;
+    if (endpoint == null || endpoint.trim().isEmpty) {
+      onTaskChanged?.call(
+        task.copyWith(
+          status: PostProcessStatus.failed,
+          errorMessage: 'AI cloud endpoint is not configured',
+        ),
+      );
+      return;
+    }
+
+    final candidates = await _builtInBuilder(
+      task,
+      settings.builtInClipAnalyzerMode,
+    );
+    final client = _httpClientFactory();
+    try {
+      final request = await client.postUrl(Uri.parse(endpoint));
+      request.headers.contentType = ContentType.json;
+      if (settings.aiCloudApiKey != null) {
+        request.headers.set(
+          HttpHeaders.authorizationHeader,
+          'Bearer ${settings.aiCloudApiKey}',
+        );
+      }
+      request.write(
+        jsonEncode({
+          'schemaVersion': 1,
+          'taskId': task.id,
+          'sourceTaskId': task.sourceTaskId,
+          'title': task.title,
+          'sourcePath': task.sourcePath,
+          if (settings.aiCloudModel != null) 'model': settings.aiCloudModel,
+          'instructions':
+              'Return JSON with a top-level segments array. Each segment should include startMs, endMs, title, summary, keywords, tags, confidence, reason, detections, and transcripts.',
+          'builtInCandidates': candidates
+              .map((segment) => segment.toJson())
+              .toList(),
+        }),
+      );
+      final response = await request.close();
+      final body = await response.transform(utf8.decoder).join();
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        onTaskChanged?.call(
+          task.copyWith(
+            status: PostProcessStatus.failed,
+            errorMessage:
+                'AI cloud endpoint returned HTTP ${response.statusCode}',
+          ),
+        );
+        return;
+      }
+      final segments = _parseManifest(body, task);
+      onTaskChanged?.call(
+        task.copyWith(
+          status: PostProcessStatus.completed,
+          progress: 100,
+          clipSegments: segments,
+        ),
+      );
+    } catch (error) {
+      onTaskChanged?.call(
+        task.copyWith(
+          status: PostProcessStatus.failed,
+          errorMessage: 'AI cloud analysis failed: $error',
+        ),
+      );
+    } finally {
+      client.close(force: true);
+    }
+  }
+
   @override
   Future<void> cancel(String taskId) async {
     final process = _processes[taskId];
@@ -149,10 +262,7 @@ class AiClipAnalyzerExecutor implements PostProcessExecutor {
     String manifest,
     PostProcessTask task,
   ) {
-    final decoded = jsonDecode(manifest);
-    if (decoded is! Map<String, Object?>) {
-      throw const AiClipAnalyzerException('root must be a JSON object');
-    }
+    final decoded = _decodeManifestRoot(manifest);
     final rawSegments = decoded['segments'];
     if (rawSegments is! List) {
       throw const AiClipAnalyzerException('segments must be a JSON array');
@@ -207,6 +317,34 @@ class AiClipAnalyzerExecutor implements PostProcessExecutor {
         outputPath: raw['outputPath'] as String?,
       );
     }).toList();
+  }
+
+  static Map<String, Object?> _decodeManifestRoot(String manifest) {
+    final decoded = jsonDecode(manifest);
+    if (decoded is! Map<String, Object?>) {
+      throw const AiClipAnalyzerException('root must be a JSON object');
+    }
+    if (decoded['segments'] is List) {
+      return decoded;
+    }
+    final outputText = decoded['output_text'];
+    if (outputText is String && outputText.trim().isNotEmpty) {
+      return _decodeManifestRoot(outputText);
+    }
+    final choices = decoded['choices'];
+    if (choices is List && choices.isNotEmpty) {
+      final first = choices.first;
+      if (first is Map<String, Object?>) {
+        final message = first['message'];
+        if (message is Map<String, Object?>) {
+          final content = message['content'];
+          if (content is String && content.trim().isNotEmpty) {
+            return _decodeManifestRoot(content);
+          }
+        }
+      }
+    }
+    return decoded;
   }
 
   static int _readMs(
@@ -267,38 +405,114 @@ class AiClipAnalyzerExecutor implements PostProcessExecutor {
     return result;
   }
 
-  static Future<List<ClipSegment>> _buildFallbackSegments(
+  static Future<List<ClipSegment>> _buildBuiltInSegments(
     PostProcessTask task,
+    BuiltInClipAnalyzerMode mode,
   ) async {
     final sourceName = task.sourcePath.split(Platform.pathSeparator).last;
-    final segmentId = '${task.id}#segment-1';
-    return [
-      ClipSegment(
+    final keywords = _keywordTokens(task.title, sourceName);
+    final windows = switch (mode) {
+      BuiltInClipAnalyzerMode.balanced => const [
+        _BuiltInWindow(0, 30000, 'Opening context', 'balanced'),
+        _BuiltInWindow(30000, 90000, 'Main content candidate', 'balanced'),
+        _BuiltInWindow(90000, 150000, 'Follow-up candidate', 'balanced'),
+      ],
+      BuiltInClipAnalyzerMode.visualFocused => const [
+        _BuiltInWindow(0, 20000, 'Visual opening candidate', 'visual'),
+        _BuiltInWindow(20000, 50000, 'Visual scene candidate', 'visual'),
+        _BuiltInWindow(50000, 80000, 'Visual detail candidate', 'visual'),
+        _BuiltInWindow(80000, 110000, 'Visual transition candidate', 'visual'),
+      ],
+      BuiltInClipAnalyzerMode.audioFocused => const [
+        _BuiltInWindow(0, 45000, 'Speech/context candidate', 'audio'),
+        _BuiltInWindow(45000, 90000, 'Speech/topic candidate', 'audio'),
+        _BuiltInWindow(90000, 135000, 'Speech/summary candidate', 'audio'),
+      ],
+    };
+
+    return windows.asMap().entries.map((entry) {
+      final index = entry.key + 1;
+      final window = entry.value;
+      final segmentId = '${task.id}#builtin-$index';
+      final summary = switch (mode) {
+        BuiltInClipAnalyzerMode.balanced =>
+          'Built-in balanced analysis candidate for "$sourceName". Use it as a searchable baseline before YOLO/Whisper/cloud refinement.',
+        BuiltInClipAnalyzerMode.visualFocused =>
+          'Built-in visual-focused candidate based on stable sampling windows and file/title keywords.',
+        BuiltInClipAnalyzerMode.audioFocused =>
+          'Built-in audio-focused candidate prepared for transcript/cloud refinement using title and file keywords.',
+      };
+      final detections = mode == BuiltInClipAnalyzerMode.audioFocused
+          ? const <ClipDetection>[]
+          : [
+              ClipDetection(
+                id: '$segmentId#det-1',
+                segmentId: segmentId,
+                timestampMs:
+                    window.startMs + ((window.endMs - window.startMs) ~/ 2),
+                label: mode == BuiltInClipAnalyzerMode.visualFocused
+                    ? 'visual-scene-candidate'
+                    : 'scene-candidate',
+                confidence: mode == BuiltInClipAnalyzerMode.visualFocused
+                    ? 0.34
+                    : 0.26,
+                bbox: const [],
+              ),
+            ];
+      final transcripts = mode == BuiltInClipAnalyzerMode.visualFocused
+          ? const <ClipTranscript>[]
+          : [
+              ClipTranscript(
+                id: '$segmentId#txt-1',
+                segmentId: segmentId,
+                startMs: window.startMs,
+                endMs: window.endMs,
+                text: [task.title, sourceName, ...keywords].join(' '),
+                words: keywords,
+              ),
+            ];
+      return ClipSegment(
         id: segmentId,
         sourceTaskId: task.sourceTaskId,
         postProcessTaskId: task.id,
         sourcePath: task.sourcePath,
-        startMs: 0,
-        endMs: 60000,
-        title: task.title,
-        summary:
-            'AI analyzer is not configured. This placeholder keeps "$sourceName" searchable until a YOLO/Whisper sidecar is connected.',
-        keywords: [task.title, sourceName, 'ai-analyzer-pending'],
-        tags: const ['pending-ai-analysis'],
-        confidence: 0.05,
-        reason: 'No AI analyzer command configured in Settings.',
-        transcripts: [
-          ClipTranscript(
-            id: '$segmentId#txt-1',
-            segmentId: segmentId,
-            startMs: 0,
-            endMs: 60000,
-            text: sourceName,
-          ),
-        ],
-      ),
-    ];
+        startMs: window.startMs,
+        endMs: window.endMs,
+        title: '${task.title} · ${window.title}',
+        summary: summary,
+        keywords: [...keywords, window.tag, 'built-in'],
+        tags: ['built-in', window.tag, mode.name],
+        confidence: switch (mode) {
+          BuiltInClipAnalyzerMode.balanced => 0.28,
+          BuiltInClipAnalyzerMode.visualFocused => 0.34,
+          BuiltInClipAnalyzerMode.audioFocused => 0.3,
+        },
+        reason:
+            'Built-in ${mode.name} heuristic. Configure a local sidecar or cloud endpoint for model-based semantic refinement.',
+        detections: detections,
+        transcripts: transcripts,
+      );
+    }).toList();
   }
+
+  static List<String> _keywordTokens(String title, String sourceName) {
+    return '$title $sourceName'
+        .replaceAll(RegExp(r'[_\-.]+'), ' ')
+        .split(RegExp(r'\s+'))
+        .map((token) => token.trim().toLowerCase())
+        .where((token) => token.length >= 2)
+        .take(16)
+        .toList();
+  }
+}
+
+class _BuiltInWindow {
+  const _BuiltInWindow(this.startMs, this.endMs, this.title, this.tag);
+
+  final int startMs;
+  final int endMs;
+  final String title;
+  final String tag;
 }
 
 class AiClipAnalyzerException implements Exception {

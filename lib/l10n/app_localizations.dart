@@ -1166,6 +1166,66 @@ abstract class AppLocalizations {
   /// **'切片'**
   String get clips;
 
+  /// No description provided for @aiClipAnalysis.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 切片分析'**
+  String get aiClipAnalysis;
+
+  /// No description provided for @aiClipAnalysisDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择内置本地分析、Python sidecar，或云端大模型地址来生成语义切片。'**
+  String get aiClipAnalysisDesc;
+
+  /// No description provided for @aiAnalysisProvider.
+  ///
+  /// In zh, this message translates to:
+  /// **'分析提供方'**
+  String get aiAnalysisProvider;
+
+  /// No description provided for @aiProviderBuiltIn.
+  ///
+  /// In zh, this message translates to:
+  /// **'内置本地分析'**
+  String get aiProviderBuiltIn;
+
+  /// No description provided for @aiProviderExternalCommand.
+  ///
+  /// In zh, this message translates to:
+  /// **'外部命令 / Python sidecar'**
+  String get aiProviderExternalCommand;
+
+  /// No description provided for @aiProviderCloudEndpoint.
+  ///
+  /// In zh, this message translates to:
+  /// **'云端大模型地址'**
+  String get aiProviderCloudEndpoint;
+
+  /// No description provided for @builtInClipAnalyzerMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'内置分析策略'**
+  String get builtInClipAnalyzerMode;
+
+  /// No description provided for @builtInBalanced.
+  ///
+  /// In zh, this message translates to:
+  /// **'均衡 — 视觉 + 音频候选'**
+  String get builtInBalanced;
+
+  /// No description provided for @builtInVisualFocused.
+  ///
+  /// In zh, this message translates to:
+  /// **'偏视觉 — 场景候选'**
+  String get builtInVisualFocused;
+
+  /// No description provided for @builtInAudioFocused.
+  ///
+  /// In zh, this message translates to:
+  /// **'偏音频 — 语音候选'**
+  String get builtInAudioFocused;
+
   /// No description provided for @aiAnalyzerCommand.
   ///
   /// In zh, this message translates to:
@@ -1177,6 +1237,42 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'可选，例如 python3 tools/ai_clip_analyzer.py --yolo-model yolov8n.pt --whisper-model small'**
   String get aiAnalyzerCommandHint;
+
+  /// No description provided for @aiCloudEndpoint.
+  ///
+  /// In zh, this message translates to:
+  /// **'云端 AI 地址'**
+  String get aiCloudEndpoint;
+
+  /// No description provided for @aiCloudEndpointHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'返回 segments JSON manifest 的 HTTPS 接口地址'**
+  String get aiCloudEndpointHint;
+
+  /// No description provided for @aiCloudApiKey.
+  ///
+  /// In zh, this message translates to:
+  /// **'云端 AI API Key'**
+  String get aiCloudApiKey;
+
+  /// No description provided for @aiCloudApiKeyHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'可选，用于云端分析服务的 Bearer Token'**
+  String get aiCloudApiKeyHint;
+
+  /// No description provided for @aiCloudModel.
+  ///
+  /// In zh, this message translates to:
+  /// **'云端 AI 模型'**
+  String get aiCloudModel;
+
+  /// No description provided for @aiCloudModelHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'可选，例如 gpt-4.1-mini 或你的网关模型 ID'**
+  String get aiCloudModelHint;
 
   /// No description provided for @clipLibrary.
   ///

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -23,6 +24,7 @@ void main() {
     await executor.startTask(
       task: _task(),
       settings: _settings(
+        provider: AiAnalysisProvider.externalCommand,
         aiAnalyzerCommand:
             'python3 tools/ai_clip_analyzer.py --yolo-model local.pt',
       ),
@@ -66,7 +68,7 @@ void main() {
   });
 
   test(
-    'fallback segment keeps analysis chain searchable before sidecar is configured',
+    'built-in analyzer creates structured local candidates before sidecar is configured',
     () async {
       final executor = AiClipAnalyzerExecutor();
       addTearDown(executor.dispose);
@@ -79,10 +81,91 @@ void main() {
       );
 
       expect(changes.last.status, PostProcessStatus.completed);
-      expect(changes.last.clipSegments.single.tags, ['pending-ai-analysis']);
-      expect(changes.last.clipSegments.single.confidence, lessThan(0.1));
+      expect(changes.last.clipSegments, hasLength(3));
+      expect(changes.last.clipSegments.first.tags, contains('built-in'));
+      expect(changes.last.clipSegments.first.keywords, contains('source'));
+      expect(changes.last.clipSegments.first.confidence, greaterThan(0.1));
     },
   );
+
+  test('built-in visual strategy adds scene candidate detections', () async {
+    final executor = AiClipAnalyzerExecutor();
+    addTearDown(executor.dispose);
+    final changes = <PostProcessTask>[];
+
+    await executor.startTask(
+      task: _task(),
+      settings: _settings(mode: BuiltInClipAnalyzerMode.visualFocused),
+      onTaskChanged: changes.add,
+    );
+
+    expect(changes.last.clipSegments, hasLength(4));
+    expect(changes.last.clipSegments.first.tags, contains('visualFocused'));
+    expect(
+      changes.last.clipSegments.first.detections.single.label,
+      'visual-scene-candidate',
+    );
+  });
+
+  test('cloud endpoint receives candidates and returns manifest', () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    addTearDown(() => server.close(force: true));
+    final requestBodies = <Map<String, Object?>>[];
+    unawaited(
+      server.forEach((request) async {
+        requestBodies.add(
+          jsonDecode(await utf8.decoder.bind(request).join())
+              as Map<String, Object?>,
+        );
+        expect(
+          request.headers.value(HttpHeaders.authorizationHeader),
+          'Bearer token',
+        );
+        request.response.headers.contentType = ContentType.json;
+        request.response.write(
+          jsonEncode({
+            'segments': [
+              {
+                'startMs': 3000,
+                'endMs': 15000,
+                'title': 'Cloud refined scene',
+                'summary': 'Cloud model selected the product scene',
+                'keywords': ['cloud', 'product'],
+                'tags': ['cloud', 'llm'],
+                'confidence': 0.92,
+                'reason': 'cloud semantic refinement',
+                'transcripts': [
+                  {'startMs': 3200, 'endMs': 12000, 'text': 'cloud transcript'},
+                ],
+              },
+            ],
+          }),
+        );
+        await request.response.close();
+      }),
+    );
+    final executor = AiClipAnalyzerExecutor();
+    addTearDown(executor.dispose);
+    final changes = <PostProcessTask>[];
+
+    await executor.startTask(
+      task: _task(),
+      settings: _settings(
+        provider: AiAnalysisProvider.cloudEndpoint,
+        aiCloudEndpoint: 'http://127.0.0.1:${server.port}/analyze',
+        aiCloudApiKey: 'token',
+        aiCloudModel: 'clip-model',
+      ),
+      onTaskChanged: changes.add,
+    );
+    await pumpEventQueue();
+
+    expect(requestBodies.single['model'], 'clip-model');
+    expect(requestBodies.single['builtInCandidates'], isA<List<Object?>>());
+    expect(changes.last.status, PostProcessStatus.completed);
+    expect(changes.last.clipSegments.single.title, 'Cloud refined scene');
+    expect(changes.last.clipSegments.single.tags, ['cloud', 'llm']);
+  });
 }
 
 PostProcessTask _task() {
@@ -98,7 +181,14 @@ PostProcessTask _task() {
   );
 }
 
-DownloadSettings _settings({String? aiAnalyzerCommand}) {
+DownloadSettings _settings({
+  AiAnalysisProvider provider = AiAnalysisProvider.builtIn,
+  BuiltInClipAnalyzerMode mode = BuiltInClipAnalyzerMode.balanced,
+  String? aiAnalyzerCommand,
+  String? aiCloudEndpoint,
+  String? aiCloudApiKey,
+  String? aiCloudModel,
+}) {
   return DownloadSettings(
     saveDirectory: '/downloads',
     downloadMode: DownloadMode.serial,
@@ -107,7 +197,12 @@ DownloadSettings _settings({String? aiAnalyzerCommand}) {
     downloadSubtitles: false,
     downloadThumbnail: false,
     disclaimerAccepted: false,
+    aiAnalysisProvider: provider,
+    builtInClipAnalyzerMode: mode,
     aiAnalyzerCommand: aiAnalyzerCommand,
+    aiCloudEndpoint: aiCloudEndpoint,
+    aiCloudApiKey: aiCloudApiKey,
+    aiCloudModel: aiCloudModel,
   );
 }
 

@@ -24,6 +24,9 @@ class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _ytDlpCtrl;
   late final TextEditingController _ffmpegCtrl;
   late final TextEditingController _aiAnalyzerCtrl;
+  late final TextEditingController _aiCloudEndpointCtrl;
+  late final TextEditingController _aiCloudApiKeyCtrl;
+  late final TextEditingController _aiCloudModelCtrl;
 
   @override
   void initState() {
@@ -34,6 +37,9 @@ class _SettingsPageState extends State<SettingsPage> {
     _ytDlpCtrl = TextEditingController(text: s.ytDlpPath ?? '');
     _ffmpegCtrl = TextEditingController(text: s.ffmpegPath ?? '');
     _aiAnalyzerCtrl = TextEditingController(text: s.aiAnalyzerCommand ?? '');
+    _aiCloudEndpointCtrl = TextEditingController(text: s.aiCloudEndpoint ?? '');
+    _aiCloudApiKeyCtrl = TextEditingController(text: s.aiCloudApiKey ?? '');
+    _aiCloudModelCtrl = TextEditingController(text: s.aiCloudModel ?? '');
     widget.controller.addListener(_syncFromSettings);
   }
 
@@ -45,6 +51,9 @@ class _SettingsPageState extends State<SettingsPage> {
     _ytDlpCtrl.dispose();
     _ffmpegCtrl.dispose();
     _aiAnalyzerCtrl.dispose();
+    _aiCloudEndpointCtrl.dispose();
+    _aiCloudApiKeyCtrl.dispose();
+    _aiCloudModelCtrl.dispose();
     super.dispose();
   }
 
@@ -55,6 +64,9 @@ class _SettingsPageState extends State<SettingsPage> {
     _updateCtrlIfChanged(_ytDlpCtrl, s.ytDlpPath ?? '');
     _updateCtrlIfChanged(_ffmpegCtrl, s.ffmpegPath ?? '');
     _updateCtrlIfChanged(_aiAnalyzerCtrl, s.aiAnalyzerCommand ?? '');
+    _updateCtrlIfChanged(_aiCloudEndpointCtrl, s.aiCloudEndpoint ?? '');
+    _updateCtrlIfChanged(_aiCloudApiKeyCtrl, s.aiCloudApiKey ?? '');
+    _updateCtrlIfChanged(_aiCloudModelCtrl, s.aiCloudModel ?? '');
   }
 
   void _updateCtrlIfChanged(TextEditingController ctrl, String value) {
@@ -187,16 +199,129 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     onChanged: widget.controller.updateFfmpegPath,
                   ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            SectionCard(
+              title: l10n.aiClipAnalysis,
+              subtitle: l10n.aiClipAnalysisDesc,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  DropdownButtonFormField<AiAnalysisProvider>(
+                    key: const Key('ai-analysis-provider-field'),
+                    initialValue: settings.aiAnalysisProvider,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      labelText: l10n.aiAnalysisProvider,
+                      border: const OutlineInputBorder(),
+                    ),
+                    items: [
+                      DropdownMenuItem(
+                        value: AiAnalysisProvider.builtIn,
+                        child: Text(l10n.aiProviderBuiltIn),
+                      ),
+                      DropdownMenuItem(
+                        value: AiAnalysisProvider.externalCommand,
+                        child: Text(l10n.aiProviderExternalCommand),
+                      ),
+                      DropdownMenuItem(
+                        value: AiAnalysisProvider.cloudEndpoint,
+                        child: Text(l10n.aiProviderCloudEndpoint),
+                      ),
+                    ],
+                    onChanged: (provider) {
+                      if (provider != null) {
+                        widget.controller.updateAiAnalysisProvider(provider);
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<BuiltInClipAnalyzerMode>(
+                    key: const Key('built-in-clip-analyzer-mode-field'),
+                    initialValue: settings.builtInClipAnalyzerMode,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      labelText: l10n.builtInClipAnalyzerMode,
+                      border: const OutlineInputBorder(),
+                    ),
+                    items: [
+                      DropdownMenuItem(
+                        value: BuiltInClipAnalyzerMode.balanced,
+                        child: Text(l10n.builtInBalanced),
+                      ),
+                      DropdownMenuItem(
+                        value: BuiltInClipAnalyzerMode.visualFocused,
+                        child: Text(l10n.builtInVisualFocused),
+                      ),
+                      DropdownMenuItem(
+                        value: BuiltInClipAnalyzerMode.audioFocused,
+                        child: Text(l10n.builtInAudioFocused),
+                      ),
+                    ],
+                    onChanged: (mode) {
+                      if (mode != null) {
+                        widget.controller.updateBuiltInClipAnalyzerMode(mode);
+                      }
+                    },
+                  ),
                   const SizedBox(height: 16),
                   TextFormField(
                     key: const Key('ai-analyzer-command-field'),
                     controller: _aiAnalyzerCtrl,
+                    enabled:
+                        settings.aiAnalysisProvider ==
+                        AiAnalysisProvider.externalCommand,
                     decoration: InputDecoration(
                       labelText: l10n.aiAnalyzerCommand,
                       helperText: l10n.aiAnalyzerCommandHint,
                       border: const OutlineInputBorder(),
                     ),
                     onChanged: widget.controller.updateAiAnalyzerCommand,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    key: const Key('ai-cloud-endpoint-field'),
+                    controller: _aiCloudEndpointCtrl,
+                    enabled:
+                        settings.aiAnalysisProvider ==
+                        AiAnalysisProvider.cloudEndpoint,
+                    decoration: InputDecoration(
+                      labelText: l10n.aiCloudEndpoint,
+                      helperText: l10n.aiCloudEndpointHint,
+                      border: const OutlineInputBorder(),
+                    ),
+                    onChanged: widget.controller.updateAiCloudEndpoint,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    key: const Key('ai-cloud-model-field'),
+                    controller: _aiCloudModelCtrl,
+                    enabled:
+                        settings.aiAnalysisProvider ==
+                        AiAnalysisProvider.cloudEndpoint,
+                    decoration: InputDecoration(
+                      labelText: l10n.aiCloudModel,
+                      helperText: l10n.aiCloudModelHint,
+                      border: const OutlineInputBorder(),
+                    ),
+                    onChanged: widget.controller.updateAiCloudModel,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    key: const Key('ai-cloud-api-key-field'),
+                    controller: _aiCloudApiKeyCtrl,
+                    enabled:
+                        settings.aiAnalysisProvider ==
+                        AiAnalysisProvider.cloudEndpoint,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      labelText: l10n.aiCloudApiKey,
+                      helperText: l10n.aiCloudApiKeyHint,
+                      border: const OutlineInputBorder(),
+                    ),
+                    onChanged: widget.controller.updateAiCloudApiKey,
                   ),
                 ],
               ),

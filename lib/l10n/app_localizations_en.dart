@@ -622,11 +622,63 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clips => 'Clips';
 
   @override
+  String get aiClipAnalysis => 'AI Clip Analysis';
+
+  @override
+  String get aiClipAnalysisDesc =>
+      'Choose the local analyzer, a Python sidecar, or a cloud model endpoint for semantic clip generation.';
+
+  @override
+  String get aiAnalysisProvider => 'Analysis Provider';
+
+  @override
+  String get aiProviderBuiltIn => 'Built-in local analyzer';
+
+  @override
+  String get aiProviderExternalCommand => 'External command / Python sidecar';
+
+  @override
+  String get aiProviderCloudEndpoint => 'Cloud model endpoint';
+
+  @override
+  String get builtInClipAnalyzerMode => 'Built-in Strategy';
+
+  @override
+  String get builtInBalanced => 'Balanced — visual + audio candidates';
+
+  @override
+  String get builtInVisualFocused => 'Visual focused — scene candidates';
+
+  @override
+  String get builtInAudioFocused => 'Audio focused — speech candidates';
+
+  @override
   String get aiAnalyzerCommand => 'AI Analyzer Command';
 
   @override
   String get aiAnalyzerCommandHint =>
       'Optional, e.g. python3 tools/ai_clip_analyzer.py --yolo-model yolov8n.pt --whisper-model small';
+
+  @override
+  String get aiCloudEndpoint => 'Cloud AI Endpoint';
+
+  @override
+  String get aiCloudEndpointHint =>
+      'HTTPS endpoint that returns a JSON manifest with segments';
+
+  @override
+  String get aiCloudApiKey => 'Cloud AI API Key';
+
+  @override
+  String get aiCloudApiKeyHint =>
+      'Optional bearer token for your cloud analysis service';
+
+  @override
+  String get aiCloudModel => 'Cloud AI Model';
+
+  @override
+  String get aiCloudModelHint =>
+      'Optional model name, e.g. gpt-4.1-mini or your gateway model id';
 
   @override
   String get clipLibrary => 'AI Clip Library';

@@ -53,7 +53,13 @@ void main() {
       expect(settings.defaultQuality, 'best');
       expect(settings.ytDlpPath, isNull);
       expect(settings.ffmpegPath, isNull);
+      expect(settings.aiAnalysisProvider, AiAnalysisProvider.builtIn);
+      expect(
+        settings.builtInClipAnalyzerMode,
+        BuiltInClipAnalyzerMode.balanced,
+      );
       expect(settings.aiAnalyzerCommand, isNull);
+      expect(settings.aiCloudEndpoint, isNull);
     });
 
     test('saves and loads settings', () async {
@@ -66,9 +72,14 @@ void main() {
         downloadSubtitles: true,
         downloadThumbnail: true,
         disclaimerAccepted: true,
+        aiAnalysisProvider: AiAnalysisProvider.cloudEndpoint,
+        builtInClipAnalyzerMode: BuiltInClipAnalyzerMode.audioFocused,
         ytDlpPath: '/tools/yt-dlp',
         ffmpegPath: '/tools/ffmpeg',
         aiAnalyzerCommand: 'python3 tools/ai_clip_analyzer.py',
+        aiCloudEndpoint: 'https://ai.example.com/analyze',
+        aiCloudApiKey: 'token',
+        aiCloudModel: 'clip-model',
       );
 
       await repository.save(settings);
@@ -81,9 +92,17 @@ void main() {
       expect(restored.downloadSubtitles, isTrue);
       expect(restored.downloadThumbnail, isTrue);
       expect(restored.disclaimerAccepted, isTrue);
+      expect(restored.aiAnalysisProvider, AiAnalysisProvider.cloudEndpoint);
+      expect(
+        restored.builtInClipAnalyzerMode,
+        BuiltInClipAnalyzerMode.audioFocused,
+      );
       expect(restored.ytDlpPath, '/tools/yt-dlp');
       expect(restored.ffmpegPath, '/tools/ffmpeg');
       expect(restored.aiAnalyzerCommand, 'python3 tools/ai_clip_analyzer.py');
+      expect(restored.aiCloudEndpoint, 'https://ai.example.com/analyze');
+      expect(restored.aiCloudApiKey, 'token');
+      expect(restored.aiCloudModel, 'clip-model');
     });
 
     test('removes optional tool paths when they are cleared', () async {
@@ -93,6 +112,9 @@ void main() {
           ytDlpPath: '/tools/yt-dlp',
           ffmpegPath: '/tools/ffmpeg',
           aiAnalyzerCommand: 'python3 tools/ai_clip_analyzer.py',
+          aiCloudEndpoint: 'https://ai.example.com/analyze',
+          aiCloudApiKey: 'token',
+          aiCloudModel: 'clip-model',
         ),
       );
 
@@ -102,6 +124,9 @@ void main() {
       expect(restored.ytDlpPath, isNull);
       expect(restored.ffmpegPath, isNull);
       expect(restored.aiAnalyzerCommand, isNull);
+      expect(restored.aiCloudEndpoint, isNull);
+      expect(restored.aiCloudApiKey, isNull);
+      expect(restored.aiCloudModel, isNull);
     });
   });
 }

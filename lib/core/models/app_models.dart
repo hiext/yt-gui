@@ -2,6 +2,10 @@ import 'dart:io';
 
 enum DownloadMode { serial, queue, concurrent }
 
+enum AiAnalysisProvider { builtIn, externalCommand, cloudEndpoint }
+
+enum BuiltInClipAnalyzerMode { balanced, visualFocused, audioFocused }
+
 enum DownloadStatus {
   idle,
   parsing,
@@ -23,9 +27,14 @@ class DownloadSettings {
     required this.downloadSubtitles,
     required this.downloadThumbnail,
     required this.disclaimerAccepted,
+    this.aiAnalysisProvider = AiAnalysisProvider.builtIn,
+    this.builtInClipAnalyzerMode = BuiltInClipAnalyzerMode.balanced,
     this.ytDlpPath,
     this.ffmpegPath,
     this.aiAnalyzerCommand,
+    this.aiCloudEndpoint,
+    this.aiCloudApiKey,
+    this.aiCloudModel,
     this.cookieConfigs = const [],
     this.defaultCookieBrowser,
   });
@@ -56,9 +65,14 @@ class DownloadSettings {
   final bool downloadSubtitles;
   final bool downloadThumbnail;
   final bool disclaimerAccepted;
+  final AiAnalysisProvider aiAnalysisProvider;
+  final BuiltInClipAnalyzerMode builtInClipAnalyzerMode;
   final String? ytDlpPath;
   final String? ffmpegPath;
   final String? aiAnalyzerCommand;
+  final String? aiCloudEndpoint;
+  final String? aiCloudApiKey;
+  final String? aiCloudModel;
   final List<CookieConfig> cookieConfigs;
   final String? defaultCookieBrowser;
 
@@ -70,9 +84,14 @@ class DownloadSettings {
     bool? downloadSubtitles,
     bool? downloadThumbnail,
     bool? disclaimerAccepted,
+    AiAnalysisProvider? aiAnalysisProvider,
+    BuiltInClipAnalyzerMode? builtInClipAnalyzerMode,
     Object? ytDlpPath = _unchanged,
     Object? ffmpegPath = _unchanged,
     Object? aiAnalyzerCommand = _unchanged,
+    Object? aiCloudEndpoint = _unchanged,
+    Object? aiCloudApiKey = _unchanged,
+    Object? aiCloudModel = _unchanged,
     Object? cookieConfigs = _unchanged,
     Object? defaultCookieBrowser = _unchanged,
   }) {
@@ -84,6 +103,9 @@ class DownloadSettings {
       downloadSubtitles: downloadSubtitles ?? this.downloadSubtitles,
       downloadThumbnail: downloadThumbnail ?? this.downloadThumbnail,
       disclaimerAccepted: disclaimerAccepted ?? this.disclaimerAccepted,
+      aiAnalysisProvider: aiAnalysisProvider ?? this.aiAnalysisProvider,
+      builtInClipAnalyzerMode:
+          builtInClipAnalyzerMode ?? this.builtInClipAnalyzerMode,
       ytDlpPath: ytDlpPath == _unchanged
           ? this.ytDlpPath
           : ytDlpPath as String?,
@@ -93,6 +115,15 @@ class DownloadSettings {
       aiAnalyzerCommand: aiAnalyzerCommand == _unchanged
           ? this.aiAnalyzerCommand
           : aiAnalyzerCommand as String?,
+      aiCloudEndpoint: aiCloudEndpoint == _unchanged
+          ? this.aiCloudEndpoint
+          : aiCloudEndpoint as String?,
+      aiCloudApiKey: aiCloudApiKey == _unchanged
+          ? this.aiCloudApiKey
+          : aiCloudApiKey as String?,
+      aiCloudModel: aiCloudModel == _unchanged
+          ? this.aiCloudModel
+          : aiCloudModel as String?,
       cookieConfigs: cookieConfigs == _unchanged
           ? this.cookieConfigs
           : cookieConfigs as List<CookieConfig>,
@@ -114,6 +145,9 @@ class DownloadSettings {
     final normalizedAiAnalyzerCommand = _normalizeOptionalPath(
       aiAnalyzerCommand,
     );
+    final normalizedAiCloudEndpoint = _normalizeOptionalPath(aiCloudEndpoint);
+    final normalizedAiCloudApiKey = _normalizeOptionalPath(aiCloudApiKey);
+    final normalizedAiCloudModel = _normalizeOptionalPath(aiCloudModel);
 
     return DownloadSettings(
       saveDirectory: normalizedSaveDirectory,
@@ -123,9 +157,14 @@ class DownloadSettings {
       downloadSubtitles: downloadSubtitles,
       downloadThumbnail: downloadThumbnail,
       disclaimerAccepted: disclaimerAccepted,
+      aiAnalysisProvider: aiAnalysisProvider,
+      builtInClipAnalyzerMode: builtInClipAnalyzerMode,
       ytDlpPath: normalizedYtDlpPath,
       ffmpegPath: normalizedFfmpegPath,
       aiAnalyzerCommand: normalizedAiAnalyzerCommand,
+      aiCloudEndpoint: normalizedAiCloudEndpoint,
+      aiCloudApiKey: normalizedAiCloudApiKey,
+      aiCloudModel: normalizedAiCloudModel,
       cookieConfigs: cookieConfigs,
       defaultCookieBrowser: defaultCookieBrowser,
     );
@@ -145,11 +184,22 @@ class DownloadSettings {
       'downloadSubtitles': downloadSubtitles,
       'downloadThumbnail': downloadThumbnail,
       'disclaimerAccepted': disclaimerAccepted,
+      'aiAnalysisProvider': aiAnalysisProvider.name,
+      'builtInClipAnalyzerMode': builtInClipAnalyzerMode.name,
     };
     if (ytDlpPath != null) map['ytDlpPath'] = ytDlpPath!;
     if (ffmpegPath != null) map['ffmpegPath'] = ffmpegPath!;
     if (aiAnalyzerCommand != null) {
       map['aiAnalyzerCommand'] = aiAnalyzerCommand!;
+    }
+    if (aiCloudEndpoint != null) {
+      map['aiCloudEndpoint'] = aiCloudEndpoint!;
+    }
+    if (aiCloudApiKey != null) {
+      map['aiCloudApiKey'] = aiCloudApiKey!;
+    }
+    if (aiCloudModel != null) {
+      map['aiCloudModel'] = aiCloudModel!;
     }
     if (defaultCookieBrowser != null) {
       map['defaultCookieBrowser'] = defaultCookieBrowser!;
@@ -170,6 +220,13 @@ class DownloadSettings {
       return null;
     }
 
+    final aiAnalyzerCommand = json['aiAnalyzerCommand'] as String?;
+    final aiAnalysisProvider = json.containsKey('aiAnalysisProvider')
+        ? _parseAiAnalysisProvider(json['aiAnalysisProvider'])
+        : _normalizeStaticOptionalPath(aiAnalyzerCommand) == null
+        ? defaults.aiAnalysisProvider
+        : AiAnalysisProvider.externalCommand;
+
     return DownloadSettings(
       saveDirectory:
           (json['saveDirectory'] as String?) ?? defaultSaveDirectory(),
@@ -184,9 +241,16 @@ class DownloadSettings {
           parseBool(json['downloadThumbnail']) ?? defaults.downloadThumbnail,
       disclaimerAccepted:
           parseBool(json['disclaimerAccepted']) ?? defaults.disclaimerAccepted,
+      aiAnalysisProvider: aiAnalysisProvider,
+      builtInClipAnalyzerMode: _parseBuiltInClipAnalyzerMode(
+        json['builtInClipAnalyzerMode'],
+      ),
       ytDlpPath: json['ytDlpPath'] as String?,
       ffmpegPath: json['ffmpegPath'] as String?,
-      aiAnalyzerCommand: json['aiAnalyzerCommand'] as String?,
+      aiAnalyzerCommand: aiAnalyzerCommand,
+      aiCloudEndpoint: json['aiCloudEndpoint'] as String?,
+      aiCloudApiKey: json['aiCloudApiKey'] as String?,
+      aiCloudModel: json['aiCloudModel'] as String?,
       defaultCookieBrowser: json['defaultCookieBrowser'] as String?,
     ).normalized();
   }
@@ -199,6 +263,31 @@ class DownloadSettings {
       );
     }
     return defaults.downloadMode;
+  }
+
+  static AiAnalysisProvider _parseAiAnalysisProvider(Object? value) {
+    if (value is String) {
+      return AiAnalysisProvider.values.firstWhere(
+        (provider) => provider.name == value,
+        orElse: () => defaults.aiAnalysisProvider,
+      );
+    }
+    return defaults.aiAnalysisProvider;
+  }
+
+  static String? _normalizeStaticOptionalPath(String? path) {
+    final trimmed = path?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
+  }
+
+  static BuiltInClipAnalyzerMode _parseBuiltInClipAnalyzerMode(Object? value) {
+    if (value is String) {
+      return BuiltInClipAnalyzerMode.values.firstWhere(
+        (mode) => mode.name == value,
+        orElse: () => defaults.builtInClipAnalyzerMode,
+      );
+    }
+    return defaults.builtInClipAnalyzerMode;
   }
 }
 

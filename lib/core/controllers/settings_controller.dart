@@ -71,8 +71,28 @@ class SettingsController extends ChangeNotifier {
     updateSettings(_settings.copyWith(ffmpegPath: ffmpegPath));
   }
 
+  void updateAiAnalysisProvider(AiAnalysisProvider provider) {
+    updateSettings(_settings.copyWith(aiAnalysisProvider: provider));
+  }
+
+  void updateBuiltInClipAnalyzerMode(BuiltInClipAnalyzerMode mode) {
+    updateSettings(_settings.copyWith(builtInClipAnalyzerMode: mode));
+  }
+
   void updateAiAnalyzerCommand(String command) {
     updateSettings(_settings.copyWith(aiAnalyzerCommand: command));
+  }
+
+  void updateAiCloudEndpoint(String endpoint) {
+    updateSettings(_settings.copyWith(aiCloudEndpoint: endpoint));
+  }
+
+  void updateAiCloudApiKey(String apiKey) {
+    updateSettings(_settings.copyWith(aiCloudApiKey: apiKey));
+  }
+
+  void updateAiCloudModel(String model) {
+    updateSettings(_settings.copyWith(aiCloudModel: model));
   }
 
   void _save() {
