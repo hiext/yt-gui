@@ -77,9 +77,25 @@ void main() {
         ytDlpPath: '/tools/yt-dlp',
         ffmpegPath: '/tools/ffmpeg',
         aiAnalyzerCommand: 'python3 tools/ai_clip_analyzer.py',
-        aiCloudEndpoint: 'https://ai.example.com/analyze',
-        aiCloudApiKey: 'token',
-        aiCloudModel: 'clip-model',
+        selectedAiCloudConfigId: 'qwen-main',
+        aiCloudConfigs: [
+          AiCloudConfig(
+            id: 'openai-backup',
+            vendor: AiCloudVendor.openAI,
+            name: 'OpenAI Backup',
+            endpoint: 'https://api.openai.com/v1/chat/completions',
+            model: 'gpt-4o-mini',
+          ),
+          AiCloudConfig(
+            id: 'qwen-main',
+            vendor: AiCloudVendor.qwen,
+            name: 'Qwen Main',
+            endpoint:
+                'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+            apiKey: 'token',
+            model: 'qwen-plus',
+          ),
+        ],
       );
 
       await repository.save(settings);
@@ -100,9 +116,15 @@ void main() {
       expect(restored.ytDlpPath, '/tools/yt-dlp');
       expect(restored.ffmpegPath, '/tools/ffmpeg');
       expect(restored.aiAnalyzerCommand, 'python3 tools/ai_clip_analyzer.py');
-      expect(restored.aiCloudEndpoint, 'https://ai.example.com/analyze');
+      expect(
+        restored.aiCloudEndpoint,
+        'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+      );
       expect(restored.aiCloudApiKey, 'token');
-      expect(restored.aiCloudModel, 'clip-model');
+      expect(restored.aiCloudModel, 'qwen-plus');
+      expect(restored.selectedAiCloudConfigId, 'qwen-main');
+      expect(restored.aiCloudConfigs, hasLength(2));
+      expect(restored.selectedAiCloudConfig?.vendor, AiCloudVendor.qwen);
     });
 
     test('removes optional tool paths when they are cleared', () async {

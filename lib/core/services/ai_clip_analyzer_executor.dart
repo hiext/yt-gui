@@ -169,12 +169,12 @@ class AiClipAnalyzerExecutor implements PostProcessExecutor {
     required PostProcessTask task,
     PostProcessTaskChanged? onTaskChanged,
   }) async {
-    final endpoint = settings.aiCloudEndpoint;
-    if (endpoint == null || endpoint.trim().isEmpty) {
+    final config = settings.selectedAiCloudConfig;
+    if (config == null || !config.hasEndpoint) {
       onTaskChanged?.call(
         task.copyWith(
           status: PostProcessStatus.failed,
-          errorMessage: 'AI cloud endpoint is not configured',
+          errorMessage: 'AI cloud profile is not configured',
         ),
       );
       return;
@@ -186,29 +186,11 @@ class AiClipAnalyzerExecutor implements PostProcessExecutor {
     );
     final client = _httpClientFactory();
     try {
-      final request = await client.postUrl(Uri.parse(endpoint));
+      final payload = _buildClipPromptPayload(task, config, candidates);
+      final request = await client.postUrl(_cloudEndpointUri(config));
       request.headers.contentType = ContentType.json;
-      if (settings.aiCloudApiKey != null) {
-        request.headers.set(
-          HttpHeaders.authorizationHeader,
-          'Bearer ${settings.aiCloudApiKey}',
-        );
-      }
-      request.write(
-        jsonEncode({
-          'schemaVersion': 1,
-          'taskId': task.id,
-          'sourceTaskId': task.sourceTaskId,
-          'title': task.title,
-          'sourcePath': task.sourcePath,
-          if (settings.aiCloudModel != null) 'model': settings.aiCloudModel,
-          'instructions':
-              'Return JSON with a top-level segments array. Each segment should include startMs, endMs, title, summary, keywords, tags, confidence, reason, detections, and transcripts.',
-          'builtInCandidates': candidates
-              .map((segment) => segment.toJson())
-              .toList(),
-        }),
-      );
+      _applyCloudAuthHeaders(request, config);
+      request.write(jsonEncode(_cloudRequestBody(config, payload)));
       final response = await request.close();
       final body = await response.transform(utf8.decoder).join();
       if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -221,7 +203,10 @@ class AiClipAnalyzerExecutor implements PostProcessExecutor {
         );
         return;
       }
-      final segments = _parseManifest(body, task);
+      final segments = _parseManifest(
+        _cloudResponseManifest(body, config),
+        task,
+      );
       onTaskChanged?.call(
         task.copyWith(
           status: PostProcessStatus.completed,
@@ -239,6 +224,134 @@ class AiClipAnalyzerExecutor implements PostProcessExecutor {
     } finally {
       client.close(force: true);
     }
+  }
+
+  static Map<String, Object?> _buildClipPromptPayload(
+    PostProcessTask task,
+    AiCloudConfig config,
+    List<ClipSegment> candidates,
+  ) {
+    return {
+      'schemaVersion': 1,
+      'taskId': task.id,
+      'sourceTaskId': task.sourceTaskId,
+      'title': task.title,
+      'sourcePath': task.sourcePath,
+      'vendor': config.vendor.name,
+      if (config.model.trim().isNotEmpty) 'model': config.model,
+      'instructions':
+          'Return strict JSON with a top-level segments array. Each segment should include startMs, endMs, title, summary, keywords, tags, confidence, reason, detections, and transcripts. Use the builtInCandidates as editable semantic candidates, not as final truth.',
+      'builtInCandidates': candidates
+          .map((segment) => segment.toJson())
+          .toList(),
+    };
+  }
+
+  static Uri _cloudEndpointUri(AiCloudConfig config) {
+    final endpoint = config.endpoint.replaceAll(
+      '{model}',
+      Uri.encodeComponent(config.model),
+    );
+    final uri = Uri.parse(endpoint);
+    if (config.vendor != AiCloudVendor.gemini || config.apiKey == null) {
+      return uri;
+    }
+    if (uri.queryParameters.containsKey('key')) return uri;
+    return uri.replace(
+      queryParameters: {...uri.queryParameters, 'key': config.apiKey!},
+    );
+  }
+
+  static void _applyCloudAuthHeaders(
+    HttpClientRequest request,
+    AiCloudConfig config,
+  ) {
+    final apiKey = config.apiKey;
+    if (apiKey == null) return;
+    switch (config.vendor) {
+      case AiCloudVendor.anthropic:
+        request.headers.set('x-api-key', apiKey);
+        request.headers.set('anthropic-version', '2023-06-01');
+      case AiCloudVendor.gemini:
+        request.headers.set('x-goog-api-key', apiKey);
+      case AiCloudVendor.custom:
+      case AiCloudVendor.openAI:
+      case AiCloudVendor.groq:
+      case AiCloudVendor.deepSeek:
+      case AiCloudVendor.qwen:
+      case AiCloudVendor.openRouter:
+        request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $apiKey');
+    }
+  }
+
+  static Map<String, Object?> _cloudRequestBody(
+    AiCloudConfig config,
+    Map<String, Object?> payload,
+  ) {
+    if (config.vendor == AiCloudVendor.custom) {
+      return payload;
+    }
+
+    final prompt = _clipManifestPrompt(payload);
+    if (config.vendor == AiCloudVendor.anthropic) {
+      return {
+        'model': config.model,
+        'max_tokens': 4096,
+        'temperature': 0.2,
+        'messages': [
+          {'role': 'user', 'content': prompt},
+        ],
+      };
+    }
+    if (config.vendor == AiCloudVendor.gemini) {
+      return {
+        'contents': [
+          {
+            'role': 'user',
+            'parts': [
+              {'text': prompt},
+            ],
+          },
+        ],
+        'generationConfig': {
+          'temperature': 0.2,
+          'responseMimeType': 'application/json',
+        },
+      };
+    }
+    return {
+      'model': config.model,
+      'temperature': 0.2,
+      'response_format': {'type': 'json_object'},
+      'messages': [
+        {
+          'role': 'system',
+          'content':
+              'You are an AI video clipping analyst. Reply only with valid JSON.',
+        },
+        {'role': 'user', 'content': prompt},
+      ],
+    };
+  }
+
+  static String _clipManifestPrompt(Map<String, Object?> payload) {
+    return '''
+Analyze the video clipping candidates and refine them into searchable semantic clips.
+
+Rules:
+- Reply with one JSON object only.
+- The JSON root must contain "segments".
+- Keep timestamps in milliseconds.
+- Preserve useful detections/transcripts, add keywords and tags for future search.
+
+Input:
+${jsonEncode(payload)}
+''';
+  }
+
+  static String _cloudResponseManifest(String body, AiCloudConfig config) {
+    if (config.vendor == AiCloudVendor.custom) return body;
+    return body;
   }
 
   @override
@@ -320,7 +433,7 @@ class AiClipAnalyzerExecutor implements PostProcessExecutor {
   }
 
   static Map<String, Object?> _decodeManifestRoot(String manifest) {
-    final decoded = jsonDecode(manifest);
+    final decoded = jsonDecode(_extractJsonObjectText(manifest));
     if (decoded is! Map<String, Object?>) {
       throw const AiClipAnalyzerException('root must be a JSON object');
     }
@@ -341,10 +454,82 @@ class AiClipAnalyzerExecutor implements PostProcessExecutor {
           if (content is String && content.trim().isNotEmpty) {
             return _decodeManifestRoot(content);
           }
+          if (content is List && content.isNotEmpty) {
+            final text = _readProviderTextParts(content);
+            if (text.trim().isNotEmpty) {
+              return _decodeManifestRoot(text);
+            }
+          }
+        }
+        final content = first['content'];
+        if (content is Map<String, Object?>) {
+          final parts = content['parts'];
+          if (parts is List && parts.isNotEmpty) {
+            final text = _readProviderTextParts(parts);
+            if (text.trim().isNotEmpty) {
+              return _decodeManifestRoot(text);
+            }
+          }
+        }
+      }
+    }
+    final content = decoded['content'];
+    if (content is List && content.isNotEmpty) {
+      final text = _readProviderTextParts(content);
+      if (text.trim().isNotEmpty) {
+        return _decodeManifestRoot(text);
+      }
+    }
+    final candidates = decoded['candidates'];
+    if (candidates is List && candidates.isNotEmpty) {
+      final first = candidates.first;
+      if (first is Map<String, Object?>) {
+        final content = first['content'];
+        if (content is Map<String, Object?>) {
+          final parts = content['parts'];
+          if (parts is List && parts.isNotEmpty) {
+            final text = _readProviderTextParts(parts);
+            if (text.trim().isNotEmpty) {
+              return _decodeManifestRoot(text);
+            }
+          }
         }
       }
     }
     return decoded;
+  }
+
+  static String _extractJsonObjectText(String text) {
+    var trimmed = text.trim();
+    final fenced = RegExp(
+      r'^```(?:json)?\s*([\s\S]*?)\s*```$',
+      multiLine: true,
+    ).firstMatch(trimmed);
+    if (fenced != null) {
+      trimmed = fenced.group(1)!.trim();
+    }
+    final start = trimmed.indexOf('{');
+    final end = trimmed.lastIndexOf('}');
+    if (start >= 0 && end > start) {
+      return trimmed.substring(start, end + 1);
+    }
+    return trimmed;
+  }
+
+  static String _readProviderTextParts(List<Object?> parts) {
+    return parts
+        .map((part) {
+          if (part is String) return part;
+          if (part is Map<String, Object?>) {
+            final text = part['text'];
+            if (text is String) return text;
+            final content = part['content'];
+            if (content is String) return content;
+          }
+          return '';
+        })
+        .where((text) => text.trim().isNotEmpty)
+        .join('\n');
   }
 
   static int _readMs(

@@ -633,22 +633,72 @@ class AppLocalizationsZh extends AppLocalizations {
       '可选，例如 python3 tools/ai_clip_analyzer.py --yolo-model yolov8n.pt --whisper-model small';
 
   @override
+  String get aiCloudProfile => '云端配置档';
+
+  @override
+  String get aiCloudProfileHint => '选择要用于 AI 切片的云端模型配置';
+
+  @override
+  String get aiCloudNoProfiles => '还没有云端配置档。选择厂商后点击“新增配置档”。';
+
+  @override
+  String get addAiCloudProfile => '新增配置档';
+
+  @override
+  String get deleteAiCloudProfile => '删除配置档';
+
+  @override
+  String get aiCloudProfileName => '配置档名称';
+
+  @override
+  String get aiCloudVendor => '云厂商';
+
+  @override
+  String get aiCloudVendorHint => '切换厂商会套用该厂商的默认接口和模型，可继续手动调整。';
+
+  @override
+  String get aiCloudVendorCustom => '自定义 JSON 接口';
+
+  @override
+  String get aiCloudVendorOpenAI => 'OpenAI';
+
+  @override
+  String get aiCloudVendorGemini => 'Google Gemini';
+
+  @override
+  String get aiCloudVendorAnthropic => 'Anthropic Claude';
+
+  @override
+  String get aiCloudVendorGroq => 'Groq';
+
+  @override
+  String get aiCloudVendorDeepSeek => 'DeepSeek';
+
+  @override
+  String get aiCloudVendorQwen => '通义千问 / DashScope';
+
+  @override
+  String get aiCloudVendorOpenRouter => 'OpenRouter';
+
+  @override
   String get aiCloudEndpoint => '云端 AI 地址';
 
   @override
-  String get aiCloudEndpointHint => '返回 segments JSON manifest 的 HTTPS 接口地址';
+  String get aiCloudEndpointHint =>
+      '厂商 API 地址或返回 segments JSON manifest 的自定义 HTTPS 接口';
 
   @override
   String get aiCloudApiKey => '云端 AI API Key';
 
   @override
-  String get aiCloudApiKeyHint => '可选，用于云端分析服务的 Bearer Token';
+  String get aiCloudApiKeyHint => '按配置档保存；厂商接口会自动使用对应认证方式';
 
   @override
   String get aiCloudModel => '云端 AI 模型';
 
   @override
-  String get aiCloudModelHint => '可选，例如 gpt-4.1-mini 或你的网关模型 ID';
+  String get aiCloudModelHint =>
+      '例如 gpt-4o-mini、gemini-2.0-flash、qwen-plus 或你的网关模型 ID';
 
   @override
   String get clipLibrary => 'AI 切片库';

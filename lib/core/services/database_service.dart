@@ -177,7 +177,9 @@ class DatabaseService {
       for (final entry in data.entries) {
         await txn.insert('settings', {
           'key': entry.key,
-          'value': entry.value.toString(),
+          'value': entry.value is String
+              ? entry.value
+              : jsonEncode(entry.value),
         });
       }
     });

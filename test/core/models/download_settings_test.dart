@@ -17,9 +17,25 @@ void main() {
         ytDlpPath: '/tools/yt-dlp',
         ffmpegPath: '/tools/ffmpeg',
         aiAnalyzerCommand: 'python3 tools/ai_clip_analyzer.py',
-        aiCloudEndpoint: 'https://ai.example.com/analyze',
-        aiCloudApiKey: 'test-key',
-        aiCloudModel: 'clip-model',
+        selectedAiCloudConfigId: 'openai-main',
+        aiCloudConfigs: [
+          AiCloudConfig(
+            id: 'openai-main',
+            vendor: AiCloudVendor.openAI,
+            name: 'OpenAI Main',
+            endpoint: 'https://api.openai.com/v1/chat/completions',
+            apiKey: 'test-key',
+            model: 'gpt-4o-mini',
+          ),
+          AiCloudConfig(
+            id: 'qwen-backup',
+            vendor: AiCloudVendor.qwen,
+            name: 'Qwen Backup',
+            endpoint:
+                'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+            model: 'qwen-plus',
+          ),
+        ],
       );
 
       final restored = DownloadSettings.fromJson(settings.toJson());
@@ -39,9 +55,15 @@ void main() {
       expect(restored.ytDlpPath, '/tools/yt-dlp');
       expect(restored.ffmpegPath, '/tools/ffmpeg');
       expect(restored.aiAnalyzerCommand, 'python3 tools/ai_clip_analyzer.py');
-      expect(restored.aiCloudEndpoint, 'https://ai.example.com/analyze');
+      expect(
+        restored.aiCloudEndpoint,
+        'https://api.openai.com/v1/chat/completions',
+      );
       expect(restored.aiCloudApiKey, 'test-key');
-      expect(restored.aiCloudModel, 'clip-model');
+      expect(restored.aiCloudModel, 'gpt-4o-mini');
+      expect(restored.selectedAiCloudConfigId, 'openai-main');
+      expect(restored.aiCloudConfigs, hasLength(2));
+      expect(restored.selectedAiCloudConfig?.vendor, AiCloudVendor.openAI);
     });
 
     test('normalizes missing and invalid persisted values', () {
@@ -77,6 +99,21 @@ void main() {
       expect(restored.ffmpegPath, '/tools/ffmpeg');
       expect(restored.aiAnalyzerCommand, isNull);
       expect(restored.aiCloudEndpoint, isNull);
+    });
+
+    test('migrates legacy cloud endpoint into a cloud profile', () {
+      final restored = DownloadSettings.fromJson(const {
+        'aiCloudEndpoint': ' https://ai.example.com/analyze ',
+        'aiCloudApiKey': ' token ',
+        'aiCloudModel': ' clip-model ',
+      });
+
+      expect(restored.aiAnalysisProvider, AiAnalysisProvider.cloudEndpoint);
+      expect(restored.selectedAiCloudConfigId, 'legacy-cloud');
+      expect(restored.aiCloudConfigs.single.vendor, AiCloudVendor.custom);
+      expect(restored.aiCloudEndpoint, 'https://ai.example.com/analyze');
+      expect(restored.aiCloudApiKey, 'token');
+      expect(restored.aiCloudModel, 'clip-model');
     });
 
     test('treats legacy analyzer command as external command provider', () {

@@ -660,25 +660,76 @@ class AppLocalizationsEn extends AppLocalizations {
       'Optional, e.g. python3 tools/ai_clip_analyzer.py --yolo-model yolov8n.pt --whisper-model small';
 
   @override
+  String get aiCloudProfile => 'Cloud AI Profile';
+
+  @override
+  String get aiCloudProfileHint =>
+      'Choose the cloud model configuration used for AI clipping';
+
+  @override
+  String get aiCloudNoProfiles =>
+      'No cloud profiles yet. Pick a vendor, then add a profile.';
+
+  @override
+  String get addAiCloudProfile => 'Add Profile';
+
+  @override
+  String get deleteAiCloudProfile => 'Delete Profile';
+
+  @override
+  String get aiCloudProfileName => 'Profile Name';
+
+  @override
+  String get aiCloudVendor => 'Cloud Vendor';
+
+  @override
+  String get aiCloudVendorHint =>
+      'Switching vendors applies default endpoint and model values; you can still edit them.';
+
+  @override
+  String get aiCloudVendorCustom => 'Custom JSON endpoint';
+
+  @override
+  String get aiCloudVendorOpenAI => 'OpenAI';
+
+  @override
+  String get aiCloudVendorGemini => 'Google Gemini';
+
+  @override
+  String get aiCloudVendorAnthropic => 'Anthropic Claude';
+
+  @override
+  String get aiCloudVendorGroq => 'Groq';
+
+  @override
+  String get aiCloudVendorDeepSeek => 'DeepSeek';
+
+  @override
+  String get aiCloudVendorQwen => 'Qwen / DashScope';
+
+  @override
+  String get aiCloudVendorOpenRouter => 'OpenRouter';
+
+  @override
   String get aiCloudEndpoint => 'Cloud AI Endpoint';
 
   @override
   String get aiCloudEndpointHint =>
-      'HTTPS endpoint that returns a JSON manifest with segments';
+      'Vendor API URL or custom HTTPS endpoint that returns a segments JSON manifest';
 
   @override
   String get aiCloudApiKey => 'Cloud AI API Key';
 
   @override
   String get aiCloudApiKeyHint =>
-      'Optional bearer token for your cloud analysis service';
+      'Saved per profile; vendor calls use the matching auth scheme automatically';
 
   @override
   String get aiCloudModel => 'Cloud AI Model';
 
   @override
   String get aiCloudModelHint =>
-      'Optional model name, e.g. gpt-4.1-mini or your gateway model id';
+      'For example gpt-4o-mini, gemini-2.0-flash, qwen-plus, or your gateway model id';
 
   @override
   String get clipLibrary => 'AI Clip Library';

@@ -83,16 +83,102 @@ class SettingsController extends ChangeNotifier {
     updateSettings(_settings.copyWith(aiAnalyzerCommand: command));
   }
 
+  void addAiCloudConfig(AiCloudVendor vendor) {
+    final id = _uniqueAiCloudConfigId(vendor);
+    final config = AiCloudConfig.preset(vendor, id: id);
+    updateSettings(
+      _settings.copyWith(
+        aiAnalysisProvider: AiAnalysisProvider.cloudEndpoint,
+        selectedAiCloudConfigId: config.id,
+        aiCloudConfigs: [..._settings.aiCloudConfigs, config],
+      ),
+    );
+  }
+
+  void updateSelectedAiCloudConfig(String id) {
+    updateSettings(_settings.copyWith(selectedAiCloudConfigId: id));
+  }
+
+  void removeAiCloudConfig(String id) {
+    final configs = _settings.aiCloudConfigs
+        .where((config) => config.id != id)
+        .toList();
+    final selectedId = configs.isEmpty ? null : configs.first.id;
+    updateSettings(
+      _settings.copyWith(
+        selectedAiCloudConfigId: selectedId,
+        aiCloudConfigs: configs,
+      ),
+    );
+  }
+
+  void updateSelectedAiCloudVendor(AiCloudVendor vendor) {
+    final current = _ensureSelectedAiCloudConfig(vendor);
+    final preset = AiCloudConfig.preset(vendor, id: current.id);
+    _upsertAiCloudConfig(
+      preset.copyWith(apiKey: current.apiKey, enabled: current.enabled),
+    );
+  }
+
+  void updateSelectedAiCloudName(String name) {
+    final current = _ensureSelectedAiCloudConfig(AiCloudVendor.custom);
+    _upsertAiCloudConfig(current.copyWith(name: name));
+  }
+
   void updateAiCloudEndpoint(String endpoint) {
-    updateSettings(_settings.copyWith(aiCloudEndpoint: endpoint));
+    final current = _ensureSelectedAiCloudConfig(AiCloudVendor.custom);
+    _upsertAiCloudConfig(current.copyWith(endpoint: endpoint));
   }
 
   void updateAiCloudApiKey(String apiKey) {
-    updateSettings(_settings.copyWith(aiCloudApiKey: apiKey));
+    final current = _ensureSelectedAiCloudConfig(AiCloudVendor.custom);
+    _upsertAiCloudConfig(current.copyWith(apiKey: apiKey));
   }
 
   void updateAiCloudModel(String model) {
-    updateSettings(_settings.copyWith(aiCloudModel: model));
+    final current = _ensureSelectedAiCloudConfig(AiCloudVendor.custom);
+    _upsertAiCloudConfig(current.copyWith(model: model));
+  }
+
+  AiCloudConfig _ensureSelectedAiCloudConfig(AiCloudVendor fallbackVendor) {
+    final selected = _settings.selectedAiCloudConfig;
+    if (selected != null) return selected;
+    return AiCloudConfig.preset(
+      fallbackVendor,
+      id: _uniqueAiCloudConfigId(fallbackVendor),
+    );
+  }
+
+  void _upsertAiCloudConfig(AiCloudConfig config) {
+    var replaced = false;
+    final configs = _settings.aiCloudConfigs.map((item) {
+      if (item.id != config.id) return item;
+      replaced = true;
+      return config;
+    }).toList();
+    if (!replaced) {
+      configs.add(config);
+    }
+    updateSettings(
+      _settings.copyWith(
+        aiAnalysisProvider: AiAnalysisProvider.cloudEndpoint,
+        selectedAiCloudConfigId: config.id,
+        aiCloudConfigs: configs,
+      ),
+    );
+  }
+
+  String _uniqueAiCloudConfigId(AiCloudVendor vendor) {
+    final existingIds = _settings.aiCloudConfigs
+        .map((config) => config.id)
+        .toSet();
+    final base = vendor.name;
+    if (!existingIds.contains(base)) return base;
+    for (var index = 2; index < 100; index += 1) {
+      final candidate = '$base$index';
+      if (!existingIds.contains(candidate)) return candidate;
+    }
+    return '$base${DateTime.now().millisecondsSinceEpoch}';
   }
 
   void _save() {

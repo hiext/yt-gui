@@ -152,20 +152,109 @@ void main() {
       task: _task(),
       settings: _settings(
         provider: AiAnalysisProvider.cloudEndpoint,
-        aiCloudEndpoint: 'http://127.0.0.1:${server.port}/analyze',
-        aiCloudApiKey: 'token',
-        aiCloudModel: 'clip-model',
+        selectedAiCloudConfigId: 'custom-main',
+        aiCloudConfigs: [
+          AiCloudConfig(
+            id: 'custom-main',
+            vendor: AiCloudVendor.custom,
+            name: 'Custom analyzer',
+            endpoint: 'http://127.0.0.1:${server.port}/analyze',
+            apiKey: 'token',
+            model: 'clip-model',
+          ),
+        ],
       ),
       onTaskChanged: changes.add,
     );
     await pumpEventQueue();
 
     expect(requestBodies.single['model'], 'clip-model');
+    expect(requestBodies.single['vendor'], 'custom');
     expect(requestBodies.single['builtInCandidates'], isA<List<Object?>>());
     expect(changes.last.status, PostProcessStatus.completed);
     expect(changes.last.clipSegments.single.title, 'Cloud refined scene');
     expect(changes.last.clipSegments.single.tags, ['cloud', 'llm']);
   });
+
+  test(
+    'cloud vendor profile sends chat request and parses model text',
+    () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => server.close(force: true));
+      final requestBodies = <Map<String, Object?>>[];
+      unawaited(
+        server.forEach((request) async {
+          requestBodies.add(
+            jsonDecode(await utf8.decoder.bind(request).join())
+                as Map<String, Object?>,
+          );
+          expect(
+            request.headers.value(HttpHeaders.authorizationHeader),
+            'Bearer openai-token',
+          );
+          request.response.headers.contentType = ContentType.json;
+          request.response.write(
+            jsonEncode({
+              'choices': [
+                {
+                  'message': {
+                    'content': '''
+```json
+{
+  "segments": [
+    {
+      "startMs": 5000,
+      "endMs": 18000,
+      "title": "LLM refined highlight",
+      "summary": "OpenAI-compatible response",
+      "keywords": ["llm"],
+      "tags": ["cloud"],
+      "confidence": 0.88,
+      "reason": "semantic highlight"
+    }
+  ]
+}
+```
+''',
+                  },
+                },
+              ],
+            }),
+          );
+          await request.response.close();
+        }),
+      );
+      final executor = AiClipAnalyzerExecutor();
+      addTearDown(executor.dispose);
+      final changes = <PostProcessTask>[];
+
+      await executor.startTask(
+        task: _task(),
+        settings: _settings(
+          provider: AiAnalysisProvider.cloudEndpoint,
+          selectedAiCloudConfigId: 'openai-main',
+          aiCloudConfigs: [
+            AiCloudConfig(
+              id: 'openai-main',
+              vendor: AiCloudVendor.openAI,
+              name: 'OpenAI Main',
+              endpoint: 'http://127.0.0.1:${server.port}/chat/completions',
+              apiKey: 'openai-token',
+              model: 'gpt-4o-mini',
+            ),
+          ],
+        ),
+        onTaskChanged: changes.add,
+      );
+      await pumpEventQueue();
+
+      expect(requestBodies.single['model'], 'gpt-4o-mini');
+      expect(requestBodies.single['messages'], isA<List<Object?>>());
+      expect(requestBodies.single['response_format'], {'type': 'json_object'});
+      expect(changes.last.status, PostProcessStatus.completed);
+      expect(changes.last.clipSegments.single.title, 'LLM refined highlight');
+    },
+  );
 }
 
 PostProcessTask _task() {
@@ -188,6 +277,8 @@ DownloadSettings _settings({
   String? aiCloudEndpoint,
   String? aiCloudApiKey,
   String? aiCloudModel,
+  String? selectedAiCloudConfigId,
+  List<AiCloudConfig> aiCloudConfigs = const [],
 }) {
   return DownloadSettings(
     saveDirectory: '/downloads',
@@ -203,6 +294,8 @@ DownloadSettings _settings({
     aiCloudEndpoint: aiCloudEndpoint,
     aiCloudApiKey: aiCloudApiKey,
     aiCloudModel: aiCloudModel,
+    selectedAiCloudConfigId: selectedAiCloudConfigId,
+    aiCloudConfigs: aiCloudConfigs,
   );
 }
 

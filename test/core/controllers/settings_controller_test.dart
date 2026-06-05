@@ -69,6 +69,11 @@ void main() {
         controller.settings.aiCloudEndpoint,
         'https://ai.example.com/analyze',
       );
+      expect(controller.settings.selectedAiCloudConfigId, 'legacy-cloud');
+      expect(
+        controller.settings.aiCloudConfigs.single.vendor,
+        AiCloudVendor.custom,
+      );
     });
 
     test('updates individual settings fields', () {
@@ -120,6 +125,47 @@ void main() {
       );
       expect(controller.settings.aiCloudApiKey, 'token');
       expect(controller.settings.aiCloudModel, 'clip-model');
+      expect(
+        controller.settings.aiCloudConfigs.single.vendor,
+        AiCloudVendor.custom,
+      );
+    });
+
+    test('adds selects edits and removes cloud vendor profiles', () {
+      final controller = SettingsController();
+      addTearDown(controller.dispose);
+
+      controller.addAiCloudConfig(AiCloudVendor.openAI);
+      controller.addAiCloudConfig(AiCloudVendor.qwen);
+      controller.updateSelectedAiCloudConfig('openAI');
+      controller.updateSelectedAiCloudName('OpenAI Clips');
+      controller.updateAiCloudApiKey('openai-token');
+      controller.updateSelectedAiCloudVendor(AiCloudVendor.groq);
+
+      expect(
+        controller.settings.aiAnalysisProvider,
+        AiAnalysisProvider.cloudEndpoint,
+      );
+      expect(controller.settings.aiCloudConfigs, hasLength(2));
+      expect(controller.settings.selectedAiCloudConfigId, 'openAI');
+      expect(
+        controller.settings.selectedAiCloudConfig?.vendor,
+        AiCloudVendor.groq,
+      );
+      expect(controller.settings.selectedAiCloudConfig?.apiKey, 'openai-token');
+      expect(
+        controller.settings.selectedAiCloudConfig?.endpoint,
+        'https://api.groq.com/openai/v1/chat/completions',
+      );
+
+      controller.removeAiCloudConfig('openAI');
+
+      expect(controller.settings.aiCloudConfigs, hasLength(1));
+      expect(controller.settings.selectedAiCloudConfigId, 'qwen');
+      expect(
+        controller.settings.selectedAiCloudConfig?.vendor,
+        AiCloudVendor.qwen,
+      );
     });
   });
 }

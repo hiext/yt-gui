@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 enum DownloadMode { serial, queue, concurrent }
@@ -5,6 +6,191 @@ enum DownloadMode { serial, queue, concurrent }
 enum AiAnalysisProvider { builtIn, externalCommand, cloudEndpoint }
 
 enum BuiltInClipAnalyzerMode { balanced, visualFocused, audioFocused }
+
+enum AiCloudVendor {
+  custom,
+  openAI,
+  gemini,
+  anthropic,
+  groq,
+  deepSeek,
+  qwen,
+  openRouter,
+}
+
+class AiCloudConfig {
+  const AiCloudConfig({
+    required this.id,
+    required this.vendor,
+    required this.name,
+    required this.endpoint,
+    required this.model,
+    this.apiKey,
+    this.enabled = true,
+  });
+
+  final String id;
+  final AiCloudVendor vendor;
+  final String name;
+  final String endpoint;
+  final String model;
+  final String? apiKey;
+  final bool enabled;
+
+  static AiCloudConfig preset(AiCloudVendor vendor, {String? id}) {
+    final presetId = id ?? vendor.name;
+    switch (vendor) {
+      case AiCloudVendor.openAI:
+        return AiCloudConfig(
+          id: presetId,
+          vendor: vendor,
+          name: 'OpenAI',
+          endpoint: 'https://api.openai.com/v1/chat/completions',
+          model: 'gpt-4o-mini',
+        );
+      case AiCloudVendor.gemini:
+        return AiCloudConfig(
+          id: presetId,
+          vendor: vendor,
+          name: 'Google Gemini',
+          endpoint:
+              'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent',
+          model: 'gemini-2.0-flash',
+        );
+      case AiCloudVendor.anthropic:
+        return AiCloudConfig(
+          id: presetId,
+          vendor: vendor,
+          name: 'Anthropic Claude',
+          endpoint: 'https://api.anthropic.com/v1/messages',
+          model: 'claude-3-5-haiku-latest',
+        );
+      case AiCloudVendor.groq:
+        return AiCloudConfig(
+          id: presetId,
+          vendor: vendor,
+          name: 'Groq',
+          endpoint: 'https://api.groq.com/openai/v1/chat/completions',
+          model: 'llama-3.1-8b-instant',
+        );
+      case AiCloudVendor.deepSeek:
+        return AiCloudConfig(
+          id: presetId,
+          vendor: vendor,
+          name: 'DeepSeek',
+          endpoint: 'https://api.deepseek.com/chat/completions',
+          model: 'deepseek-chat',
+        );
+      case AiCloudVendor.qwen:
+        return AiCloudConfig(
+          id: presetId,
+          vendor: vendor,
+          name: 'Qwen / DashScope',
+          endpoint:
+              'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
+          model: 'qwen-plus',
+        );
+      case AiCloudVendor.openRouter:
+        return AiCloudConfig(
+          id: presetId,
+          vendor: vendor,
+          name: 'OpenRouter',
+          endpoint: 'https://openrouter.ai/api/v1/chat/completions',
+          model: 'openai/gpt-4o-mini',
+        );
+      case AiCloudVendor.custom:
+        return AiCloudConfig(
+          id: presetId,
+          vendor: vendor,
+          name: 'Custom JSON endpoint',
+          endpoint: '',
+          model: '',
+        );
+    }
+  }
+
+  AiCloudConfig copyWith({
+    String? id,
+    AiCloudVendor? vendor,
+    String? name,
+    String? endpoint,
+    String? model,
+    Object? apiKey = _unchanged,
+    bool? enabled,
+  }) {
+    return AiCloudConfig(
+      id: id ?? this.id,
+      vendor: vendor ?? this.vendor,
+      name: name ?? this.name,
+      endpoint: endpoint ?? this.endpoint,
+      model: model ?? this.model,
+      apiKey: apiKey == _unchanged ? this.apiKey : apiKey as String?,
+      enabled: enabled ?? this.enabled,
+    ).normalized();
+  }
+
+  AiCloudConfig normalized() {
+    return AiCloudConfig(
+      id: id.trim().isEmpty ? vendor.name : id.trim(),
+      vendor: vendor,
+      name: name.trim().isEmpty ? preset(vendor).name : name.trim(),
+      endpoint: endpoint.trim(),
+      model: model.trim(),
+      apiKey: _normalizeOptional(apiKey),
+      enabled: enabled,
+    );
+  }
+
+  bool get hasEndpoint => endpoint.trim().isNotEmpty;
+
+  Map<String, Object> toJson() {
+    final map = <String, Object>{
+      'id': id,
+      'vendor': vendor.name,
+      'name': name,
+      'endpoint': endpoint,
+      'model': model,
+      'enabled': enabled,
+    };
+    if (apiKey != null) {
+      map['apiKey'] = apiKey!;
+    }
+    return map;
+  }
+
+  factory AiCloudConfig.fromJson(Map<String, Object?> json) {
+    return AiCloudConfig(
+      id: json['id'] as String? ?? '',
+      vendor: _parseVendor(json['vendor']),
+      name: json['name'] as String? ?? '',
+      endpoint: json['endpoint'] as String? ?? '',
+      model: json['model'] as String? ?? '',
+      apiKey: json['apiKey'] as String?,
+      enabled: json['enabled'] as bool? ?? true,
+    ).normalized();
+  }
+
+  static AiCloudVendor _parseVendor(Object? value) {
+    if (value is String) {
+      final normalized = value.replaceAll('_', '').toLowerCase();
+      return AiCloudVendor.values.firstWhere(
+        (vendor) => vendor.name.toLowerCase() == normalized,
+        orElse: () {
+          if (normalized == 'openai') return AiCloudVendor.openAI;
+          if (normalized == 'deepseek') return AiCloudVendor.deepSeek;
+          if (normalized == 'openrouter') return AiCloudVendor.openRouter;
+          return AiCloudVendor.custom;
+        },
+      );
+    }
+    return AiCloudVendor.custom;
+  }
+
+  static String? _normalizeOptional(String? value) {
+    final trimmed = value?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
+  }
+}
 
 enum DownloadStatus {
   idle,
@@ -35,6 +221,8 @@ class DownloadSettings {
     this.aiCloudEndpoint,
     this.aiCloudApiKey,
     this.aiCloudModel,
+    this.selectedAiCloudConfigId,
+    this.aiCloudConfigs = const [],
     this.cookieConfigs = const [],
     this.defaultCookieBrowser,
   });
@@ -73,8 +261,35 @@ class DownloadSettings {
   final String? aiCloudEndpoint;
   final String? aiCloudApiKey;
   final String? aiCloudModel;
+  final String? selectedAiCloudConfigId;
+  final List<AiCloudConfig> aiCloudConfigs;
   final List<CookieConfig> cookieConfigs;
   final String? defaultCookieBrowser;
+
+  AiCloudConfig? get selectedAiCloudConfig {
+    AiCloudConfig? fallback;
+    for (final config in aiCloudConfigs) {
+      if (!config.enabled) continue;
+      fallback ??= config;
+      if (config.id == selectedAiCloudConfigId) {
+        return config;
+      }
+    }
+    if (fallback != null) return fallback;
+    if (aiCloudEndpoint == null &&
+        aiCloudModel == null &&
+        aiCloudApiKey == null) {
+      return null;
+    }
+    return AiCloudConfig(
+      id: selectedAiCloudConfigId ?? 'legacy-cloud',
+      vendor: AiCloudVendor.custom,
+      name: 'Legacy cloud endpoint',
+      endpoint: aiCloudEndpoint ?? '',
+      model: aiCloudModel ?? '',
+      apiKey: aiCloudApiKey,
+    ).normalized();
+  }
 
   DownloadSettings copyWith({
     String? saveDirectory,
@@ -92,6 +307,8 @@ class DownloadSettings {
     Object? aiCloudEndpoint = _unchanged,
     Object? aiCloudApiKey = _unchanged,
     Object? aiCloudModel = _unchanged,
+    Object? selectedAiCloudConfigId = _unchanged,
+    Object? aiCloudConfigs = _unchanged,
     Object? cookieConfigs = _unchanged,
     Object? defaultCookieBrowser = _unchanged,
   }) {
@@ -124,6 +341,12 @@ class DownloadSettings {
       aiCloudModel: aiCloudModel == _unchanged
           ? this.aiCloudModel
           : aiCloudModel as String?,
+      selectedAiCloudConfigId: selectedAiCloudConfigId == _unchanged
+          ? this.selectedAiCloudConfigId
+          : selectedAiCloudConfigId as String?,
+      aiCloudConfigs: aiCloudConfigs == _unchanged
+          ? this.aiCloudConfigs
+          : aiCloudConfigs as List<AiCloudConfig>,
       cookieConfigs: cookieConfigs == _unchanged
           ? this.cookieConfigs
           : cookieConfigs as List<CookieConfig>,
@@ -148,6 +371,20 @@ class DownloadSettings {
     final normalizedAiCloudEndpoint = _normalizeOptionalPath(aiCloudEndpoint);
     final normalizedAiCloudApiKey = _normalizeOptionalPath(aiCloudApiKey);
     final normalizedAiCloudModel = _normalizeOptionalPath(aiCloudModel);
+    final normalizedAiCloudConfigs = _normalizeAiCloudConfigs(
+      aiCloudConfigs,
+      legacyEndpoint: normalizedAiCloudEndpoint,
+      legacyApiKey: normalizedAiCloudApiKey,
+      legacyModel: normalizedAiCloudModel,
+    );
+    final normalizedSelectedAiCloudConfigId = _selectedAiCloudConfigId(
+      selectedAiCloudConfigId,
+      normalizedAiCloudConfigs,
+    );
+    final selectedAiCloudConfig = _findAiCloudConfig(
+      normalizedSelectedAiCloudConfigId,
+      normalizedAiCloudConfigs,
+    );
 
     return DownloadSettings(
       saveDirectory: normalizedSaveDirectory,
@@ -162,9 +399,12 @@ class DownloadSettings {
       ytDlpPath: normalizedYtDlpPath,
       ffmpegPath: normalizedFfmpegPath,
       aiAnalyzerCommand: normalizedAiAnalyzerCommand,
-      aiCloudEndpoint: normalizedAiCloudEndpoint,
-      aiCloudApiKey: normalizedAiCloudApiKey,
-      aiCloudModel: normalizedAiCloudModel,
+      aiCloudEndpoint:
+          selectedAiCloudConfig?.endpoint ?? normalizedAiCloudEndpoint,
+      aiCloudApiKey: selectedAiCloudConfig?.apiKey ?? normalizedAiCloudApiKey,
+      aiCloudModel: selectedAiCloudConfig?.model ?? normalizedAiCloudModel,
+      selectedAiCloudConfigId: normalizedSelectedAiCloudConfigId,
+      aiCloudConfigs: normalizedAiCloudConfigs,
       cookieConfigs: cookieConfigs,
       defaultCookieBrowser: defaultCookieBrowser,
     );
@@ -201,6 +441,14 @@ class DownloadSettings {
     if (aiCloudModel != null) {
       map['aiCloudModel'] = aiCloudModel!;
     }
+    if (selectedAiCloudConfigId != null) {
+      map['selectedAiCloudConfigId'] = selectedAiCloudConfigId!;
+    }
+    if (aiCloudConfigs.isNotEmpty) {
+      map['aiCloudConfigs'] = aiCloudConfigs
+          .map((config) => config.toJson())
+          .toList();
+    }
     if (defaultCookieBrowser != null) {
       map['defaultCookieBrowser'] = defaultCookieBrowser!;
     }
@@ -221,10 +469,28 @@ class DownloadSettings {
     }
 
     final aiAnalyzerCommand = json['aiAnalyzerCommand'] as String?;
+    final aiCloudEndpoint = json['aiCloudEndpoint'] as String?;
+    final hasLegacyCloudConfig =
+        _normalizeStaticOptionalPath(aiCloudEndpoint) != null ||
+        _normalizeStaticOptionalPath(json['aiCloudApiKey'] as String?) !=
+            null ||
+        _normalizeStaticOptionalPath(json['aiCloudModel'] as String?) != null;
+    final rawAiCloudConfigs = _decodeJsonList(json['aiCloudConfigs']);
+    final aiCloudConfigs = rawAiCloudConfigs is List
+        ? rawAiCloudConfigs
+              .whereType<Map>()
+              .map(
+                (value) =>
+                    AiCloudConfig.fromJson(Map<String, Object?>.from(value)),
+              )
+              .toList()
+        : const <AiCloudConfig>[];
     final aiAnalysisProvider = json.containsKey('aiAnalysisProvider')
         ? _parseAiAnalysisProvider(json['aiAnalysisProvider'])
         : _normalizeStaticOptionalPath(aiAnalyzerCommand) == null
-        ? defaults.aiAnalysisProvider
+        ? hasLegacyCloudConfig
+              ? AiAnalysisProvider.cloudEndpoint
+              : defaults.aiAnalysisProvider
         : AiAnalysisProvider.externalCommand;
 
     return DownloadSettings(
@@ -248,11 +514,83 @@ class DownloadSettings {
       ytDlpPath: json['ytDlpPath'] as String?,
       ffmpegPath: json['ffmpegPath'] as String?,
       aiAnalyzerCommand: aiAnalyzerCommand,
-      aiCloudEndpoint: json['aiCloudEndpoint'] as String?,
+      aiCloudEndpoint: aiCloudEndpoint,
       aiCloudApiKey: json['aiCloudApiKey'] as String?,
       aiCloudModel: json['aiCloudModel'] as String?,
+      selectedAiCloudConfigId: json['selectedAiCloudConfigId'] as String?,
+      aiCloudConfigs: aiCloudConfigs,
       defaultCookieBrowser: json['defaultCookieBrowser'] as String?,
     ).normalized();
+  }
+
+  static Object? _decodeJsonList(Object? value) {
+    if (value is! String) return value;
+    final trimmed = value.trim();
+    if (!trimmed.startsWith('[')) return value;
+    try {
+      return jsonDecode(trimmed);
+    } catch (_) {
+      return value;
+    }
+  }
+
+  static List<AiCloudConfig> _normalizeAiCloudConfigs(
+    List<AiCloudConfig> configs, {
+    String? legacyEndpoint,
+    String? legacyApiKey,
+    String? legacyModel,
+  }) {
+    final normalized = <AiCloudConfig>[];
+    final seenIds = <String>{};
+    for (final config in configs) {
+      final normalizedConfig = config.normalized();
+      if (normalizedConfig.id.isEmpty ||
+          seenIds.contains(normalizedConfig.id)) {
+        continue;
+      }
+      seenIds.add(normalizedConfig.id);
+      normalized.add(normalizedConfig);
+    }
+    if (normalized.isEmpty &&
+        (legacyEndpoint != null ||
+            legacyApiKey != null ||
+            legacyModel != null)) {
+      normalized.add(
+        AiCloudConfig(
+          id: 'legacy-cloud',
+          vendor: AiCloudVendor.custom,
+          name: 'Legacy cloud endpoint',
+          endpoint: legacyEndpoint ?? '',
+          model: legacyModel ?? '',
+          apiKey: legacyApiKey,
+        ).normalized(),
+      );
+    }
+    return List.unmodifiable(normalized);
+  }
+
+  static String? _selectedAiCloudConfigId(
+    String? selectedId,
+    List<AiCloudConfig> configs,
+  ) {
+    final normalizedSelectedId = _normalizeStaticOptionalPath(selectedId);
+    if (configs.isEmpty) return null;
+    if (normalizedSelectedId != null &&
+        configs.any((config) => config.id == normalizedSelectedId)) {
+      return normalizedSelectedId;
+    }
+    return configs.first.id;
+  }
+
+  static AiCloudConfig? _findAiCloudConfig(
+    String? id,
+    List<AiCloudConfig> configs,
+  ) {
+    if (id == null) return configs.isEmpty ? null : configs.first;
+    for (final config in configs) {
+      if (config.id == id) return config;
+    }
+    return configs.isEmpty ? null : configs.first;
   }
 
   static DownloadMode _parseDownloadMode(Object? value) {

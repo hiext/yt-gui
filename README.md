@@ -15,6 +15,7 @@ yt-dlp 可视化桌面下载器，面向普通用户的图形化视频/音频下
 - 下载中实时显示进度、速度、剩余时间
 - 历史记录：已完成、失败、已取消，失败任务可重试
 - 设置持久化：保存目录、画质、工具路径等重启保留
+- AI 切片分析：内置候选切片、外部 Python sidecar、云端大模型配置档
 
 ## 开发环境要求
 
@@ -63,6 +64,18 @@ flutter:
 打开应用 → 设置，在「yt-dlp 路径」和「ffmpeg 路径」输入框中填写系统中已安装的工具路径，留空则回退到内置工具。
 
 > 自定义路径优先于内置工具。路径不存在时，启动下载会给出明确错误提示。
+
+## AI 切片与云端模型配置
+
+设置页的「AI 切片分析」支持三种分析来源：
+
+- **内置本地分析**：无需配置 API Key，生成基础候选切片。
+- **外部命令 / Python sidecar**：例如 `python3 tools/ai_clip_analyzer.py --yolo-model yolov8n.pt --whisper-model small`，用于接入 YOLO、Whisper 等本地模型。
+- **云端大模型地址**：支持多配置档，当前内置 OpenAI、Google Gemini、Anthropic Claude、Groq、DeepSeek、通义千问 / DashScope、OpenRouter 和自定义 JSON 接口。
+
+云端模式下，每个配置档独立保存厂商、接口地址、模型 ID 和 API Key。OpenAI-compatible 厂商会使用 `Authorization: Bearer <key>`；Gemini 会使用 `x-goog-api-key` 并支持 `{model}` endpoint 占位；Anthropic 使用 `x-api-key`。自定义接口需要返回包含 `segments` 数组的 JSON，每个切片建议包含 `startMs`、`endMs`、`title`、`summary`、`keywords`、`tags`、`confidence`、`reason`、`detections` 和 `transcripts`。
+
+不要提交真实 API Key、Cookie 或个人账号数据。发布包只提供工具能力，AI 切片结果仍需用户确认其来源与使用权限。
 
 ## 运行与测试
 

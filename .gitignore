@@ -89,3 +89,5 @@ assets/bin/linux/ffmpeg
 assets/bin/linux/ffprobe
 # Runtime cookie data
 .cookies/
+.playwright-mcp/
+.spec-workflow/

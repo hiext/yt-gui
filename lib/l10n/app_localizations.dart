@@ -1238,6 +1238,102 @@ abstract class AppLocalizations {
   /// **'可选，例如 python3 tools/ai_clip_analyzer.py --yolo-model yolov8n.pt --whisper-model small'**
   String get aiAnalyzerCommandHint;
 
+  /// No description provided for @aiCloudProfile.
+  ///
+  /// In zh, this message translates to:
+  /// **'云端配置档'**
+  String get aiCloudProfile;
+
+  /// No description provided for @aiCloudProfileHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择要用于 AI 切片的云端模型配置'**
+  String get aiCloudProfileHint;
+
+  /// No description provided for @aiCloudNoProfiles.
+  ///
+  /// In zh, this message translates to:
+  /// **'还没有云端配置档。选择厂商后点击“新增配置档”。'**
+  String get aiCloudNoProfiles;
+
+  /// No description provided for @addAiCloudProfile.
+  ///
+  /// In zh, this message translates to:
+  /// **'新增配置档'**
+  String get addAiCloudProfile;
+
+  /// No description provided for @deleteAiCloudProfile.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除配置档'**
+  String get deleteAiCloudProfile;
+
+  /// No description provided for @aiCloudProfileName.
+  ///
+  /// In zh, this message translates to:
+  /// **'配置档名称'**
+  String get aiCloudProfileName;
+
+  /// No description provided for @aiCloudVendor.
+  ///
+  /// In zh, this message translates to:
+  /// **'云厂商'**
+  String get aiCloudVendor;
+
+  /// No description provided for @aiCloudVendorHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'切换厂商会套用该厂商的默认接口和模型，可继续手动调整。'**
+  String get aiCloudVendorHint;
+
+  /// No description provided for @aiCloudVendorCustom.
+  ///
+  /// In zh, this message translates to:
+  /// **'自定义 JSON 接口'**
+  String get aiCloudVendorCustom;
+
+  /// No description provided for @aiCloudVendorOpenAI.
+  ///
+  /// In zh, this message translates to:
+  /// **'OpenAI'**
+  String get aiCloudVendorOpenAI;
+
+  /// No description provided for @aiCloudVendorGemini.
+  ///
+  /// In zh, this message translates to:
+  /// **'Google Gemini'**
+  String get aiCloudVendorGemini;
+
+  /// No description provided for @aiCloudVendorAnthropic.
+  ///
+  /// In zh, this message translates to:
+  /// **'Anthropic Claude'**
+  String get aiCloudVendorAnthropic;
+
+  /// No description provided for @aiCloudVendorGroq.
+  ///
+  /// In zh, this message translates to:
+  /// **'Groq'**
+  String get aiCloudVendorGroq;
+
+  /// No description provided for @aiCloudVendorDeepSeek.
+  ///
+  /// In zh, this message translates to:
+  /// **'DeepSeek'**
+  String get aiCloudVendorDeepSeek;
+
+  /// No description provided for @aiCloudVendorQwen.
+  ///
+  /// In zh, this message translates to:
+  /// **'通义千问 / DashScope'**
+  String get aiCloudVendorQwen;
+
+  /// No description provided for @aiCloudVendorOpenRouter.
+  ///
+  /// In zh, this message translates to:
+  /// **'OpenRouter'**
+  String get aiCloudVendorOpenRouter;
+
   /// No description provided for @aiCloudEndpoint.
   ///
   /// In zh, this message translates to:
@@ -1247,7 +1343,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiCloudEndpointHint.
   ///
   /// In zh, this message translates to:
-  /// **'返回 segments JSON manifest 的 HTTPS 接口地址'**
+  /// **'厂商 API 地址或返回 segments JSON manifest 的自定义 HTTPS 接口'**
   String get aiCloudEndpointHint;
 
   /// No description provided for @aiCloudApiKey.
@@ -1259,7 +1355,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiCloudApiKeyHint.
   ///
   /// In zh, this message translates to:
-  /// **'可选，用于云端分析服务的 Bearer Token'**
+  /// **'按配置档保存；厂商接口会自动使用对应认证方式'**
   String get aiCloudApiKeyHint;
 
   /// No description provided for @aiCloudModel.
@@ -1271,7 +1367,7 @@ abstract class AppLocalizations {
   /// No description provided for @aiCloudModelHint.
   ///
   /// In zh, this message translates to:
-  /// **'可选，例如 gpt-4.1-mini 或你的网关模型 ID'**
+  /// **'例如 gpt-4o-mini、gemini-2.0-flash、qwen-plus 或你的网关模型 ID'**
   String get aiCloudModelHint;
 
   /// No description provided for @clipLibrary.

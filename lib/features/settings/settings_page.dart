@@ -24,9 +24,11 @@ class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _ytDlpCtrl;
   late final TextEditingController _ffmpegCtrl;
   late final TextEditingController _aiAnalyzerCtrl;
+  late final TextEditingController _aiCloudNameCtrl;
   late final TextEditingController _aiCloudEndpointCtrl;
   late final TextEditingController _aiCloudApiKeyCtrl;
   late final TextEditingController _aiCloudModelCtrl;
+  AiCloudVendor _newAiCloudVendor = AiCloudVendor.openAI;
 
   @override
   void initState() {
@@ -37,9 +39,13 @@ class _SettingsPageState extends State<SettingsPage> {
     _ytDlpCtrl = TextEditingController(text: s.ytDlpPath ?? '');
     _ffmpegCtrl = TextEditingController(text: s.ffmpegPath ?? '');
     _aiAnalyzerCtrl = TextEditingController(text: s.aiAnalyzerCommand ?? '');
-    _aiCloudEndpointCtrl = TextEditingController(text: s.aiCloudEndpoint ?? '');
-    _aiCloudApiKeyCtrl = TextEditingController(text: s.aiCloudApiKey ?? '');
-    _aiCloudModelCtrl = TextEditingController(text: s.aiCloudModel ?? '');
+    final cloudConfig = s.selectedAiCloudConfig;
+    _aiCloudNameCtrl = TextEditingController(text: cloudConfig?.name ?? '');
+    _aiCloudEndpointCtrl = TextEditingController(
+      text: cloudConfig?.endpoint ?? '',
+    );
+    _aiCloudApiKeyCtrl = TextEditingController(text: cloudConfig?.apiKey ?? '');
+    _aiCloudModelCtrl = TextEditingController(text: cloudConfig?.model ?? '');
     widget.controller.addListener(_syncFromSettings);
   }
 
@@ -51,6 +57,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _ytDlpCtrl.dispose();
     _ffmpegCtrl.dispose();
     _aiAnalyzerCtrl.dispose();
+    _aiCloudNameCtrl.dispose();
     _aiCloudEndpointCtrl.dispose();
     _aiCloudApiKeyCtrl.dispose();
     _aiCloudModelCtrl.dispose();
@@ -64,15 +71,42 @@ class _SettingsPageState extends State<SettingsPage> {
     _updateCtrlIfChanged(_ytDlpCtrl, s.ytDlpPath ?? '');
     _updateCtrlIfChanged(_ffmpegCtrl, s.ffmpegPath ?? '');
     _updateCtrlIfChanged(_aiAnalyzerCtrl, s.aiAnalyzerCommand ?? '');
-    _updateCtrlIfChanged(_aiCloudEndpointCtrl, s.aiCloudEndpoint ?? '');
-    _updateCtrlIfChanged(_aiCloudApiKeyCtrl, s.aiCloudApiKey ?? '');
-    _updateCtrlIfChanged(_aiCloudModelCtrl, s.aiCloudModel ?? '');
+    final cloudConfig = s.selectedAiCloudConfig;
+    _updateCtrlIfChanged(_aiCloudNameCtrl, cloudConfig?.name ?? '');
+    _updateCtrlIfChanged(_aiCloudEndpointCtrl, cloudConfig?.endpoint ?? '');
+    _updateCtrlIfChanged(_aiCloudApiKeyCtrl, cloudConfig?.apiKey ?? '');
+    _updateCtrlIfChanged(_aiCloudModelCtrl, cloudConfig?.model ?? '');
   }
 
   void _updateCtrlIfChanged(TextEditingController ctrl, String value) {
     if (ctrl.text != value) {
       ctrl.text = value;
     }
+  }
+
+  List<DropdownMenuItem<AiCloudVendor>> _aiCloudVendorItems(
+    AppLocalizations l10n,
+  ) {
+    return [
+      for (final vendor in AiCloudVendor.values)
+        DropdownMenuItem(
+          value: vendor,
+          child: Text(_aiCloudVendorLabel(l10n, vendor)),
+        ),
+    ];
+  }
+
+  String _aiCloudVendorLabel(AppLocalizations l10n, AiCloudVendor vendor) {
+    return switch (vendor) {
+      AiCloudVendor.custom => l10n.aiCloudVendorCustom,
+      AiCloudVendor.openAI => l10n.aiCloudVendorOpenAI,
+      AiCloudVendor.gemini => l10n.aiCloudVendorGemini,
+      AiCloudVendor.anthropic => l10n.aiCloudVendorAnthropic,
+      AiCloudVendor.groq => l10n.aiCloudVendorGroq,
+      AiCloudVendor.deepSeek => l10n.aiCloudVendorDeepSeek,
+      AiCloudVendor.qwen => l10n.aiCloudVendorQwen,
+      AiCloudVendor.openRouter => l10n.aiCloudVendorOpenRouter,
+    };
   }
 
   @override
@@ -82,6 +116,9 @@ class _SettingsPageState extends State<SettingsPage> {
       builder: (context, _) {
         final l10n = AppLocalizations.of(context)!;
         final settings = widget.controller.settings;
+        final cloudConfig = settings.selectedAiCloudConfig;
+        final cloudEnabled =
+            settings.aiAnalysisProvider == AiAnalysisProvider.cloudEndpoint;
 
         return ListView(
           padding: const EdgeInsets.all(24),
@@ -281,48 +318,188 @@ class _SettingsPageState extends State<SettingsPage> {
                     onChanged: widget.controller.updateAiAnalyzerCommand,
                   ),
                   const SizedBox(height: 16),
-                  TextFormField(
-                    key: const Key('ai-cloud-endpoint-field'),
-                    controller: _aiCloudEndpointCtrl,
-                    enabled:
-                        settings.aiAnalysisProvider ==
-                        AiAnalysisProvider.cloudEndpoint,
-                    decoration: InputDecoration(
-                      labelText: l10n.aiCloudEndpoint,
-                      helperText: l10n.aiCloudEndpointHint,
-                      border: const OutlineInputBorder(),
-                    ),
-                    onChanged: widget.controller.updateAiCloudEndpoint,
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final compact = constraints.maxWidth < 620;
+                      final profileField = DropdownButtonFormField<String>(
+                        key: ValueKey(
+                          'ai-cloud-profile-${settings.selectedAiCloudConfigId}',
+                        ),
+                        initialValue: cloudConfig?.id,
+                        isExpanded: true,
+                        decoration: InputDecoration(
+                          labelText: l10n.aiCloudProfile,
+                          helperText: l10n.aiCloudProfileHint,
+                          border: const OutlineInputBorder(),
+                        ),
+                        items: [
+                          for (final config in settings.aiCloudConfigs)
+                            DropdownMenuItem(
+                              value: config.id,
+                              child: Text(config.name),
+                            ),
+                        ],
+                        onChanged: cloudEnabled
+                            ? (id) {
+                                if (id != null) {
+                                  widget.controller.updateSelectedAiCloudConfig(
+                                    id,
+                                  );
+                                }
+                              }
+                            : null,
+                      );
+                      final addVendorField =
+                          DropdownButtonFormField<AiCloudVendor>(
+                            key: const Key('ai-cloud-add-vendor-field'),
+                            initialValue: _newAiCloudVendor,
+                            isExpanded: true,
+                            decoration: InputDecoration(
+                              labelText: l10n.aiCloudVendor,
+                              border: const OutlineInputBorder(),
+                            ),
+                            items: _aiCloudVendorItems(l10n),
+                            onChanged: cloudEnabled
+                                ? (vendor) {
+                                    if (vendor != null) {
+                                      setState(() {
+                                        _newAiCloudVendor = vendor;
+                                      });
+                                    }
+                                  }
+                                : null,
+                          );
+                      final addButton = FilledButton.tonalIcon(
+                        onPressed: cloudEnabled
+                            ? () => widget.controller.addAiCloudConfig(
+                                _newAiCloudVendor,
+                              )
+                            : null,
+                        icon: const Icon(Icons.add_outlined),
+                        label: Text(l10n.addAiCloudProfile),
+                      );
+
+                      if (compact) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            profileField,
+                            const SizedBox(height: 12),
+                            addVendorField,
+                            const SizedBox(height: 8),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: addButton,
+                            ),
+                          ],
+                        );
+                      }
+
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(child: profileField),
+                          const SizedBox(width: 12),
+                          Expanded(child: addVendorField),
+                          const SizedBox(width: 8),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: addButton,
+                          ),
+                        ],
+                      );
+                    },
                   ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    key: const Key('ai-cloud-model-field'),
-                    controller: _aiCloudModelCtrl,
-                    enabled:
-                        settings.aiAnalysisProvider ==
-                        AiAnalysisProvider.cloudEndpoint,
-                    decoration: InputDecoration(
-                      labelText: l10n.aiCloudModel,
-                      helperText: l10n.aiCloudModelHint,
-                      border: const OutlineInputBorder(),
+                  if (cloudConfig == null) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      l10n.aiCloudNoProfiles,
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
-                    onChanged: widget.controller.updateAiCloudModel,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    key: const Key('ai-cloud-api-key-field'),
-                    controller: _aiCloudApiKeyCtrl,
-                    enabled:
-                        settings.aiAnalysisProvider ==
-                        AiAnalysisProvider.cloudEndpoint,
-                    obscureText: true,
-                    decoration: InputDecoration(
-                      labelText: l10n.aiCloudApiKey,
-                      helperText: l10n.aiCloudApiKeyHint,
-                      border: const OutlineInputBorder(),
+                  ] else ...[
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<AiCloudVendor>(
+                      key: ValueKey('ai-cloud-vendor-${cloudConfig.id}'),
+                      initialValue: cloudConfig.vendor,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: l10n.aiCloudVendor,
+                        helperText: l10n.aiCloudVendorHint,
+                        border: const OutlineInputBorder(),
+                      ),
+                      items: _aiCloudVendorItems(l10n),
+                      onChanged: cloudEnabled
+                          ? (vendor) {
+                              if (vendor != null) {
+                                widget.controller.updateSelectedAiCloudVendor(
+                                  vendor,
+                                );
+                              }
+                            }
+                          : null,
                     ),
-                    onChanged: widget.controller.updateAiCloudApiKey,
-                  ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      key: const Key('ai-cloud-name-field'),
+                      controller: _aiCloudNameCtrl,
+                      enabled: cloudEnabled,
+                      decoration: InputDecoration(
+                        labelText: l10n.aiCloudProfileName,
+                        border: const OutlineInputBorder(),
+                      ),
+                      onChanged: widget.controller.updateSelectedAiCloudName,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      key: const Key('ai-cloud-endpoint-field'),
+                      controller: _aiCloudEndpointCtrl,
+                      enabled: cloudEnabled,
+                      decoration: InputDecoration(
+                        labelText: l10n.aiCloudEndpoint,
+                        helperText: l10n.aiCloudEndpointHint,
+                        border: const OutlineInputBorder(),
+                      ),
+                      onChanged: widget.controller.updateAiCloudEndpoint,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      key: const Key('ai-cloud-model-field'),
+                      controller: _aiCloudModelCtrl,
+                      enabled: cloudEnabled,
+                      decoration: InputDecoration(
+                        labelText: l10n.aiCloudModel,
+                        helperText: l10n.aiCloudModelHint,
+                        border: const OutlineInputBorder(),
+                      ),
+                      onChanged: widget.controller.updateAiCloudModel,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      key: const Key('ai-cloud-api-key-field'),
+                      controller: _aiCloudApiKeyCtrl,
+                      enabled: cloudEnabled,
+                      obscureText: true,
+                      decoration: InputDecoration(
+                        labelText: l10n.aiCloudApiKey,
+                        helperText: l10n.aiCloudApiKeyHint,
+                        border: const OutlineInputBorder(),
+                      ),
+                      onChanged: widget.controller.updateAiCloudApiKey,
+                    ),
+                    const SizedBox(height: 8),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: cloudEnabled
+                            ? () => widget.controller.removeAiCloudConfig(
+                                cloudConfig.id,
+                              )
+                            : null,
+                        icon: const Icon(Icons.delete_outline),
+                        label: Text(l10n.deleteAiCloudProfile),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
