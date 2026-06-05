@@ -211,6 +211,10 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       '--part',
       '--ffmpeg-location',
       ffmpegPath,
+      '--progress-template',
+      'download:${YtDlpProgressParser.progressPrefix}'
+          '%(progress.status)s|%(progress._percent_str)s|'
+          '%(progress._speed_str)s|%(progress._eta_str)s',
       '--print',
       'after_move:$_filepathPrefix%(filepath)s',
       if (settings.downloadSubtitles) '--write-subs',

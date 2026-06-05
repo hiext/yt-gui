@@ -300,7 +300,7 @@ class _CompactTaskTile extends StatelessWidget {
                     const SizedBox(width: 8),
                   ],
                   Text(
-                    '${task.progress.toStringAsFixed(0)}%',
+                    _formatProgress(task.progress),
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
@@ -333,6 +333,11 @@ class _CompactTaskTile extends StatelessWidget {
     if (variant == null) return task.title;
     final type = variant.type == ResourceType.video ? l10n.video : l10n.audio;
     return '$type  ${variant.label}';
+  }
+
+  String _formatProgress(double progress) {
+    if (progress > 0 && progress < 1) return '<1%';
+    return '${progress.toStringAsFixed(0)}%';
   }
 
   List<Widget> _actionsFor(DownloadStatus status) {
