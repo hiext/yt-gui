@@ -318,12 +318,18 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     }
 
     if (session.status != DownloadStatus.failed) {
-      final msg = 'Non-zero exit: $exitCode for ${session.task.id}';
-      LogService.instance.error(msg, 'executor');
+      final detail = session.errorMessage;
+      final msg = detail?.isNotEmpty == true
+          ? detail!
+          : currentAppLocalizations().ytDlpNonZeroExit;
+      LogService.instance.error(
+        'Download failed: exit=$exitCode ${session.task.id} — $msg',
+        'executor',
+      );
       session.handleEvent(
         YtDlpProgressEvent(
           type: YtDlpProgressEventType.error,
-          message: currentAppLocalizations().ytDlpNonZeroExit,
+          message: msg,
         ),
       );
       onTaskChanged?.call(session.task);
