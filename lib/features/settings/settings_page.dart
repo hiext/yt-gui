@@ -29,6 +29,8 @@ class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _aiCloudApiKeyCtrl;
   late final TextEditingController _aiCloudModelCtrl;
   AiCloudVendor _newAiCloudVendor = AiCloudVendor.openAI;
+  bool _saved = true;
+  DateTime? _lastSavedAt;
 
   @override
   void initState() {
@@ -76,6 +78,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _updateCtrlIfChanged(_aiCloudEndpointCtrl, cloudConfig?.endpoint ?? '');
     _updateCtrlIfChanged(_aiCloudApiKeyCtrl, cloudConfig?.apiKey ?? '');
     _updateCtrlIfChanged(_aiCloudModelCtrl, cloudConfig?.model ?? '');
+    _markDirty();
   }
 
   void _updateCtrlIfChanged(TextEditingController ctrl, String value) {
@@ -613,9 +616,76 @@ class _SettingsPageState extends State<SettingsPage> {
               onRemove: (domain) => _removeCookie(domain),
               onReimport: (config) => _reimportCookie(config),
             ),
+            const SizedBox(height: 24),
+            // ── Save status bar ──
+            _buildSaveBar(l10n),
+            const SizedBox(height: 48),
           ],
         );
       },
+    );
+  }
+
+  void _markDirty() {
+    if (_saved) setState(() => _saved = false);
+  }
+
+  void _doSave() {
+    // Flush all text field values now — each onChanged already updates
+    // the controller immediately; this just provides confirmation.
+    widget.controller.updateSettings(widget.controller.settings);
+    setState(() {
+      _saved = true;
+      _lastSavedAt = DateTime.now();
+    });
+  }
+
+  String _saveStatusText(AppLocalizations l10n) {
+    if (_saved && _lastSavedAt != null) {
+      final h = _lastSavedAt!.hour.toString().padLeft(2, '0');
+      final m = _lastSavedAt!.minute.toString().padLeft(2, '0');
+      return l10n.settingsSavedAt(h, m);
+    }
+    if (_saved) return l10n.settingsSaved;
+    return l10n.settingsUnsaved;
+  }
+
+  Widget _buildSaveBar(AppLocalizations l10n) {
+    final saved = _saved;
+    return Card(
+      color: saved
+          ? Theme.of(context).colorScheme.surfaceContainerLow
+          : Theme.of(context).colorScheme.primaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Icon(
+              saved ? Icons.check_circle_outline : Icons.info_outline,
+              size: 20,
+              color: saved
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.onPrimaryContainer,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                _saveStatusText(l10n),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: saved
+                          ? Theme.of(context).colorScheme.onSurface
+                          : Theme.of(context).colorScheme.onPrimaryContainer,
+                    ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            FilledButton.tonal(
+              onPressed: saved ? null : _doSave,
+              child: Text(l10n.saveSettingsBtn),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -625,6 +695,7 @@ class _SettingsPageState extends State<SettingsPage> {
         disclaimerAccepted: widget.controller.settings.disclaimerAccepted,
       ),
     );
+    _markDirty();
   }
 
   Future<void> _importCookies(String browser, String domain) async {

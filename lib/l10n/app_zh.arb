@@ -439,5 +439,16 @@
   "clipStartEarlier": "开始 -1秒",
   "clipStartLater": "开始 +1秒",
   "clipEndEarlier": "结束 -1秒",
-  "clipEndLater": "结束 +1秒"
+  "clipEndLater": "结束 +1秒",
+  "importing": "导入中…",
+  "saveSettingsBtn": "保存设置",
+  "settingsSaved": "设置已保存",
+  "settingsUnsaved": "有未保存的更改 — 点击保存",
+  "settingsSavedAt": "已于 {hour}:{minute} 保存",
+  "@settingsSavedAt": {
+    "placeholders": {
+      "hour": { "type": "String" },
+      "minute": { "type": "String" }
+    }
+  }
 }

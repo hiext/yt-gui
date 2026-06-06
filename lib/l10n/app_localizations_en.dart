@@ -247,9 +247,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get importBtn => 'Import';
 
   @override
-  String get importing => 'Importing…';
-
-  @override
   String get commonSites => 'Common Sites';
 
   @override
@@ -806,4 +803,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get clipEndLater => 'End +1s';
+
+  @override
+  String get importing => 'Importing…';
+
+  @override
+  String get saveSettingsBtn => 'Save Settings';
+
+  @override
+  String get settingsSaved => 'Settings saved';
+
+  @override
+  String get settingsUnsaved => 'Unsaved changes — press Save';
+
+  @override
+  String settingsSavedAt(String hour, String minute) {
+    return 'Saved at $hour:$minute';
+  }
 }

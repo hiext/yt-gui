@@ -439,5 +439,16 @@
   "clipStartEarlier": "Start -1s",
   "clipStartLater": "Start +1s",
   "clipEndEarlier": "End -1s",
-  "clipEndLater": "End +1s"
+  "clipEndLater": "End +1s",
+  "importing": "Importing…",
+  "saveSettingsBtn": "Save Settings",
+  "settingsSaved": "Settings saved",
+  "settingsUnsaved": "Unsaved changes — press Save",
+  "settingsSavedAt": "Saved at {hour}:{minute}",
+  "@settingsSavedAt": {
+    "placeholders": {
+      "hour": { "type": "String" },
+      "minute": { "type": "String" }
+    }
+  }
 }
