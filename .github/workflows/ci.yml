@@ -2,9 +2,10 @@ name: Flutter CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, pro-dev]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.ref }}
@@ -60,7 +61,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq cmake ninja-build clang pkg-config libgtk-3-dev
       - run: flutter pub get
-      - run: flutter build linux
+      - run: flutter build linux --release
       - uses: actions/upload-artifact@v4
         with:
           name: hiext-yt-gui-linux-x64
@@ -76,7 +77,7 @@ jobs:
         with:
           channel: stable
       - run: flutter pub get
-      - run: flutter build macos
+      - run: flutter build macos --release
       - uses: actions/upload-artifact@v4
         with:
           name: hiext-yt-gui-macos
@@ -92,7 +93,7 @@ jobs:
         with:
           channel: stable
       - run: flutter pub get
-      - run: flutter build windows
+      - run: flutter build windows --release
       - uses: actions/upload-artifact@v4
         with:
           name: hiext-yt-gui-windows-x64
