@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../core/models/app_models.dart';
 import '../../core/services/log_service.dart';
 
@@ -126,6 +127,25 @@ class _DebugLogOverlayState extends State<DebugLogOverlay> {
                   _buildLevelChip(LogService.instance.level),
                   const SizedBox(width: 8),
                   IconButton(
+                    icon: const Icon(Icons.copy_all, size: 18),
+                    onPressed: () {
+                      final text = LogService.instance.entries
+                          .map((e) =>
+                              '[${_fmt(e.timestamp)}] '
+                              '${e.level.name.toUpperCase().padRight(5)} '
+                              '${e.source != null ? '[${e.source}] ' : ''}'
+                              '${e.message}')
+                          .join('\n');
+                      Clipboard.setData(ClipboardData(text: text));
+                    },
+                    tooltip: 'Copy all',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 28,
+                      minHeight: 28,
+                    ),
+                  ),
+                  IconButton(
                     icon: Icon(
                       _autoScroll ? Icons.vertical_align_bottom : Icons.pause,
                       size: 18,
@@ -177,23 +197,36 @@ class _DebugLogOverlayState extends State<DebugLogOverlay> {
                       itemCount: entries.length,
                       itemBuilder: (context, index) {
                         final entry = entries[index];
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 1,
-                          ),
-                          child: Text(
+                        final line =
                             '[${_fmt(entry.timestamp)}] '
                             '${entry.level.name.toUpperCase().padRight(5)} '
                             '${entry.source != null ? '[${entry.source}] ' : ''}'
-                            '${entry.message}',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: _colorForLevel(entry.level),
-                              fontFamily: 'monospace',
-                              fontSize: 11,
+                            '${entry.message}';
+                        return GestureDetector(
+                          onLongPress: () {
+                            Clipboard.setData(ClipboardData(text: line));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Copied'),
+                                duration: Duration(seconds: 1),
+                              ),
+                            );
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 1,
                             ),
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
+                            child: Text(
+                              line,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: _colorForLevel(entry.level),
+                                fontFamily: 'monospace',
+                                fontSize: 11,
+                              ),
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         );
                       },
