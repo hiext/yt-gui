@@ -6,6 +6,105 @@ yt-dlp 可视化桌面下载器，面向普通用户的图形化视频/音频下
 
 本项目仅提供基于 `yt-dlp` 和 `ffmpeg` 的下载与管理工具，不提供任何受保护内容，也不以下载、传播或获取盗版数字数据为目的。请仅在拥有合法权利或已获得明确授权的前提下使用本工具，并自行遵守相关版权法律、平台服务条款及当地法规。
 
+## 安装指南
+
+### 下载
+
+从 [GitHub Actions](https://github.com/hiext/yt-gui/actions) 最新一次成功构建的 **Artifacts** 中下载对应平台的压缩包，或从 [Releases](https://github.com/hiext/yt-gui/releases) 页面下载已发布的版本。
+
+| 平台 | Artifact 名称 | 包内容 |
+|------|--------------|--------|
+| Linux (x64) | `hiext-yt-gui-linux-x64` | 可执行文件 + 运行时库 |
+| macOS | `hiext-yt-gui-macos` | `.app` 应用包 |
+| Windows (x64) | `hiext-yt-gui-windows-x64` | 可执行文件 + DLL |
+
+### Linux
+
+1. 下载 `hiext-yt-gui-linux-x64` artifact 并解压：
+
+   ```bash
+   unzip hiext-yt-gui-linux-x64.zip -d hiext-yt-gui
+   cd hiext-yt-gui
+   ```
+
+2. 确保系统已安装运行依赖：
+
+   ```bash
+   # Debian / Ubuntu
+   sudo apt-get install -y libgtk-3-0 libnotify4 libsqlite3-0
+
+   # Fedora
+   sudo dnf install -y gtk3 libnotify sqlite
+
+   # Arch
+   sudo pacman -S --needed gtk3 libnotify sqlite
+   ```
+
+3. 赋予执行权限并运行：
+
+   ```bash
+   chmod +x hiext_yt_gui
+   ./hiext_yt_gui
+   ```
+
+4. （可选）创建桌面快捷方式：
+
+   ```bash
+   mkdir -p ~/.local/share/applications
+   cat > ~/.local/share/applications/hiext-yt-gui.desktop << 'EOF'
+   [Desktop Entry]
+   Name=Hiext YT GUI
+   Comment=yt-dlp visual downloader
+   Exec=/path/to/hiext-yt-gui/hiext_yt_gui
+   Icon=/path/to/hiext-yt-gui/data/flutter_assets/assets/branding/hiext-yt-logo-mark.png
+   Type=Application
+   Categories=Utility;Video;
+   EOF
+   ```
+
+   > 将 `/path/to/hiext-yt-gui` 替换为实际解压路径。
+
+### macOS
+
+1. 下载 `hiext-yt-gui-macos` artifact 并解压得到 `hiext_yt_gui.app`。
+
+2. 由于应用未经过 Apple 公证，首次打开时需绕过 Gatekeeper：
+
+   ```bash
+   # 移除隔离属性
+   xattr -cr hiext_yt_gui.app
+
+   # 或右键点击 .app → 按住 Option 键 → 选择"打开"
+   ```
+
+3. 将 `hiext_yt_gui.app` 拖入 `/Applications` 文件夹即可。
+
+4. （可选）安装 yt-dlp / ffmpeg runtime 依赖：
+
+   ```bash
+   brew install yt-dlp ffmpeg
+   ```
+
+   > 应用内置了工具查找逻辑，也可在设置 → yt-dlp/ffmpeg 路径中指定自定义路径。
+
+### Windows
+
+1. 下载 `hiext-yt-gui-windows-x64` artifact 并解压到目标目录。
+
+2. 确保系统已安装 [Visual C++ Redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe)（通常已预装）。
+
+3. 双击 `hiext_yt_gui.exe` 启动应用。
+
+4. （可选）右键 `hiext_yt_gui.exe` → **发送到** → **桌面快捷方式**。
+
+### 首次运行配置
+
+首次启动后，应用会显示免责声明弹窗，阅读并确认后进入主界面。建议在**设置**页面中：
+
+- 指定**保存目录**（默认 `~/Videos/Hiext YT GUI`）
+- 如需使用自定义工具路径，可在 yt-dlp/ffmpeg 输入框中填写
+- 调整下载模式（串行 / 并发）与并发数量
+
 ## 功能
 
 - 粘贴链接一键解析可选格式
@@ -126,15 +225,15 @@ flutter run -d windows
 
 ```bash
 # Linux (可执行文件 + 依赖库)
-flutter build linux
+flutter build linux --release
 # 产物位于 build/linux/x64/release/bundle/
 
 # macOS (.app 包)
-flutter build macos
+flutter build macos --release
 # 产物位于 build/macos/Build/Products/Release/
 
 # Windows (可执行文件 + DLL)
-flutter build windows
+flutter build windows --release
 # 产物位于 build/windows/x64/runner/Release/
 ```
 
