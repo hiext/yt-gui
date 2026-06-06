@@ -7,6 +7,7 @@ import '../../core/controllers/settings_controller.dart';
 import '../../core/models/app_models.dart';
 import '../../core/services/cookie_service.dart'
     show CookieService, CookieEntry, CookieImportResult;
+import '../../core/services/log_service.dart';
 import '../../shared/widgets/section_card.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -85,6 +86,15 @@ class _SettingsPageState extends State<SettingsPage> {
     if (ctrl.text != value) {
       ctrl.text = value;
     }
+  }
+
+  static const _qualityPresets = [
+    'best', 'bestvideo+bestaudio', 'bestvideo', 'bestaudio',
+    'bv*+ba*', 'bv*+ba/b', 'worstvideo+worstaudio', 'worst',
+  ];
+
+  String _normalizeQualityValue(String value) {
+    return _qualityPresets.contains(value) ? value : 'best';
   }
 
   List<DropdownMenuItem<AiCloudVendor>> _aiCloudVendorItems(
@@ -188,15 +198,44 @@ class _SettingsPageState extends State<SettingsPage> {
                     onChanged: widget.controller.updateSaveDirectory,
                   ),
                   const SizedBox(height: 16),
-                  TextFormField(
+                  DropdownButtonFormField<String>(
                     key: const Key('default-quality-field'),
-                    controller: _qualityCtrl,
+                    initialValue: _normalizeQualityValue(
+                      settings.defaultQuality,
+                    ),
+                    isExpanded: true,
                     decoration: InputDecoration(
                       labelText: l10n.defaultQuality,
-                      helperText: l10n.defaultQualityHint,
                       border: const OutlineInputBorder(),
                     ),
-                    onChanged: widget.controller.updateDefaultQuality,
+                    items: const [
+                      DropdownMenuItem(value: 'best', child: Text('best (推荐)')),
+                      DropdownMenuItem(
+                        value: 'bestvideo+bestaudio',
+                        child: Text('bestvideo+bestaudio'),
+                      ),
+                      DropdownMenuItem(value: 'bestvideo', child: Text('bestvideo')),
+                      DropdownMenuItem(value: 'bestaudio', child: Text('bestaudio')),
+                      DropdownMenuItem(
+                        value: 'bv*+ba*',
+                        child: Text('bv*+ba* (最佳视频+音频)'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'bv*+ba/b',
+                        child: Text('bv*+ba/b'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'worstvideo+worstaudio',
+                        child: Text('worstvideo+worstaudio'),
+                      ),
+                      DropdownMenuItem(value: 'worst', child: Text('worst')),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) {
+                        widget.controller.updateDefaultQuality(v);
+                        _qualityCtrl.text = v;
+                      }
+                    },
                   ),
                   const SizedBox(height: 16),
                   SizedBox(
@@ -609,6 +648,34 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
             const SizedBox(height: 16),
+            // ── Log Level ──
+            SectionCard(
+              title: 'Log Level / 日志级别',
+              subtitle: 'Set the verbosity of debug logging.',
+              child: DropdownButtonFormField<LogLevel>(
+                initialValue: settings.logLevel,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Log Level',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: LogLevel.debug, child: Text('Debug')),
+                  DropdownMenuItem(value: LogLevel.info, child: Text('Info')),
+                  DropdownMenuItem(value: LogLevel.warning, child: Text('Warning')),
+                  DropdownMenuItem(value: LogLevel.error, child: Text('Error')),
+                ],
+                onChanged: (v) {
+                  if (v != null) {
+                    LogService.instance.setLevel(v);
+                    widget.controller.updateSettings(
+                      widget.controller.settings.copyWith(logLevel: v),
+                    );
+                  }
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
             _CookieSection(
               configs: settings.cookieConfigs,
               defaultBrowser: settings.defaultCookieBrowser,
@@ -798,7 +865,7 @@ class _SettingsPageState extends State<SettingsPage> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result.detail ?? l10n.cookieImportSuccess(domain)),
+          content: Text(l10n.cookieImportSuccess(domain)),
           duration: const Duration(seconds: 3),
         ),
       );

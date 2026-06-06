@@ -16,11 +16,14 @@ void main() {
     await tester.enterText(saveField, '/home/user/downloads');
     await tester.pump();
 
+    // quality field is now a dropdown — tap, select option, verify
     final qualityField = find.byKey(const Key('default-quality-field'));
     await tester.ensureVisible(qualityField);
     await tester.pumpAndSettle();
-    await tester.enterText(qualityField, 'bestvideo+bestaudio');
-    await tester.pump();
+    await tester.tap(qualityField);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('bestvideo+bestaudio').last);
+    await tester.pumpAndSettle();
 
     final recommendedCountField = find.byKey(
       const Key('recommended-variant-count-field'),

@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/controllers/download_controller.dart';
@@ -29,6 +28,8 @@ class _HomePageState extends State<HomePage> {
   List<ResourceVariant> _variants = const [];
   final Set<String?> _selected = {};
   bool _showCookiePrompt = false;
+  final List<String> _parseLogs = [];
+  final ScrollController _parseLogScrollCtrl = ScrollController();
 
   @override
   void dispose() {
@@ -98,6 +99,77 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
         ),
+        // Parse log panel — visible only during inspection
+        if (_inspecting && _parseLogs.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Container(
+            constraints: const BoxConstraints(maxHeight: 200),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outlineVariant,
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.terminal, size: 14),
+                      const SizedBox(width: 6),
+                      Text(
+                        l10n.parsing,
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
+                      const Spacer(),
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: Colors.green,
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Flexible(
+                  child: ListView.builder(
+                    controller: _parseLogScrollCtrl,
+                    shrinkWrap: true,
+                    itemCount: _parseLogs.length,
+                    itemBuilder: (context, index) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 1,
+                        ),
+                        child: Text(
+                          _parseLogs[index],
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                fontFamily: 'monospace',
+                                fontSize: 10,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         if (_showCookiePrompt) ...[
           const SizedBox(height: 16),
           Card(
@@ -247,14 +319,20 @@ class _HomePageState extends State<HomePage> {
       _selected.clear();
       _videoTitle = null;
       _videoId = null;
+      _parseLogs.clear();
     });
     try {
       final variants = await widget.controller.inspect(
         uri,
         localizations: l10n,
-        onLog: kDebugMode
-            ? (line) => debugPrint('[yt-dlp][inspect] $line')
-            : null,
+        onLog: (line) {
+          _parseLogs.add(line);
+          if (_parseLogScrollCtrl.hasClients) {
+            _parseLogScrollCtrl.jumpTo(
+              _parseLogScrollCtrl.position.maxScrollExtent,
+            );
+          }
+        },
       );
       if (!mounted ||
           token != _inspectToken ||

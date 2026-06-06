@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/services.dart' show rootBundle;
 
 import '../../l10n/app_localizations.dart';
+import 'log_service.dart';
 import '../../l10n/app_localizations_current.dart';
 import '../models/app_models.dart';
 import 'embedded_tool_resolver.dart';
@@ -151,6 +152,7 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     _sessions[task.id] = session;
     _processes[task.id] = process;
 
+    LogService.instance.info('Starting download: $taskId, url: $url', 'executor');
     unawaited(_streamProcess(process, session, onTaskChanged));
   }
 
@@ -278,11 +280,17 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
 
     if (exitCode == 0 && session.status != DownloadStatus.failed) {
       session.markCompleted();
+      LogService.instance.info(
+        'Download completed: ${session.task.id}, mediaPath: ${session.task.mediaPath}',
+        'executor',
+      );
       onTaskChanged?.call(session.task);
       return;
     }
 
     if (session.status != DownloadStatus.failed) {
+      final msg = 'Non-zero exit: $exitCode for ${session.task.id}';
+      LogService.instance.error(msg, 'executor');
       session.handleEvent(
         YtDlpProgressEvent(
           type: YtDlpProgressEventType.error,
