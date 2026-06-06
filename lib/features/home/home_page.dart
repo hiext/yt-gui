@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/controllers/download_controller.dart';
 import '../../core/models/app_models.dart';
+import '../../core/services/log_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/section_card.dart';
 
@@ -347,6 +348,7 @@ class _HomePageState extends State<HomePage> {
         _showCookiePrompt = !hasCookie;
       });
     } catch (error) {
+      LogService.instance.error('inspect failed: $error', 'home');
       if (!mounted ||
           token != _inspectToken ||
           _linkController.text.trim() != uri.toString()) {
@@ -382,6 +384,7 @@ class _HomePageState extends State<HomePage> {
       );
       widget.onShowDownloads();
     } catch (error) {
+      LogService.instance.error('submit download failed: $error', 'home');
       setState(() {
         _errorText = l10n.addTaskFailed('$error');
       });

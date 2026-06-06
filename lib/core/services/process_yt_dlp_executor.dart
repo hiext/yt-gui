@@ -41,14 +41,27 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       File(filePath).writeAsBytesSync(data.buffer.asUint8List());
       await Process.run('chmod', ['+x', filePath]);
       _extractedPaths[tool.path] = filePath;
+      LogService.instance.debug(
+        'Extracted ${tool.kind.name} to $filePath',
+        'executor',
+      );
       return filePath;
-    } catch (_) {
+    } catch (e) {
+      LogService.instance.warn(
+        'Failed to extract ${tool.kind.name}: $e',
+        'executor',
+      );
       if (tool.fallbackPath != null) {
+        LogService.instance.info(
+          'Using fallback ${tool.kind.name}: ${tool.fallbackPath}',
+          'executor',
+        );
         return tool.fallbackPath!;
       }
-      throw EmbeddedToolResolutionException(
-        'Missing ${tool.kind.baseExecutableName}. Install ${tool.kind.baseExecutableName} on PATH, add ${tool.path} to the app bundle, or set a custom path in Settings.',
-      );
+      final msg =
+          'Missing ${tool.kind.baseExecutableName}. Install ${tool.kind.baseExecutableName} on PATH, add ${tool.path} to the app bundle, or set a custom path in Settings.';
+      LogService.instance.error(msg, 'executor');
+      throw EmbeddedToolResolutionException(msg);
     }
   }
 
@@ -63,7 +76,11 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
         .normalized();
     final tools = _toolResolver.resolveBundle(settings: normalizedSettings);
     final ytDlpPath = await _ensureExecutable(tools.ytDlp);
+    LogService.instance.debug('inspect: yt-dlp=$ytDlpPath url=$url', 'executor');
     final cookieFile = _resolveCookieFile(url, normalizedSettings);
+    if (cookieFile != null) {
+      LogService.instance.debug('inspect: using cookie $cookieFile', 'executor');
+    }
     final process = await _processRunner(
       ytDlpPath,
       buildInspectArguments(url, cookieFile: cookieFile),
@@ -98,6 +115,10 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
 
     if (exitCode != 0) {
       final message = session.errorMessage ?? l10n.ytDlpNonZeroExit;
+      LogService.instance.error(
+        'inspect failed: exit=$exitCode $message',
+        'executor',
+      );
       throw YtDlpExecutorException(message);
     }
 
@@ -105,6 +126,10 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       outputLines,
       l10n,
       recommendedVariantCount: normalizedSettings.recommendedVariantCount,
+    );
+    LogService.instance.info(
+      'inspect: found ${variants.length} variants',
+      'executor',
     );
     return variants.isEmpty
         ? [
@@ -128,6 +153,10 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     final tools = _toolResolver.resolveBundle(settings: settings);
     final ytDlpPath = await _ensureExecutable(tools.ytDlp);
     final ffmpegPath = await _ensureExecutable(tools.ffmpeg);
+    LogService.instance.debug(
+      'startDownload: yt-dlp=$ytDlpPath ffmpeg=$ffmpegPath',
+      'executor',
+    );
     final process = await _processRunner(
       ytDlpPath,
       buildDownloadArguments(

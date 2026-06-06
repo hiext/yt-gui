@@ -315,6 +315,10 @@ class DownloadController extends ChangeNotifier {
       } catch (e) {
         _startedTaskIds.remove(task.id);
         final message = e.toString();
+        LogService.instance.error(
+          'startDownload failed: $message',
+          'ctrl',
+        );
         scheduler.fail(
           task.id,
           message: message.isNotEmpty ? message : l10n.downloadFailedFallback,
