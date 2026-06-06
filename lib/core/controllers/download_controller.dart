@@ -7,6 +7,7 @@ import '../../l10n/app_localizations_current.dart';
 import 'post_process_controller.dart';
 import '../models/app_models.dart';
 import '../services/download_scheduler.dart';
+import '../services/log_service.dart';
 import '../services/notification_service.dart';
 import '../services/task_repository.dart';
 import '../services/yt_dlp_executor.dart';
@@ -108,6 +109,7 @@ class DownloadController extends ChangeNotifier {
     AppLocalizations? localizations,
     InspectLogSink? onLog,
   }) {
+    LogService.instance.debug('Inspecting URL: $url', 'ctrl');
     return executor.inspect(
       url,
       settings: settingsProvider(),
@@ -157,6 +159,7 @@ class DownloadController extends ChangeNotifier {
     scheduler.enqueue(task);
     scheduler.startNext();
     _notifyChanged();
+    LogService.instance.info('Download queued: ${task.id} variant=${variant.label}', 'ctrl');
     await _startPendingRunningTasks();
   }
 

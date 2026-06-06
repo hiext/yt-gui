@@ -21,6 +21,7 @@ import '../features/home/home_page.dart';
 import '../features/settings/settings_page.dart';
 import '../shared/widgets/debug_log_overlay.dart';
 import '../shared/widgets/section_card.dart';
+import '../core/services/log_service.dart';
 
 enum AppSection { home, downloads, clips, history, settings, help }
 
@@ -56,6 +57,7 @@ class _AppShellState extends State<AppShell> {
       unawaited(_loadCookieConfigs());
     }
     _settingsController.addListener(_handleSettingsChanged);
+    LogService.instance.info('AppShell init — settings loaded, disclaimer=${_settingsController.settings.disclaimerAccepted}', 'app');
     _postProcessController = PostProcessController(
       executor: AiClipAnalyzerExecutor(),
       settingsProvider: () => _settingsController.settings,
@@ -183,6 +185,7 @@ class _AppShellState extends State<AppShell> {
     setState(() {
       _section = section;
     });
+    LogService.instance.debug('Navigated to ${section.name}', 'nav');
   }
 
   void _onBrandTap() {
@@ -196,6 +199,10 @@ class _AppShellState extends State<AppShell> {
       setState(() {
         _debugLogVisible = !_debugLogVisible;
       });
+      LogService.instance.info(
+        'Debug log panel ${_debugLogVisible ? "opened" : "closed"}',
+        'debug',
+      );
     }
   }
 

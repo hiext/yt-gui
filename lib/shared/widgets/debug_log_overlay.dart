@@ -21,6 +21,7 @@ class DebugLogOverlay extends StatefulWidget {
 class _DebugLogOverlayState extends State<DebugLogOverlay> {
   final _scrollCtrl = ScrollController();
   bool _autoScroll = true;
+  double _panelHeight = 220;
 
   @override
   void didUpdateWidget(covariant DebugLogOverlay oldWidget) {
@@ -37,7 +38,9 @@ class _DebugLogOverlayState extends State<DebugLogOverlay> {
   void _onLogUpdate() {
     if (_autoScroll && _scrollCtrl.hasClients) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent);
+        if (_scrollCtrl.hasClients) {
+          _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent);
+        }
       });
     }
   }
@@ -60,10 +63,39 @@ class _DebugLogOverlayState extends State<DebugLogOverlay> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
+    if (!widget.visible) return widget.child;
+
+    return Column(
       children: [
-        widget.child,
-        if (widget.visible) _buildLogPanel(),
+        Expanded(child: widget.child),
+        // Drag handle
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onVerticalDragUpdate: (d) {
+            setState(() {
+              _panelHeight = (_panelHeight - d.delta.dy).clamp(100, 600);
+            });
+          },
+          child: Container(
+            height: 6,
+            color: Theme.of(context).colorScheme.outlineVariant,
+            child: Center(
+              child: Container(
+                width: 40,
+                height: 3,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+          ),
+        ),
+        // Log panel
+        AnimatedBuilder(
+          animation: LogService.instance,
+          builder: (context, _) => _buildLogPanel(),
+        ),
       ],
     );
   }
@@ -72,13 +104,9 @@ class _DebugLogOverlayState extends State<DebugLogOverlay> {
     final entries = LogService.instance.entries;
     final theme = Theme.of(context);
 
-    return Positioned(
-      bottom: 0,
-      left: 0,
-      right: 0,
-      height: 280,
+    return SizedBox(
+      height: _panelHeight,
       child: Material(
-        elevation: 8,
         color: theme.colorScheme.surfaceContainerHighest,
         child: Column(
           children: [
@@ -135,32 +163,41 @@ class _DebugLogOverlayState extends State<DebugLogOverlay> {
             ),
             // Log entries
             Expanded(
-              child: ListView.builder(
-                controller: _scrollCtrl,
-                itemCount: entries.length,
-                itemBuilder: (context, index) {
-                  final entry = entries[index];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 1,
-                    ),
-                    child: Text(
-                      '[${_fmt(entry.timestamp)}] '
-                      '${entry.level.name.toUpperCase().padRight(5)} '
-                      '${entry.source != null ? '[${entry.source}] ' : ''}'
-                      '${entry.message}',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: _colorForLevel(entry.level),
-                        fontFamily: 'monospace',
-                        fontSize: 11,
+              child: entries.isEmpty
+                  ? Center(
+                      child: Text(
+                        'No log entries yet. Level: ${LogService.instance.level.name}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
+                    )
+                  : ListView.builder(
+                      controller: _scrollCtrl,
+                      itemCount: entries.length,
+                      itemBuilder: (context, index) {
+                        final entry = entries[index];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 1,
+                          ),
+                          child: Text(
+                            '[${_fmt(entry.timestamp)}] '
+                            '${entry.level.name.toUpperCase().padRight(5)} '
+                            '${entry.source != null ? '[${entry.source}] ' : ''}'
+                            '${entry.message}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: _colorForLevel(entry.level),
+                              fontFamily: 'monospace',
+                              fontSize: 11,
+                            ),
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
             ),
           ],
         ),

@@ -8,6 +8,7 @@ import 'package:window_manager/window_manager.dart';
 
 import 'app/hiext_yt_app.dart';
 import 'app/runtime_screenshot_app.dart';
+import 'core/services/log_service.dart';
 import 'core/services/notification_service.dart';
 
 const _screenshotMode = bool.fromEnvironment('HIEXT_SCREENSHOT_MODE');
@@ -16,6 +17,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   _configureLinuxSqlite();
 
+  LogService.instance.info('App starting — platform: ${Platform.operatingSystem}', 'main');
   unawaited(NotificationService().initialize(appName: 'Hiext YT GUI'));
 
   await windowManager.ensureInitialized();
