@@ -271,6 +271,12 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
         '--add-header',
           'User-Agent:Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
               '(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+        '--add-header', 'Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        '--add-header', 'Accept-Language:zh-CN,zh;q=0.9,en;q=0.8',
+        '--add-header', 'Accept-Encoding:gzip, deflate, br',
+        '--add-header', 'Sec-Fetch-Site:none',
+        '--add-header', 'Sec-Fetch-Mode:navigate',
+        '--add-header', 'Sec-Fetch-Dest:document',
       ];
     }
     return const [];
