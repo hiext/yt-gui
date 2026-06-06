@@ -136,6 +136,7 @@ class _FakeExecutor implements YtDlpExecutor {
     Uri url, {
     DownloadSettings? settings,
     AppLocalizations? localizations,
+    InspectLogSink? onLog,
   }) async => const [];
 
   @override

@@ -56,6 +56,7 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     Uri url, {
     DownloadSettings? settings,
     AppLocalizations? localizations,
+    InspectLogSink? onLog,
   }) async {
     final normalizedSettings = (settings ?? DownloadSettings.defaults)
         .normalized();
@@ -80,8 +81,17 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       ),
     );
 
-    final stdoutFuture = _consumeLines(process.stdout, session, outputLines);
-    final stderrFuture = _consumeLines(process.stderr, session, outputLines);
+    final stdoutFuture = _consumeLines(
+      process.stdout,
+      session,
+      collectedLines: outputLines,
+    );
+    final stderrFuture = _consumeLines(
+      process.stderr,
+      session,
+      collectedLines: outputLines,
+      onLog: onLog,
+    );
     final exitCode = await process.exitCode;
     await Future.wait([stdoutFuture, stderrFuture]);
 
@@ -192,6 +202,7 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
   static List<String> buildInspectArguments(Uri url, {String? cookieFile}) {
     return [
       '--dump-json',
+      '--verbose',
       '--no-playlist',
       if (cookieFile != null) ...['--cookies', cookieFile],
       url.toString(),
@@ -235,8 +246,16 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     YtDlpSession session,
     DownloadTaskChanged? onTaskChanged,
   ) async {
-    final stdoutFuture = _consumeLines(process.stdout, session, onTaskChanged);
-    final stderrFuture = _consumeLines(process.stderr, session, onTaskChanged);
+    final stdoutFuture = _consumeLines(
+      process.stdout,
+      session,
+      onTaskChanged: onTaskChanged,
+    );
+    final stderrFuture = _consumeLines(
+      process.stderr,
+      session,
+      onTaskChanged: onTaskChanged,
+    );
     final exitCode = await process.exitCode;
     await Future.wait([stdoutFuture, stderrFuture]);
 
@@ -271,26 +290,17 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
 
   Future<void> _consumeLines(
     Stream<List<int>> stream,
-    YtDlpSession session, [
-    Object? thirdArgument,
-  ]) async {
-    final collectedLines = thirdArgument is List<String> ? thirdArgument : null;
-    final onTaskChanged = thirdArgument is DownloadTaskChanged
-        ? thirdArgument
-        : null;
-
+    YtDlpSession session, {
+    List<String>? collectedLines,
+    DownloadTaskChanged? onTaskChanged,
+    InspectLogSink? onLog,
+  }) async {
     await for (final line
         in stream
             .transform(SystemEncoding().decoder)
             .transform(LineSplitter())) {
       collectedLines?.add(line);
-      if (line.startsWith(_filepathPrefix)) {
-        session.task = session.task.copyWith(
-          mediaPath: line.substring(_filepathPrefix.length).trim(),
-        );
-        onTaskChanged?.call(session.task);
-        continue;
-      }
+      onLog?.call(line);
       session.handleLine(line);
       if (_intentionalStops.contains(session.task.id)) {
         continue;

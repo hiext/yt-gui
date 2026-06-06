@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HiExt YT GUI Pro | 为高频下载工作流准备</title>
+    <meta
+      name="description"
+      content="HiExt YT GUI Pro 面向高频素材采集与长期归档用户，聚焦批量任务、并发控制、Cookie 工作流、失败恢复和高级日志能力。"
+    />
+    <meta property="og:title" content="HiExt YT GUI Pro | 为高频下载工作流准备" />
+    <meta
+      property="og:description"
+      content="当下载不是一次动作，而是持续工作流时，Pro 版负责把批量、并发、恢复和 Cookie 流程收拢到一个桌面界面里。"
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="assets/branding/hiext-yt-logo-mark.svg" />
+    <meta name="theme-color" content="#1f4fd1" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="shortcut icon" href="favicon.ico" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="site-header">
+        <div class="container header-inner">
+          <a class="brand" href="index.html" aria-label="HiExt YT GUI 首页">
+            <img
+              class="brand-mark"
+              src="assets/branding/hiext-yt-logo-mark.svg"
+              alt="HiExt YT GUI"
+            />
+            <span class="brand-copy">
+              <strong>HiExt YT GUI Pro</strong>
+              <small>高频下载工作流升级页</small>
+            </span>
+          </a>
+
+          <button
+            class="menu-toggle"
+            type="button"
+            aria-expanded="false"
+            aria-controls="site-nav"
+          >
+            菜单
+          </button>
+
+          <nav id="site-nav" class="site-nav" aria-label="主导航">
+            <a href="#benefits">升级收益</a>
+            <a href="#matrix">版本差异</a>
+            <a href="#pricing">价格</a>
+            <a href="#faq">FAQ</a>
+          </nav>
+
+          <div class="header-actions">
+            <a class="button button-secondary" href="index.html">返回首页</a>
+            <a
+              class="button button-primary"
+              href="https://github.com/hiext/yt-gui/releases"
+              target="_blank"
+              rel="noreferrer"
+            >
+              下载免费版
+            </a>
+          </div>
+        </div>
+      </header>
+
+      <main id="top">
+        <section class="hero section hero-compact">
+          <div class="container hero-grid">
+            <div class="hero-copy">
+              <div class="eyebrow-row">
+                <span class="eyebrow-pill">买断制</span>
+                <span class="eyebrow-pill">高频用户</span>
+                <span class="eyebrow-pill">批量 / 并发 / 恢复</span>
+              </div>
+
+              <p class="hero-kicker">面向会持续下载的人</p>
+              <h1>当下载变成工作流，Pro 才开始真正省时间</h1>
+              <p class="hero-lead">
+                免费版负责让你快速完成第一次下载，Pro 版负责把高频场景里的重复操作、失败重试、Cookie 配置和任务恢复整合成一个长期可用的桌面工作台。
+              </p>
+
+              <div class="hero-actions">
+                <a
+                  class="button button-primary button-large"
+                  href="https://github.com/hiext/yt-gui/releases"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  先用免费版验证流程
+                </a>
+                <a class="button button-secondary button-large" href="#reserve">
+                  登记早鸟资格
+                </a>
+              </div>
+
+              <div class="hero-notes">
+                <span>早鸟建议价 ¥79，正式版建议价 ¥129</span>
+                <span>适合每周都要处理多次下载、归档和失败恢复的用户</span>
+              </div>
+            </div>
+
+            <div class="hero-side-stack">
+              <article class="signal-card signal-card-strong">
+                <span class="signal-label">升级信号</span>
+                <h3>你已经不是“偶尔下载”用户</h3>
+                <p>
+                  当你开始在意并发数、历史记录、Cookie 和失败恢复时，说明你的问题不再是“能不能下”，而是“这条流程是否顺手”。
+                </p>
+              </article>
+
+              <div class="signal-grid">
+                <article class="signal-card">
+                  <strong>批量任务</strong>
+                  <p>减少一条条重新解析、重新点击的重复劳动。</p>
+                </article>
+                <article class="signal-card">
+                  <strong>并发控制</strong>
+                  <p>把带宽和时间优先级真正纳入你的工作流。</p>
+                </article>
+                <article class="signal-card">
+                  <strong>任务恢复</strong>
+                  <p>异常中断后继续，不用从头再组织一次。</p>
+                </article>
+                <article class="signal-card">
+                  <strong>Cookie 工作流</strong>
+                  <p>把受限内容处理从命令行折腾拉回图形界面。</p>
+                </article>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="benefits" class="section muted-section">
+          <div class="container">
+            <div class="section-heading narrow">
+              <p class="section-kicker">升级收益</p>
+              <h2>Pro 不卖“更多按钮”，卖的是更少中断</h2>
+              <p>
+                如果下载只是偶发动作，免费版已经够用；如果下载是你素材流的一部分，Pro 的价值在于把碎片动作收成整条流程。
+              </p>
+            </div>
+
+            <div class="feature-grid pain-grid">
+              <article class="feature-card audience-card">
+                <h3>减少重复点击</h3>
+                <p>批量任务和队列下载，避免每个链接都重复完成同一套动作。</p>
+              </article>
+              <article class="feature-card audience-card">
+                <h3>减少上下文切换</h3>
+                <p>格式选择、任务状态、失败处理和历史记录都留在一个界面里。</p>
+              </article>
+              <article class="feature-card audience-card">
+                <h3>减少重试损耗</h3>
+                <p>中断恢复和失败重试更集中，避免每次出错都重新组织任务。</p>
+              </article>
+              <article class="feature-card audience-card">
+                <h3>减少环境摩擦</h3>
+                <p>Cookie、日志和工具路径集中管理，更适合长期桌面使用。</p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section id="matrix" class="section">
+          <div class="container">
+            <div class="section-heading narrow">
+              <p class="section-kicker">版本差异</p>
+              <h2>免费版负责上手，Pro 版负责高频效率</h2>
+              <p>这不是把基础功能拆开卖，而是把“偶发使用”和“持续工作流”分成两个层级。</p>
+            </div>
+
+            <div class="matrix-card">
+              <table class="matrix-table">
+                <thead>
+                  <tr>
+                    <th scope="col">能力项</th>
+                    <th scope="col">免费版</th>
+                    <th scope="col">Pro 版</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <th scope="row">链接解析与基础格式选择</th>
+                    <td data-label="免费版">支持</td>
+                    <td data-label="Pro 版">支持</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">单任务下载</th>
+                    <td data-label="免费版">支持</td>
+                    <td data-label="Pro 版">支持</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">批量任务与队列</th>
+                    <td data-label="免费版">基础</td>
+                    <td data-label="Pro 版">完整工作流</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">并发下载与并发数控制</th>
+                    <td data-label="免费版">不主打</td>
+                    <td data-label="Pro 版">核心能力</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">Cookie 导入与管理</th>
+                    <td data-label="免费版">按需使用</td>
+                    <td data-label="Pro 版">高频优化</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">异常中断后恢复</th>
+                    <td data-label="免费版">有限</td>
+                    <td data-label="Pro 版">重点强化</td>
+                  </tr>
+                  <tr>
+                    <th scope="row">日志导出与高级设置</th>
+                    <td data-label="免费版">基础</td>
+                    <td data-label="Pro 版">提供</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="section dark-section">
+          <div class="container">
+            <div class="section-heading narrow light">
+              <p class="section-kicker">适合谁升级</p>
+              <h2>下面这些人，更容易觉得 Pro 值得</h2>
+              <p>判断标准很简单：你是否经常在下载环节被打断，而不是只在乎能不能成功一次。</p>
+            </div>
+
+            <div class="feature-grid value-grid">
+              <article class="feature-card value-card">
+                <h3>自媒体剪辑</h3>
+                <p>你会反复收集素材、整理目录、处理失败任务，省的是重复劳动。</p>
+              </article>
+              <article class="feature-card value-card">
+                <h3>内容运营</h3>
+                <p>你需要更稳定地管理多个任务源，不希望每次都重新组织下载。</p>
+              </article>
+              <article class="feature-card value-card">
+                <h3>课程资料归档</h3>
+                <p>你更看重长期本地保存和历史回看，而不是一次性拿到文件。</p>
+              </article>
+              <article class="feature-card value-card">
+                <h3>研究型采集</h3>
+                <p>你常常遇到受限内容、不同格式和中断恢复，命令行摩擦已经开始累积。</p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section id="pricing" class="section compare-section">
+          <div class="container">
+            <div class="section-heading narrow">
+              <p class="section-kicker">价格设计</p>
+              <h2>买断比订阅更适合这类桌面工具</h2>
+              <p>用户的决策应该简单：先试用，再按自己的使用频率决定是否升级。</p>
+            </div>
+
+            <div class="offer-grid">
+              <article class="pricing-card">
+                <div class="pricing-head">
+                  <span class="pricing-badge muted">先验证</span>
+                  <h3>免费版路径</h3>
+                  <p class="price">¥0</p>
+                </div>
+                <p class="pricing-copy">适合先确认：这个工具是否真的进入你的日常流程。</p>
+                <ul class="pricing-list">
+                  <li>完成第一次成功下载</li>
+                  <li>体验格式解析与任务界面</li>
+                  <li>判断自己是否属于高频用户</li>
+                </ul>
+                <a
+                  class="button button-secondary button-block"
+                  href="https://github.com/hiext/yt-gui/releases"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  下载免费版
+                </a>
+              </article>
+
+              <article class="pricing-card pricing-card-featured">
+                <div class="pricing-head">
+                  <span class="pricing-badge strong">建议主推</span>
+                  <h3>Pro 买断版</h3>
+                  <p class="price">¥79 <small>早鸟 / ¥129 正式</small></p>
+                </div>
+                <p class="pricing-copy">适合已经确认自己每周都会频繁处理下载任务的用户。</p>
+                <ul class="pricing-list">
+                  <li>把高频流程的摩擦成本打包解决</li>
+                  <li>比订阅更符合桌面工具购买习惯</li>
+                  <li>后续可直接接入支付或发码交付流程</li>
+                </ul>
+                <a class="button button-primary button-block" href="#reserve">
+                  登记早鸟资格
+                </a>
+              </article>
+            </div>
+
+            <div class="pricing-note">
+              <p>
+                当前这页的目标不是立刻接支付，而是把升级理由、价格锚点和目标用户先讲清楚。后续接支付链接时，这一页可以直接复用。
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section id="upgrade-path" class="section muted-section">
+          <div class="container">
+            <div class="section-heading narrow">
+              <p class="section-kicker">升级路径</p>
+              <h2>先完成试用，再进入 Pro 决策</h2>
+              <p>这条路径的目标很明确：先确认自己是不是高频用户，再决定是否值得为更顺手的工作流付费。</p>
+            </div>
+
+            <div class="workflow-grid">
+              <article class="workflow-card">
+                <span class="step-index">01</span>
+                <h3>下载免费版</h3>
+                <p>先完成一次真实下载，确认解析、任务管理和基础流程是否符合你的使用习惯。</p>
+              </article>
+              <article class="workflow-card">
+                <span class="step-index">02</span>
+                <h3>观察一周频率</h3>
+                <p>如果你一周内多次用到并开始关心并发、恢复和 Cookie，说明你已经进入 Pro 场景。</p>
+              </article>
+              <article class="workflow-card">
+                <span class="step-index">03</span>
+                <h3>关注 Pro 交付</h3>
+                <p>等支付或发码接入后，这一页可直接承接升级，不需要重写整套商业化话术。</p>
+              </article>
+            </div>
+
+            <div class="section-actions center">
+              <a
+                class="button button-primary button-large"
+                href="https://github.com/hiext/yt-gui/releases"
+                target="_blank"
+                rel="noreferrer"
+              >
+                下载免费版
+              </a>
+              <a class="button button-secondary button-large" href="#reserve">
+                公开登记升级意向
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <section id="reserve" class="section">
+          <div class="container">
+            <div class="section-heading narrow">
+              <p class="section-kicker">早鸟登记</p>
+              <h2>留下你的联系方式和使用场景，进入私有候补名单</h2>
+              <p>这一版改成私有登记通道，适合早期阶段先收集真实需求、升级意向和价格敏感度，不再要求用户公开发帖。</p>
+            </div>
+
+            <div class="reserve-card">
+              <form class="reserve-form" id="reserve-form" method="post" action="/api/waitlist">
+                <div class="field-grid">
+                  <label class="field">
+                    <span>你的角色</span>
+                    <select name="role">
+                      <option value="自媒体剪辑">自媒体剪辑</option>
+                      <option value="内容运营">内容运营</option>
+                      <option value="课程资料归档">课程资料归档</option>
+                      <option value="研究型采集">研究型采集</option>
+                      <option value="其他">其他</option>
+                    </select>
+                  </label>
+                  <label class="field">
+                    <span>每周下载频率</span>
+                    <select name="volume">
+                      <option value="1-3 次">1-3 次</option>
+                      <option value="4-10 次">4-10 次</option>
+                      <option value="10 次以上">10 次以上</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="field-grid">
+                  <label class="field">
+                    <span>联系邮箱</span>
+                    <input
+                      name="contact"
+                      type="email"
+                      inputmode="email"
+                      autocomplete="email"
+                      placeholder="you@example.com"
+                      required
+                    />
+                  </label>
+                  <label class="field field-hp" aria-hidden="true">
+                    <span>Website</span>
+                    <input name="website" type="text" tabindex="-1" autocomplete="off" />
+                  </label>
+                </div>
+
+                <label class="field">
+                  <span>你最想优先解决的问题</span>
+                  <textarea
+                    name="problem"
+                    rows="5"
+                    placeholder="例如：批量任务太碎、受限内容处理麻烦、异常中断后恢复成本高。"
+                    required
+                  ></textarea>
+                </label>
+
+                <label class="field">
+                  <span>你愿意接受的价格区间</span>
+                  <select name="price">
+                    <option value="￥49-79">￥49-79</option>
+                    <option value="￥79-129">￥79-129</option>
+                    <option value="￥129 以上，只要节省时间">￥129 以上，只要节省时间</option>
+                  </select>
+                </label>
+
+                <div class="reserve-actions">
+                  <button class="button button-primary button-large" id="reserve-submit" type="submit">
+                    提交私有候补登记
+                  </button>
+                  <button class="button button-secondary button-large" id="reserve-copy" type="button">
+                    复制登记内容
+                  </button>
+                </div>
+                <p class="reserve-note" id="reserve-note" aria-live="polite">
+                  提交后会进入私有候补列表，不会公开显示你的联系方式。若当前部署尚未配置私有通道，你仍可先复制登记内容备用。
+                </p>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <section id="faq" class="section faq-section">
+          <div class="container faq-layout">
+            <div class="section-heading faq-heading">
+              <p class="section-kicker">常见问题</p>
+              <h2>关于 Pro 的关键问题，先一次说清</h2>
+              <p>让用户先判断自己是不是目标用户，再决定是否继续关注或升级。</p>
+            </div>
+
+            <div class="faq-list">
+              <details class="faq-item" open>
+                <summary>为什么不直接做订阅？</summary>
+                <p>这类本地桌面工具更适合买断。订阅会放大用户决策阻力，也更容易让轻中度用户流失。</p>
+              </details>
+              <details class="faq-item">
+                <summary>免费版和 Pro 真正差在哪？</summary>
+                <p>免费版让你完成下载；Pro 让你在高频任务下更少切换、更少重试、更少环境折腾。</p>
+              </details>
+              <details class="faq-item">
+                <summary>我适合先下载免费版还是等 Pro？</summary>
+                <p>先下载免费版。如果你在一周内已经多次用到它，并开始在意并发、恢复和 Cookie，说明 Pro 有价值。</p>
+              </details>
+              <details class="faq-item">
+                <summary>这页现在还没有支付按钮，为什么先做？</summary>
+                <p>因为先把付费理由说清楚，比先挂一个支付按钮更重要。没有解释清楚的价格页，转化通常不会稳定。</p>
+              </details>
+              <details class="faq-item">
+                <summary>提交候补后，信息会公开吗？</summary>
+                <p>不会。当前主流程会把登记内容发送到私有候补通道，仅当你主动使用复制内容或其它公开渠道时，信息才会对外可见。</p>
+              </details>
+            </div>
+          </div>
+        </section>
+
+        <section class="section final-cta">
+          <div class="container final-cta-inner">
+            <div>
+              <p class="section-kicker">下一步</p>
+              <h2>先验证你的使用频率，再决定是否值得升级</h2>
+              <p>
+                如果你只是偶尔下载，免费版已经够用；如果你每周都在重复同一套下载动作，Pro 页已经帮你把升级理由整理好了。
+              </p>
+            </div>
+            <div class="final-cta-actions">
+              <a
+                class="button button-primary button-large"
+                href="https://github.com/hiext/yt-gui/releases"
+                target="_blank"
+                rel="noreferrer"
+              >
+                下载免费版
+              </a>
+              <a class="button button-secondary button-large" href="index.html">
+                返回首页
+              </a>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <div class="container footer-inner">
+          <div class="footer-brand">
+            <img src="assets/branding/hiext-yt-logo-primary.svg" alt="HiExt YT GUI" />
+            <p>面向高频素材采集与长期本地管理的桌面下载工作流。</p>
+          </div>
+
+          <div class="footer-links">
+            <a href="#benefits">升级收益</a>
+            <a href="#matrix">版本差异</a>
+            <a href="#pricing">价格</a>
+            <a href="#faq">FAQ</a>
+          </div>
+
+          <div class="footer-meta">
+            <a href="index.html">首页</a>
+            <a href="https://github.com/hiext/yt-gui" target="_blank" rel="noreferrer">
+              GitHub 仓库
+            </a>
+            <span>© 2026 HiExt</span>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
