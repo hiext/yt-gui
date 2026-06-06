@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HiExt YT GUI | 本地桌面下载工作台</title>
+    <meta
+      name="description"
+      content="HiExt YT GUI 是一个面向高频素材采集与归档场景的本地桌面下载工作台，提供格式解析、任务管理、队列/并发与 Cookie 工作流。"
+    />
+    <meta property="og:title" content="HiExt YT GUI | 本地桌面下载工作台" />
+    <meta
+      property="og:description"
+      content="把复杂下载流程，变成顺手的桌面工作流。支持格式选择、任务管理、队列/并发与 Cookie 工作流。"
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="assets/branding/hiext-yt-logo-mark.svg" />
+    <meta name="theme-color" content="#1f4fd1" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="shortcut icon" href="favicon.ico" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="site-header">
+        <div class="container header-inner">
+          <a class="brand" href="#top" aria-label="HiExt YT GUI 首页">
+            <img
+              class="brand-mark"
+              src="assets/branding/hiext-yt-logo-mark.svg"
+              alt="HiExt YT GUI"
+            />
+            <span class="brand-copy">
+              <strong>HiExt YT GUI</strong>
+              <small>本地桌面下载工作台</small>
+            </span>
+          </a>
+
+          <button
+            class="menu-toggle"
+            type="button"
+            aria-expanded="false"
+            aria-controls="site-nav"
+          >
+            菜单
+          </button>
+
+          <nav id="site-nav" class="site-nav" aria-label="主导航">
+            <a href="#features">功能</a>
+            <a href="pro.html">版本对比</a>
+            <a href="#audience">适合谁</a>
+            <a href="#faq">FAQ</a>
+          </nav>
+
+          <div class="header-actions">
+            <a class="button button-secondary" href="pro.html">查看 Pro</a>
+            <a
+              class="button button-primary"
+              href="https://github.com/hiext/yt-gui/releases"
+              target="_blank"
+              rel="noreferrer"
+            >
+              免费下载
+            </a>
+          </div>
+        </div>
+      </header>
+
+      <main id="top">
+        <section class="hero section">
+          <div class="container hero-grid">
+            <div class="hero-copy">
+              <div class="eyebrow-row">
+                <span class="eyebrow-pill">本地运行</span>
+                <span class="eyebrow-pill">任务管理</span>
+                <span class="eyebrow-pill">队列 / 并发</span>
+                <span class="eyebrow-pill">Cookie 工作流</span>
+              </div>
+
+              <p class="hero-kicker">为高频素材采集和归档场景而设计</p>
+              <h1>把复杂下载流程，变成顺手的桌面工作流</h1>
+              <p class="hero-lead">
+                HiExt YT GUI 是一个本地桌面下载工具，帮助你更轻松地解析链接、选择格式、管理任务，并完成批量素材下载。
+              </p>
+
+              <div class="hero-actions">
+                <a
+                  class="button button-primary button-large"
+                  href="https://github.com/hiext/yt-gui/releases"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  免费下载试用
+                </a>
+                <a class="button button-secondary button-large" href="pro.html">
+                  查看 Pro 功能
+                </a>
+              </div>
+
+              <div class="hero-notes">
+                <span>适合高频素材采集、归档整理与长期本地管理</span>
+                <span>当前提供 Linux / macOS / Windows 桌面版本</span>
+              </div>
+            </div>
+
+            <div class="hero-visual" aria-hidden="true">
+              <div class="app-chrome">
+                <div class="chrome-bar">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+                <div class="app-canvas">
+                  <aside class="mock-sidebar">
+                    <div class="mock-brand">
+                      <img
+                        src="assets/branding/hiext-yt-logo-mark.svg"
+                        alt=""
+                        aria-hidden="true"
+                      />
+                      <strong>HiExt</strong>
+                    </div>
+                    <div class="mock-nav-item active">新建下载</div>
+                    <div class="mock-nav-item">下载中</div>
+                    <div class="mock-nav-item">历史记录</div>
+                    <div class="mock-nav-item">设置</div>
+                    <div class="mock-nav-item">帮助</div>
+                  </aside>
+
+                  <section class="mock-main">
+                    <div class="mock-panel mock-panel-primary">
+                      <div class="mock-panel-head">
+                        <strong>粘贴链接并解析</strong>
+                        <span>解析格式与可下载内容</span>
+                      </div>
+                      <div class="mock-input-row">
+                        <div class="mock-input"></div>
+                        <div class="mock-button">解析</div>
+                      </div>
+                    </div>
+
+                    <div class="mock-panel-grid">
+                      <div class="mock-panel">
+                        <div class="mock-panel-head">
+                          <strong>推荐格式</strong>
+                          <span>最适合直接开始</span>
+                        </div>
+                        <div class="mock-list-row selected"></div>
+                        <div class="mock-list-row"></div>
+                        <div class="mock-list-row"></div>
+                      </div>
+
+                      <div class="mock-panel accent-panel">
+                        <div class="mock-panel-head">
+                          <strong>任务列表</strong>
+                          <span>队列 / 并发 / 失败重试</span>
+                        </div>
+                        <div class="progress-card running">
+                          <div>
+                            <strong>Video 1080p</strong>
+                            <span>48% · 3.4 MB/s</span>
+                          </div>
+                          <div class="mini-progress"><span></span></div>
+                        </div>
+                        <div class="progress-card queued">
+                          <div>
+                            <strong>Audio 320kbps</strong>
+                            <span>队列中</span>
+                          </div>
+                          <div class="mini-progress"><span></span></div>
+                        </div>
+                        <div class="progress-card done">
+                          <div>
+                            <strong>封面与字幕</strong>
+                            <span>已完成</span>
+                          </div>
+                          <div class="mini-progress"><span></span></div>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section muted-section">
+          <div class="container">
+            <div class="section-heading narrow">
+              <p class="section-kicker">为什么还需要它</p>
+              <h2>你不缺下载能力，你缺的是少折腾</h2>
+              <p>
+                很多人不是不会下载，而是不想在命令、格式、失败重试、Cookie 和目录管理上反复花时间。
+              </p>
+            </div>
+
+            <div class="feature-grid pain-grid">
+              <article class="feature-card pain-card">
+                <h3>命令行太麻烦</h3>
+                <p>参数多、记不住、出错难排查，学习成本偏高。</p>
+              </article>
+              <article class="feature-card pain-card">
+                <h3>免费 GUI 能用，但不稳定</h3>
+                <p>批量任务、失败恢复、站点兼容经常掉链子。</p>
+              </article>
+              <article class="feature-card pain-card">
+                <h3>任务一多就开始混乱</h3>
+                <p>下载列表、历史记录、目录整理很快失控。</p>
+              </article>
+              <article class="feature-card pain-card">
+                <h3>高频使用时效率太低</h3>
+                <p>一个个点、一个个重试、一个个查问题，注意力被反复打断。</p>
+              </article>
+            </div>
+
+            <div class="section-actions center">
+              <a class="button button-secondary" href="#workflow">看看它如何工作</a>
+            </div>
+          </div>
+        </section>
+
+        <section id="workflow" class="section">
+          <div class="container">
+            <div class="section-heading narrow">
+              <p class="section-kicker">核心流程</p>
+              <h2>从复制链接，到落地下载，只走一条清晰流程</h2>
+              <p>不用在多个工具之间来回切换，整条流程都留在桌面端完成。</p>
+            </div>
+
+            <div class="workflow-grid">
+              <article class="workflow-card">
+                <span class="step-index">01</span>
+                <h3>粘贴链接并解析</h3>
+                <p>自动获取可用格式，减少命令行操作与手工试错。</p>
+              </article>
+              <article class="workflow-card">
+                <span class="step-index">02</span>
+                <h3>选择你真正需要的内容</h3>
+                <p>视频、音频、推荐格式一眼可见，少做无效下载。</p>
+              </article>
+              <article class="workflow-card">
+                <span class="step-index">03</span>
+                <h3>开始下载并管理任务</h3>
+                <p>查看进度、处理失败、打开目录、继续后续工作。</p>
+              </article>
+            </div>
+
+            <div class="section-actions center">
+              <a
+                class="button button-primary"
+                href="https://github.com/hiext/yt-gui/releases"
+                target="_blank"
+                rel="noreferrer"
+              >
+                先下载免费版试试
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <section id="features" class="section dark-section">
+          <div class="container">
+            <div class="section-heading narrow light">
+              <p class="section-kicker">核心价值</p>
+              <h2>不是多一个按钮，而是少很多麻烦</h2>
+              <p>
+                HiExt 的价值不在“能下载”，而在“高频使用时更顺手”。
+              </p>
+            </div>
+
+            <div class="feature-grid value-grid">
+              <article class="feature-card value-card">
+                <h3>更直观</h3>
+                <p>从链接解析到格式选择，整个下载过程都在图形界面里完成。</p>
+              </article>
+              <article class="feature-card value-card">
+                <h3>更高效</h3>
+                <p>任务列表、历史记录、失败重试，让高频下载不再零散。</p>
+              </article>
+              <article class="feature-card value-card">
+                <h3>更适合长期使用</h3>
+                <p>本地配置、本地记录、本地工作流，适合长期沉淀。</p>
+              </article>
+              <article class="feature-card value-card">
+                <h3>更少环境折腾</h3>
+                <p>工具配置、Cookie 工作流、任务调度集中管理。</p>
+              </article>
+            </div>
+
+            <div class="section-actions center">
+              <a class="button button-secondary light-border" href="pro.html">
+                查看版本差异
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <section id="audience" class="section">
+          <div class="container">
+            <div class="section-heading narrow">
+              <p class="section-kicker">适用人群</p>
+              <h2>更适合这些高频用户</h2>
+              <p>
+                如果你只是偶尔下一两个文件，免费版通常已经够用；如果下载是你工作流的一部分，这个工具会更有价值。
+              </p>
+            </div>
+
+            <div class="audience-grid">
+              <article class="audience-card">
+                <h3>自媒体剪辑</h3>
+                <p>批量整理素材，减少重复操作与中断等待。</p>
+              </article>
+              <article class="audience-card">
+                <h3>内容运营</h3>
+                <p>管理多条任务和不同来源内容，更适合持续产出。</p>
+              </article>
+              <article class="audience-card">
+                <h3>课程 / 资料归档</h3>
+                <p>更适合长期整理与本地保存，不依赖云端流程。</p>
+              </article>
+              <article class="audience-card">
+                <h3>研究型采集用户</h3>
+                <p>需要反复下载、分类、回看历史记录与失败信息。</p>
+              </article>
+            </div>
+
+            <div class="section-actions center">
+              <a class="button button-secondary" href="pro.html">看看 Pro 是否适合你</a>
+            </div>
+          </div>
+        </section>
+
+        <section id="compare" class="section compare-section">
+          <div class="container">
+            <div class="section-heading narrow">
+              <p class="section-kicker">版本设计</p>
+              <h2>免费版负责上手，Pro 版负责省事</h2>
+              <p>先完成第一次成功下载，再决定是否需要更高效率的工作流能力。</p>
+            </div>
+
+            <div class="pricing-grid">
+              <article class="pricing-card">
+                <div class="pricing-head">
+                  <span class="pricing-badge muted">轻度使用</span>
+                  <h3>免费版</h3>
+                  <p class="price">¥0</p>
+                </div>
+                <p class="pricing-copy">适合偶尔下载、轻度使用用户。</p>
+                <ul class="pricing-list">
+                  <li>基础链接解析</li>
+                  <li>单任务下载</li>
+                  <li>基础格式选择</li>
+                  <li>下载历史查看</li>
+                  <li>基础暂停 / 继续</li>
+                </ul>
+                <a
+                  class="button button-secondary button-block"
+                  href="https://github.com/hiext/yt-gui/releases"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  免费下载
+                </a>
+              </article>
+
+              <article class="pricing-card pricing-card-featured">
+                <div class="pricing-head">
+                  <span class="pricing-badge strong">最适合高频用户</span>
+                  <h3>Pro 版</h3>
+                  <p class="price">早鸟 ¥79 <small> / 正式 ¥129</small></p>
+                </div>
+                <p class="pricing-copy">适合高频下载、素材采集、长期使用用户。</p>
+                <ul class="pricing-list">
+                  <li>免费版全部能力</li>
+                  <li>批量任务与队列下载</li>
+                  <li>并发下载与并发数控制</li>
+                  <li>Cookie 导入与管理</li>
+                  <li>异常退出后任务恢复</li>
+                  <li>日志导出与高级设置</li>
+                </ul>
+                <a class="button button-primary button-block" href="pro.html">
+                  查看 Pro 权益
+                </a>
+              </article>
+            </div>
+
+            <div id="pricing-note" class="pricing-note">
+              <p>
+                建议采用买断模式。免费版解决“能下载”，Pro 解决“高频下载时更高效、更稳定、更少折腾”。
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section class="section muted-section">
+          <div class="container">
+            <div class="section-heading narrow">
+              <p class="section-kicker">真实工作流</p>
+              <h2>它适合放进真实工作流，而不只是试一下</h2>
+              <p>不是为了偶尔下一个文件设计，而是为了长期高频使用更省事。</p>
+            </div>
+
+            <div class="scenario-stack">
+              <article class="scenario-card">
+                <div>
+                  <span class="scenario-label">场景 01</span>
+                  <h3>素材采集</h3>
+                </div>
+                <p><strong>原来：</strong>一个个解析、一个个下载、失败再重来。</p>
+                <p><strong>现在：</strong>统一任务列表，集中处理。</p>
+                <p><strong>结果：</strong>节省时间和注意力切换成本。</p>
+              </article>
+
+              <article class="scenario-card">
+                <div>
+                  <span class="scenario-label">场景 02</span>
+                  <h3>多任务处理</h3>
+                </div>
+                <p><strong>原来：</strong>下载和目录管理分散。</p>
+                <p><strong>现在：</strong>历史记录、进度状态、打开目录集中管理。</p>
+                <p><strong>结果：</strong>减少查找和整理成本。</p>
+              </article>
+
+              <article class="scenario-card">
+                <div>
+                  <span class="scenario-label">场景 03</span>
+                  <h3>受限内容处理</h3>
+                </div>
+                <p><strong>原来：</strong>自己找 Cookie、自己调命令。</p>
+                <p><strong>现在：</strong>在图形界面里管理相关流程。</p>
+                <p><strong>结果：</strong>降低试错成本。</p>
+              </article>
+            </div>
+
+            <div class="section-actions center">
+              <a
+                class="button button-primary"
+                href="https://github.com/hiext/yt-gui/releases"
+                target="_blank"
+                rel="noreferrer"
+              >
+                下载免费版，体验完整流程
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <section class="section final-cta">
+          <div class="container final-cta-inner">
+            <div>
+              <p class="section-kicker">开始使用</p>
+              <h2>先试用，再决定是否升级</h2>
+              <p>
+                免费版负责让你上手，Pro 负责让你省事。当前页面可直接作为下载落地页部署。
+              </p>
+            </div>
+            <div class="final-cta-actions">
+              <a
+                class="button button-primary button-large"
+                href="https://github.com/hiext/yt-gui/releases"
+                target="_blank"
+                rel="noreferrer"
+              >
+                免费下载
+              </a>
+              <a class="button button-secondary button-large" href="#faq">查看 FAQ</a>
+            </div>
+          </div>
+        </section>
+
+        <section id="faq" class="section faq-section">
+          <div class="container faq-layout">
+            <div class="section-heading faq-heading">
+              <p class="section-kicker">常见问题</p>
+              <h2>先看这里，再决定是否需要升级 Pro</h2>
+              <p>
+                这是一套桌面工具型产品页面，核心任务是帮助用户快速判断：能不能用、值不值得买、要不要先试用。
+              </p>
+            </div>
+
+            <div class="faq-list">
+              <details class="faq-item" open>
+                <summary>这是什么工具？</summary>
+                <p>
+                  这是一个本地桌面下载工具，帮助你更轻松地处理链接解析、格式选择和任务下载流程。
+                </p>
+              </details>
+              <details class="faq-item">
+                <summary>免费版可以做什么？</summary>
+                <p>免费版支持基础解析、单任务下载、基础格式选择和历史查看，足够完成轻量使用。</p>
+              </details>
+              <details class="faq-item">
+                <summary>Pro 最大区别是什么？</summary>
+                <p>Pro 更适合高频使用，重点在批量、并发、Cookie、恢复和长期管理能力。</p>
+              </details>
+              <details class="faq-item">
+                <summary>数据保存在本地吗？</summary>
+                <p>是。配置、任务和相关记录保存在本地，更适合长期桌面工作流。</p>
+              </details>
+              <details class="faq-item">
+                <summary>Pro 是买断还是订阅？</summary>
+                <p>建议采用买断模式，决策更简单，也更符合桌面工具购买习惯。</p>
+              </details>
+              <details class="faq-item">
+                <summary>我适合直接买 Pro 吗？</summary>
+                <p>
+                  如果你每周都要处理多个下载任务，或者需要 Cookie、恢复、并发等能力，Pro 更合适。
+                </p>
+              </details>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <div class="container footer-inner">
+          <div class="footer-brand">
+            <img src="assets/branding/hiext-yt-logo-primary.svg" alt="HiExt YT GUI" />
+            <p>本地桌面下载工具，面向高频素材采集与长期管理工作流。</p>
+          </div>
+
+          <div class="footer-links">
+            <a href="#features">功能</a>
+            <a href="pro.html">版本对比</a>
+            <a href="#faq">FAQ</a>
+            <a href="https://github.com/hiext/yt-gui/releases" target="_blank" rel="noreferrer">
+              下载
+            </a>
+          </div>
+
+          <div class="footer-meta">
+            <a href="https://github.com/hiext/yt-gui" target="_blank" rel="noreferrer">
+              GitHub 仓库
+            </a>
+            <span>© 2026 HiExt</span>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
