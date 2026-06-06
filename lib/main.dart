@@ -1,5 +1,7 @@
 import 'dart:async';
-import 'dart:ffi' show DynamicLibrary;
+import 'dart:ffi' hide Size;
+
+import 'package:ffi/ffi.dart';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -16,8 +18,11 @@ const _screenshotMode = bool.fromEnvironment('HIEXT_SCREENSHOT_MODE');
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  _configureLinuxSqlite();
+  // sqfliteFfiInit must come before _configureLinuxSqlite because
+  // sqlite3_flutter_libs may overwrite our override during its own
+  // initialization path. Setting ours LAST guarantees it wins.
   sqfliteFfiInit();
+  _configureLinuxSqlite();
 
   LogService.instance.info('App starting — platform: ${Platform.operatingSystem}', 'main');
   unawaited(NotificationService().initialize(appName: 'Hiext YT GUI'));
@@ -41,31 +46,85 @@ void main() async {
 
 /// Overrides the default SQLite library loading on Linux.
 ///
-/// [sqlite3_flutter_libs] is a no-op on Linux for this project (it does not
-/// bundle a prebuilt sqlite3). We must load the system libsqlite3.so.0
-/// using absolute paths because `dlopen` short-name resolution is unreliable
-/// in Flutter release bundles where LD_LIBRARY_PATH may not include system
-/// library directories.
+/// `sqflite_common_ffi` looks up SQLite symbols via `DynamicLibrary.process()`,
+/// which only sees libraries loaded with `RTLD_GLOBAL`.  `DynamicLibrary.open()`
+/// loads with `RTLD_LOCAL` by default, so we must call `dlopen` ourselves with
+/// `RTLD_GLOBAL` to make the system libsqlite3 visible process-wide.
 void _configureLinuxSqlite() {
   if (!Platform.isLinux) return;
 
-  sqlite_open.open.overrideFor(sqlite_open.OperatingSystem.linux, () {
-    const candidates = <String>[
-      '/lib/x86_64-linux-gnu/libsqlite3.so.0',
-      '/usr/lib/x86_64-linux-gnu/libsqlite3.so.0',
-      '/lib64/libsqlite3.so.0',
-      '/usr/lib64/libsqlite3.so.0',
-      '/lib/aarch64-linux-gnu/libsqlite3.so.0',
-      '/usr/lib/aarch64-linux-gnu/libsqlite3.so.0',
-    ];
-    for (final path in candidates) {
-      if (File(path).existsSync()) {
-        return DynamicLibrary.open(path);
-      }
+  // dlopen flags
+  // ignore: constant_identifier_names
+  const int RTLD_NOW = 2;
+  // ignore: constant_identifier_names
+  const int RTLD_GLOBAL = 0x100;
+
+  // Bind native dlopen / dlerror
+  final libc = DynamicLibrary.open('libc.so.6');
+  final dlopenFn = libc.lookupFunction<
+    Pointer<Void> Function(Pointer<Utf8>, Int32),
+    Pointer<Void> Function(Pointer<Utf8>, int)
+  >('dlopen');
+  final dlerrorFn = libc.lookupFunction<
+    Pointer<Utf8> Function(),
+    Pointer<Utf8> Function()
+  >('dlerror');
+
+  final candidates = <String>[
+    '/lib/x86_64-linux-gnu/libsqlite3.so.0',
+    '/usr/lib/x86_64-linux-gnu/libsqlite3.so.0',
+    '/lib64/libsqlite3.so.0',
+    '/usr/lib64/libsqlite3.so.0',
+    '/lib/aarch64-linux-gnu/libsqlite3.so.0',
+    '/usr/lib/aarch64-linux-gnu/libsqlite3.so.0',
+  ];
+
+  Pointer<Void>? handle;
+  for (final path in candidates) {
+    if (!File(path).existsSync()) continue;
+    final pathPtr = path.toNativeUtf8();
+    handle = dlopenFn(pathPtr, RTLD_NOW | RTLD_GLOBAL);
+    calloc.free(pathPtr);
+    if (handle != nullptr) break;
+    final err = dlerrorFn();
+    if (err != nullptr) {
+      LogService.instance.warn(
+        'dlopen($path): ${err.toDartString()}',
+        'sqlite',
+      );
     }
-    throw UnsupportedError(
-      'Could not load libsqlite3 on Linux. '
-      'Install libsqlite3-0 (e.g. sudo apt install libsqlite3-0).',
-    );
-  });
+  }
+
+  // Last resort: short-name search
+  if (handle == nullptr) {
+    final pathPtr = 'libsqlite3.so.0'.toNativeUtf8();
+    handle = dlopenFn(pathPtr, RTLD_NOW | RTLD_GLOBAL);
+    calloc.free(pathPtr);
+  }
+
+  if (handle == nullptr) {
+    final err = dlerrorFn();
+    final msg = err != nullptr
+        ? 'Could not load libsqlite3: ${err.toDartString()}'
+        : 'Could not load libsqlite3';
+    LogService.instance.error(msg, 'sqlite');
+    throw UnsupportedError(msg);
+  }
+
+  LogService.instance.info('SQLite loaded (RTLD_GLOBAL)', 'sqlite');
+
+  // Also set up the sqlite3 Dart package override so our handle is used
+  DynamicLibrary? cached;
+  sqlite_open.open.overrideFor(
+    sqlite_open.OperatingSystem.linux,
+    () {
+      cached ??= DynamicLibrary.open(
+        candidates.firstWhere(
+          (p) => File(p).existsSync(),
+          orElse: () => 'libsqlite3.so.0',
+        ),
+      );
+      return cached!;
+    },
+  );
 }
