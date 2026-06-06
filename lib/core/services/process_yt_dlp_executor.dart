@@ -425,6 +425,14 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     await for (final line
         in stream
             .transform(SystemEncoding().decoder)
+            // Older yt-dlp versions don't support --newline and use \r
+            // (carriage return) to update progress on the same line.
+            // Expand \r to \n so LineSplitter sees individual updates.
+            .transform(StreamTransformer<String, String>.fromHandlers(
+              handleData: (data, sink) {
+                sink.add(data.replaceAll('\r', '\n'));
+              },
+            ))
             .transform(LineSplitter())) {
       collectedLines?.add(line);
       onLog?.call(line);
