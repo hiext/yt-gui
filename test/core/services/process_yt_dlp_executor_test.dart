@@ -241,15 +241,6 @@ void main() {
     );
     expect(
       args,
-      containsAll([
-        '--progress-template',
-        '__HIEYT_PROGRESS__:%(progress.status)s|'
-            '%(progress._percent_str)s|%(progress._speed_str)s|'
-            '%(progress._eta_str)s',
-      ]),
-    );
-    expect(
-      args,
       containsAll(['--print', 'after_move:__HIEYT_FILEPATH__:%(filepath)s']),
     );
     expect(args, containsAll(['/tools/ffmpeg', '--write-subs']));

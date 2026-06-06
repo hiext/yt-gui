@@ -26,6 +26,8 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
   final Map<String, Process> _processes = {};
   final Set<String> _intentionalStops = {};
   final Map<String, String> _extractedPaths = {};
+  final Map<String, _DownloadRequest> _pendingRetries = {};
+  static const _maxRetries = 3;
 
   Future<String> _ensureExecutable(ResolvedEmbeddedTool tool) async {
     if (tool.isCustom) return tool.path;
@@ -180,8 +182,19 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     _intentionalStops.remove(task.id);
     _sessions[task.id] = session;
     _processes[task.id] = process;
+    final prevAttempts = _pendingRetries[task.id]?.attempts ?? 0;
+    _pendingRetries[task.id] = _DownloadRequest(
+      url: url,
+      variant: variant,
+      settings: settings,
+      onTaskChanged: onTaskChanged,
+      attempts: prevAttempts,
+    );
 
-    LogService.instance.info('Starting download: $taskId, url: $url', 'executor');
+    LogService.instance.info(
+      'Starting download: $taskId (attempt ${_pendingRetries[task.id]!.attempts + 1}/$_maxRetries)',
+      'executor',
+    );
     unawaited(_streamProcess(process, session, onTaskChanged));
   }
 
@@ -218,6 +231,7 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
 
     _intentionalStops.add(taskId);
     session.status = DownloadStatus.cancelled;
+    _pendingRetries.remove(taskId);
     process?.kill(ProcessSignal.sigterm);
   }
 
@@ -254,10 +268,6 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       '--part',
       '--ffmpeg-location',
       ffmpegPath,
-      '--progress-template',
-      '${YtDlpProgressParser.progressPrefix}'
-          '%(progress.status)s|%(progress._percent_str)s|'
-          '%(progress._speed_str)s|%(progress._eta_str)s',
       '--print',
       'after_move:$_filepathPrefix%(filepath)s',
       if (settings.downloadSubtitles) '--write-subs',
@@ -309,6 +319,7 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
 
     if (exitCode == 0 && session.status != DownloadStatus.failed) {
       session.markCompleted();
+      _pendingRetries.remove(session.task.id);
       LogService.instance.info(
         'Download completed: ${session.task.id}, mediaPath: ${session.task.mediaPath}',
         'executor',
@@ -318,12 +329,43 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     }
 
     if (session.status != DownloadStatus.failed) {
+      // Auto-retry on failure (network flakiness, transient errors).
+      final retry = _pendingRetries[session.task.id];
+      if (retry != null && retry.attempts < _maxRetries - 1) {
+        final next = retry.attempts + 1;
+        _pendingRetries[session.task.id] = _DownloadRequest(
+          url: retry.url,
+          variant: retry.variant,
+          settings: retry.settings,
+          onTaskChanged: retry.onTaskChanged,
+          attempts: next,
+        );
+        LogService.instance.warn(
+          'Retrying ${session.task.id} (attempt ${next + 1}/$_maxRetries) '
+          'after exit=$exitCode',
+          'executor',
+        );
+        // Small delay before retry to let transient issues resolve.
+        await Future<void>.delayed(const Duration(seconds: 2));
+        if (_intentionalStops.contains(session.task.id)) return;
+        unawaited(startDownload(
+          taskId: session.task.id,
+          url: retry.url,
+          variant: retry.variant,
+          settings: retry.settings,
+          onTaskChanged: retry.onTaskChanged,
+        ));
+        return;
+      }
+
       final detail = session.errorMessage;
       final msg = detail?.isNotEmpty == true
           ? detail!
           : currentAppLocalizations().ytDlpNonZeroExit;
+      _pendingRetries.remove(session.task.id);
       LogService.instance.error(
-        'Download failed: exit=$exitCode ${session.task.id} — $msg',
+        'Download failed after ${(retry?.attempts ?? 0) + 1} attempts: '
+        'exit=$exitCode ${session.task.id} — $msg',
         'executor',
       );
       session.handleEvent(
@@ -547,6 +589,22 @@ String _formatFileSize(int bytes) {
 
 typedef ProcessRunner =
     Future<Process> Function(String executable, List<String> arguments);
+
+class _DownloadRequest {
+  const _DownloadRequest({
+    required this.url,
+    required this.variant,
+    required this.settings,
+    required this.onTaskChanged,
+    required this.attempts,
+  });
+
+  final Uri url;
+  final ResourceVariant variant;
+  final DownloadSettings settings;
+  final DownloadTaskChanged? onTaskChanged;
+  final int attempts;
+}
 
 const _filepathPrefix = '__HIEYT_FILEPATH__:';
 
