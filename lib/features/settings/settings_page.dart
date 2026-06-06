@@ -823,6 +823,10 @@ class _SettingsPageState extends State<SettingsPage> {
     final settings = widget.controller.settings;
 
     if (!result.success) {
+      LogService.instance.error(
+        'Cookie import failed: $domain ($browser) — ${result.detail}',
+        'cookie',
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -848,6 +852,14 @@ class _SettingsPageState extends State<SettingsPage> {
       }
       return;
     }
+
+    final fileExists = File(cookieFile).existsSync();
+    final fileSize = fileExists ? File(cookieFile).lengthSync() : 0;
+    LogService.instance.info(
+      'Cookie import OK: $domain ($browser) → $cookieFile '
+      '($fileSize bytes, exists=$fileExists)',
+      'cookie',
+    );
 
     final configs = List<CookieConfig>.from(settings.cookieConfigs)
       ..removeWhere((c) => c.domain == domain)
