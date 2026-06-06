@@ -82,6 +82,11 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     final cookieFile = _resolveCookieFile(url, normalizedSettings);
     if (cookieFile != null) {
       LogService.instance.debug('inspect: using cookie $cookieFile', 'executor');
+    } else {
+      LogService.instance.warn(
+        'inspect: no cookie found for ${url.host} (${normalizedSettings.cookieConfigs.length} configs loaded)',
+        'executor',
+      );
     }
     final process = await _processRunner(
       ytDlpPath,
@@ -262,6 +267,7 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     if (host.contains('bilibili.com') || host.contains('bilibili.tv')) {
       return [
         '--add-header', 'Referer:https://www.bilibili.com',
+        '--add-header', 'Origin:https://www.bilibili.com',
         '--add-header',
           'User-Agent:Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
               '(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
