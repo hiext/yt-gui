@@ -349,7 +349,7 @@ class _CompactTaskTile extends StatelessWidget {
   }
 
   String _formatProgress(double progress) {
-    if (progress > 0 && progress < 1) return '<1%';
+    if (progress > 0 && progress < 10) return '${progress.toStringAsFixed(1)}%';
     return '${progress.toStringAsFixed(0)}%';
   }
 
