@@ -202,31 +202,19 @@ class _DebugLogOverlayState extends State<DebugLogOverlay> {
                             '${entry.level.name.toUpperCase().padRight(5)} '
                             '${entry.source != null ? '[${entry.source}] ' : ''}'
                             '${entry.message}';
-                        return GestureDetector(
-                          onLongPress: () {
-                            Clipboard.setData(ClipboardData(text: line));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Copied'),
-                                duration: Duration(seconds: 1),
-                              ),
-                            );
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 1,
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 1,
+                          ),
+                          child: SelectableText(
+                            line,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: _colorForLevel(entry.level),
+                              fontFamily: 'monospace',
+                              fontSize: 11,
                             ),
-                            child: Text(
-                              line,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: _colorForLevel(entry.level),
-                                fontFamily: 'monospace',
-                                fontSize: 11,
-                              ),
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                            maxLines: 3,
                           ),
                         );
                       },
