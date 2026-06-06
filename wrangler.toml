@@ -1,0 +1,8 @@
+name = "hiext-yt-gui"
+compatibility_date = "2026-06-06"
+pages_build_output_dir = "site"
+
+[[kv_namespaces]]
+binding = "WAITLIST_RATE_LIMIT_KV"
+id = "ff427126779e4a139b8cb2032ae66322"
+preview_id = "ff427126779e4a139b8cb2032ae66322"
