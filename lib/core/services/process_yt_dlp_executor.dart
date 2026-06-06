@@ -250,9 +250,24 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       '--dump-json',
       '--verbose',
       '--no-playlist',
+      ..._antiBotHeaders(url),
       if (cookieFile != null) ...['--cookies', cookieFile],
       url.toString(),
     ];
+  }
+
+  /// Sites that require additional HTTP headers to bypass anti-bot protection.
+  static List<String> _antiBotHeaders(Uri url) {
+    final host = url.host;
+    if (host.contains('bilibili.com') || host.contains('bilibili.tv')) {
+      return [
+        '--add-header', 'Referer:https://www.bilibili.com',
+        '--add-header',
+          'User-Agent:Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
+              '(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+      ];
+    }
+    return const [];
   }
 
   static List<String> buildDownloadArguments({
@@ -268,6 +283,7 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       '--part',
       '--ffmpeg-location',
       ffmpegPath,
+      ..._antiBotHeaders(url),
       '--print',
       'after_move:$_filepathPrefix%(filepath)s',
       if (settings.downloadSubtitles) '--write-subs',
