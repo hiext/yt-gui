@@ -210,6 +210,7 @@ class _ScreenshotScenario {
 
 DownloadSettings _sampleSettings() {
   return DownloadSettings(
+    disclaimerAccepted: true,
     saveDirectory: '/home/hiext/Videos/Hiext YT GUI',
     downloadMode: DownloadMode.concurrent,
     concurrentCount: 3,
@@ -349,6 +350,7 @@ class _NoopExecutor implements YtDlpExecutor {
     Uri url, {
     DownloadSettings? settings,
     AppLocalizations? localizations,
+    InspectLogSink? onLog,
   }) async {
     return const [];
   }

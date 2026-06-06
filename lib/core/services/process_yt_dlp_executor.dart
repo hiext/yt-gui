@@ -302,6 +302,10 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       collectedLines?.add(line);
       onLog?.call(line);
       session.handleLine(line);
+      if (line.startsWith(_filepathPrefix)) {
+        final path = line.substring(_filepathPrefix.length);
+        session.task = session.task.copyWith(mediaPath: path);
+      }
       if (_intentionalStops.contains(session.task.id)) {
         continue;
       }
