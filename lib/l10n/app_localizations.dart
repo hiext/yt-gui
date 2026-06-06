@@ -536,6 +536,9 @@ abstract class AppLocalizations {
   /// **'导入'**
   String get importBtn;
 
+  /// **'导入中...'**
+  String get importing;
+
   /// No description provided for @commonSites.
   ///
   /// In zh, this message translates to:
