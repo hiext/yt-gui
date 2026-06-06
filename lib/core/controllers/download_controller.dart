@@ -210,6 +210,14 @@ class DownloadController extends ChangeNotifier {
       return;
     }
 
+    if (task.progress > 0 && (task.progress % 10) < 1) {
+      LogService.instance.debug(
+        'handleTaskChanged: ${task.id} progress=${task.progress.toStringAsFixed(1)}% '
+        'speed=${task.speed} eta=${task.eta}',
+        'ctrl',
+      );
+    }
+
     if (task.status == DownloadStatus.completed) {
       _handleCompletedTask(task);
       return;
