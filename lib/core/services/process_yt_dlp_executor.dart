@@ -407,6 +407,7 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     DownloadTaskChanged? onTaskChanged,
     InspectLogSink? onLog,
   }) async {
+    var lastLoggedPercent = -1.0;
     await for (final line
         in stream
             .transform(SystemEncoding().decoder)
@@ -420,6 +421,16 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       if (line.startsWith(_filepathPrefix)) {
         final path = line.substring(_filepathPrefix.length);
         session.task = session.task.copyWith(mediaPath: path);
+      }
+      // Log progress milestones (every ~20%)
+      final pct = session.task.progress;
+      if (pct - lastLoggedPercent >= 20) {
+        lastLoggedPercent = pct - (pct % 20);
+        LogService.instance.debug(
+          'Progress ${session.task.id}: ${pct.toStringAsFixed(0)}% '
+          'speed=${session.task.speed} eta=${session.task.eta}',
+          'executor',
+        );
       }
       onTaskChanged?.call(session.task);
     }
