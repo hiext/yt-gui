@@ -6,7 +6,7 @@ import '../../l10n/app_localizations.dart';
 import '../../core/controllers/settings_controller.dart';
 import '../../core/models/app_models.dart';
 import '../../core/services/cookie_service.dart'
-    show CookieService, CookieEntry;
+    show CookieService, CookieEntry, CookieImportResult;
 import '../../shared/widgets/section_card.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -634,15 +634,56 @@ class _SettingsPageState extends State<SettingsPage> {
     final cookieFile =
         '$saveDir/.cookies/$domain'
         '_$browser.txt';
-    final ytDlpPath = settings.ytDlpPath ?? 'yt-dlp';
+
+    // Resolve yt-dlp path: custom path → PATH lookup → bundled fallback
+    String ytDlpPath;
+    if (settings.ytDlpPath != null && File(settings.ytDlpPath!).existsSync()) {
+      ytDlpPath = settings.ytDlpPath!;
+    } else {
+      // Check bundled release path first
+      final exeDir = File(Platform.resolvedExecutable).parent.path;
+      final bundledPath =
+          '$exeDir/data/flutter_assets/assets/bin/linux/yt-dlp';
+      if (File(bundledPath).existsSync()) {
+        ytDlpPath = bundledPath;
+      } else {
+        // Fall back to PATH
+        ytDlpPath = 'yt-dlp';
+      }
+    }
+
     final service = CookieService();
-    final result = await service.importFromBrowser(
-      browser: browser,
-      domain: domain,
-      ytDlpPath: ytDlpPath,
-      outputFile: cookieFile,
-      localizations: l10n,
-    );
+    try {
+      final result = await service.importFromBrowser(
+        browser: browser,
+        domain: domain,
+        ytDlpPath: ytDlpPath,
+        outputFile: cookieFile,
+        localizations: l10n,
+      );
+      _handleImportResult(result, domain, browser, cookieFile);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.cookieImportFailed),
+            duration: const Duration(seconds: 5),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  void _handleImportResult(
+    CookieImportResult result,
+    String domain,
+    String browser,
+    String cookieFile,
+  ) {
+    final l10n = AppLocalizations.of(context)!;
+    final settings = widget.controller.settings;
+
     if (!result.success) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -680,7 +721,7 @@ class _SettingsPageState extends State<SettingsPage> {
           importedAt: DateTime.now(),
         ),
       );
-    await service.saveConfigs(configs);
+    CookieService().saveConfigs(configs);
     final updated = settings.copyWith(cookieConfigs: configs);
     widget.controller.updateSettings(updated);
     if (mounted) {
@@ -765,6 +806,7 @@ class _CookieSection extends StatefulWidget {
 class _CookieSectionState extends State<_CookieSection> {
   String _browser = 'chrome';
   final _domainCtrl = TextEditingController();
+  bool _importing = false;
 
   static const _presetSites = <String>[
     'youtube.com',
@@ -798,9 +840,13 @@ class _CookieSectionState extends State<_CookieSection> {
   List<String> get _availablePresets =>
       _presetSites.where((d) => !_importedDomains.contains(d)).toList();
 
-  void _doImport(String domain) {
-    if (domain.isNotEmpty) {
-      widget.onImport(_browser, domain);
+  Future<void> _doImport(String domain) async {
+    if (domain.isEmpty || _importing) return;
+    setState(() => _importing = true);
+    try {
+      await widget.onImport(_browser, domain);
+    } finally {
+      if (mounted) setState(() => _importing = false);
     }
   }
 
@@ -847,9 +893,16 @@ class _CookieSectionState extends State<_CookieSection> {
                 onFieldSubmitted: (v) => _doImport(v.trim()),
               );
               final importButton = FilledButton.tonalIcon(
-                onPressed: () => _doImport(_domainCtrl.text.trim()),
-                icon: const Icon(Icons.file_download_outlined, size: 18),
-                label: Text(l10n.importBtn),
+                onPressed:
+                    _importing ? null : () => _doImport(_domainCtrl.text.trim()),
+                icon: _importing
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.file_download_outlined, size: 18),
+                label: Text(_importing ? l10n.importing : l10n.importBtn),
               );
 
               if (compact) {

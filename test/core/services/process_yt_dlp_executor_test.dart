@@ -243,7 +243,7 @@ void main() {
       args,
       containsAll([
         '--progress-template',
-        'download:__HIEYT_PROGRESS__:%(progress.status)s|'
+        '__HIEYT_PROGRESS__:%(progress.status)s|'
             '%(progress._percent_str)s|%(progress._speed_str)s|'
             '%(progress._eta_str)s',
       ]),

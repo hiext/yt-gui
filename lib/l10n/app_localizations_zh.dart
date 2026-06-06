@@ -234,6 +234,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get importBtn => '导入';
 
   @override
+  String get importing => '导入中…';
+
+  @override
   String get commonSites => '常用网站';
 
   @override

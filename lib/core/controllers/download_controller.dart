@@ -301,13 +301,23 @@ class DownloadController extends ChangeNotifier {
               isRecommended: true,
             );
       _startedTaskIds.add(task.id);
-      await executor.startDownload(
-        taskId: task.id,
-        url: Uri.parse(task.source),
-        variant: variant,
-        settings: settingsProvider(),
-        onTaskChanged: handleTaskChanged,
-      );
+      try {
+        await executor.startDownload(
+          taskId: task.id,
+          url: Uri.parse(task.source),
+          variant: variant,
+          settings: settingsProvider(),
+          onTaskChanged: handleTaskChanged,
+        );
+      } catch (e) {
+        _startedTaskIds.remove(task.id);
+        final message = e.toString();
+        scheduler.fail(
+          task.id,
+          message: message.isNotEmpty ? message : l10n.downloadFailedFallback,
+        );
+        _notifyChanged();
+      }
     }
   }
 

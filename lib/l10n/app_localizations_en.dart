@@ -247,6 +247,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get importBtn => 'Import';
 
   @override
+  String get importing => 'Importing…';
+
+  @override
   String get commonSites => 'Common Sites';
 
   @override
