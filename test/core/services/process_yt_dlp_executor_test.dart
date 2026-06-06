@@ -210,7 +210,7 @@ void main() {
 
     expect(
       args,
-      ['--dump-json', '--verbose', '--no-playlist', 'https://example.com/video'],
+      ['--dump-json', '--no-playlist', 'https://example.com/video'],
     );
   });
 

@@ -117,8 +117,17 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       collectedLines: outputLines,
       onLog: onLog,
     );
-    final exitCode = await process.exitCode;
+    final exitCode = await process.exitCode
+        .timeout(const Duration(seconds: 30), onTimeout: () {
+      process.kill();
+      return -1;
+    });
     await Future.wait([stdoutFuture, stderrFuture]);
+
+    if (exitCode == -1) {
+      LogService.instance.error('inspect timed out after 30s', 'executor');
+      throw YtDlpExecutorException('Parse timed out after 30 seconds');
+    }
 
     if (exitCode != 0) {
       final message = session.errorMessage ?? l10n.ytDlpNonZeroExit;
@@ -253,7 +262,6 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
   static List<String> buildInspectArguments(Uri url, {String? cookieFile}) {
     return [
       '--dump-json',
-      '--verbose',
       '--no-playlist',
       ..._antiBotHeaders(url),
       if (cookieFile != null) ...['--cookies', cookieFile],
