@@ -297,7 +297,7 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       ffmpegPath,
       ..._antiBotHeaders(url),
       '--print',
-      'after_move:$_filepathPrefix%(filepath)s',
+      'after_move:__HIEYT_FILEPATH__:%(filepath)s',
       if (settings.downloadSubtitles) '--write-subs',
       if (settings.downloadThumbnail) '--write-thumbnail',
       if (cookieFile != null) ...['--cookies', cookieFile],
@@ -424,9 +424,11 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
         continue;
       }
       session.handleLine(line);
-      if (line.startsWith(_filepathPrefix)) {
-        final path = line.substring(_filepathPrefix.length);
-        session.task = session.task.copyWith(mediaPath: path);
+      final filepathMatch = _filepathRe.firstMatch(line);
+      if (filepathMatch != null) {
+        session.task = session.task.copyWith(
+          mediaPath: filepathMatch.namedGroup('path'),
+        );
       }
       // Log progress milestones (every ~20%)
       final pct = session.task.progress;
@@ -645,7 +647,9 @@ class _DownloadRequest {
   final int attempts;
 }
 
-const _filepathPrefix = '__HIEYT_FILEPATH__:';
+/// Matches the after_move print output:
+///   __HIEYT_FILEPATH__:/path/to/video.mp4
+final _filepathRe = RegExp(r'^__HIEYT_FILEPATH__:(?<path>.+)$');
 
 class YtDlpExecutorException implements Exception {
   const YtDlpExecutorException(this.message);
