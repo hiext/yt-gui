@@ -147,6 +147,7 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       variants: [variant],
     );
     final session = YtDlpSession(task: task);
+    _intentionalStops.remove(task.id);
     _sessions[task.id] = session;
     _processes[task.id] = process;
 
@@ -259,13 +260,17 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     final exitCode = await process.exitCode;
     await Future.wait([stdoutFuture, stderrFuture]);
 
+    // Drop stale completion events when a newer startDownload has replaced
+    // this session (e.g. after a quick pause→resume cycle).
+    if (_sessions[session.task.id] != session) {
+      return;
+    }
+
     if (_processes[session.task.id] == process) {
       _processes.remove(session.task.id);
     }
 
-    if (_sessions[session.task.id] == session) {
-      _sessions.remove(session.task.id);
-    }
+    _sessions.remove(session.task.id);
 
     if (_intentionalStops.remove(session.task.id)) {
       return;
