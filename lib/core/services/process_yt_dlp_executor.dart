@@ -224,7 +224,7 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       '--ffmpeg-location',
       ffmpegPath,
       '--progress-template',
-      'download:${YtDlpProgressParser.progressPrefix}'
+      '${YtDlpProgressParser.progressPrefix}'
           '%(progress.status)s|%(progress._percent_str)s|'
           '%(progress._speed_str)s|%(progress._eta_str)s',
       '--print',
