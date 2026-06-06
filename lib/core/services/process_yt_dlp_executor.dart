@@ -301,13 +301,13 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
             .transform(LineSplitter())) {
       collectedLines?.add(line);
       onLog?.call(line);
+      if (_intentionalStops.contains(session.task.id)) {
+        continue;
+      }
       session.handleLine(line);
       if (line.startsWith(_filepathPrefix)) {
         final path = line.substring(_filepathPrefix.length);
         session.task = session.task.copyWith(mediaPath: path);
-      }
-      if (_intentionalStops.contains(session.task.id)) {
-        continue;
       }
       onTaskChanged?.call(session.task);
     }
