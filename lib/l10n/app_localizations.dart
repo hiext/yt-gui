@@ -458,6 +458,96 @@ abstract class AppLocalizations {
   /// **'仅并发模式下生效'**
   String get concurrentDisabledHint;
 
+  /// No description provided for @autoClipSection.
+  ///
+  /// In zh, this message translates to:
+  /// **'自动切片'**
+  String get autoClipSection;
+
+  /// No description provided for @autoClipSectionDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 分析完成后自动切割片段'**
+  String get autoClipSectionDesc;
+
+  /// No description provided for @autoClipEnabled.
+  ///
+  /// In zh, this message translates to:
+  /// **'启用自动切割'**
+  String get autoClipEnabled;
+
+  /// No description provided for @autoClipMinConfidence.
+  ///
+  /// In zh, this message translates to:
+  /// **'最低置信度'**
+  String get autoClipMinConfidence;
+
+  /// No description provided for @autoClipMaxClips.
+  ///
+  /// In zh, this message translates to:
+  /// **'每视频最多片段'**
+  String get autoClipMaxClips;
+
+  /// No description provided for @autoClipMaxDuration.
+  ///
+  /// In zh, this message translates to:
+  /// **'最大时长'**
+  String get autoClipMaxDuration;
+
+  /// No description provided for @autoClipStartOffset.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始偏移 (ms)'**
+  String get autoClipStartOffset;
+
+  /// No description provided for @autoClipEndOffset.
+  ///
+  /// In zh, this message translates to:
+  /// **'结束偏移 (ms)'**
+  String get autoClipEndOffset;
+
+  /// No description provided for @cutClip.
+  ///
+  /// In zh, this message translates to:
+  /// **'切割'**
+  String get cutClip;
+
+  /// No description provided for @cutAllClips.
+  ///
+  /// In zh, this message translates to:
+  /// **'一键切割 ({count})'**
+  String cutAllClips(int count);
+
+  /// No description provided for @allClipsCut.
+  ///
+  /// In zh, this message translates to:
+  /// **'全部已切割'**
+  String get allClipsCut;
+
+  /// No description provided for @cuttingProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'切割中 {completed}/{total}'**
+  String cuttingProgress(int completed, int total);
+
+  /// No description provided for @reCut.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新切割'**
+  String get reCut;
+
+  /// No description provided for @clipCutComplete.
+  ///
+  /// In zh, this message translates to:
+  /// **'切割完成'**
+  String get clipCutComplete;
+
+  /// No description provided for @clipCutFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'切割失败'**
+  String get clipCutFailed;
+
   /// No description provided for @additionalOptions.
   ///
   /// In zh, this message translates to:

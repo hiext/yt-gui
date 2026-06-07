@@ -195,6 +195,55 @@ class AppLocalizationsZh extends AppLocalizations {
   String get concurrentDisabledHint => '仅并发模式下生效';
 
   @override
+  String get autoClipSection => '自动切片';
+
+  @override
+  String get autoClipSectionDesc => 'AI 分析完成后自动切割片段';
+
+  @override
+  String get autoClipEnabled => '启用自动切割';
+
+  @override
+  String get autoClipMinConfidence => '最低置信度';
+
+  @override
+  String get autoClipMaxClips => '每视频最多片段';
+
+  @override
+  String get autoClipMaxDuration => '最大时长';
+
+  @override
+  String get autoClipStartOffset => '开始偏移 (ms)';
+
+  @override
+  String get autoClipEndOffset => '结束偏移 (ms)';
+
+  @override
+  String get cutClip => '切割';
+
+  @override
+  String cutAllClips(int count) {
+    return '一键切割 ($count)';
+  }
+
+  @override
+  String get allClipsCut => '全部已切割';
+
+  @override
+  String cuttingProgress(int completed, int total) {
+    return '切割中 $completed/$total';
+  }
+
+  @override
+  String get reCut => '重新切割';
+
+  @override
+  String get clipCutComplete => '切割完成';
+
+  @override
+  String get clipCutFailed => '切割失败';
+
+  @override
   String get additionalOptions => '附加选项';
 
   @override

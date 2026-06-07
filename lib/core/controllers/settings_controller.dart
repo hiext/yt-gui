@@ -87,6 +87,10 @@ class SettingsController extends ChangeNotifier {
     updateSettings(_settings.copyWith(aiAnalyzerCommand: command));
   }
 
+  void updateAutoClipConfig(AutoClipConfig config) {
+    updateSettings(_settings.copyWith(autoClipConfig: config));
+  }
+
   void addAiCloudConfig(AiCloudVendor vendor) {
     final id = _uniqueAiCloudConfigId(vendor);
     final config = AiCloudConfig.preset(vendor, id: id);

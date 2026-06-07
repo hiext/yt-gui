@@ -38,7 +38,7 @@ class DatabaseService {
     final database = await databaseFactoryFfi.openDatabase(
       join(dbPath, 'hiext_yt.db'),
       options: OpenDatabaseOptions(
-        version: 3,
+        version: 4,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
       ),
@@ -72,6 +72,7 @@ class DatabaseService {
     ''');
     await _createPostProcessTasksTable(db);
     await _createClipAnalysisTables(db);
+    await _createClipRecordsTable(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -81,6 +82,37 @@ class DatabaseService {
     if (oldVersion < 3) {
       await _createClipAnalysisTables(db);
     }
+    if (oldVersion < 4) {
+      await _createClipRecordsTable(db);
+    }
+  }
+
+  Future<void> _createClipRecordsTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS clip_records (
+        id TEXT PRIMARY KEY,
+        source_task_id TEXT NOT NULL,
+        source_path TEXT NOT NULL,
+        output_path TEXT,
+        title TEXT NOT NULL,
+        confidence REAL NOT NULL DEFAULT 0,
+        start_ms INTEGER NOT NULL,
+        end_ms INTEGER NOT NULL,
+        duration_ms INTEGER NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        progress INTEGER NOT NULL DEFAULT 0,
+        error_message TEXT,
+        created_at TEXT NOT NULL,
+        completed_at TEXT,
+        data TEXT NOT NULL
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_clip_records_source ON clip_records(source_task_id)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_clip_records_status ON clip_records(status)',
+    );
   }
 
   Future<void> _createPostProcessTasksTable(Database db) async {

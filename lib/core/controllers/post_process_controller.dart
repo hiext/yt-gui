@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../models/app_models.dart';
+import '../services/auto_clip_service.dart';
 import '../services/post_process_executor.dart';
 import '../services/post_process_repository.dart';
 
@@ -11,11 +12,13 @@ class PostProcessController extends ChangeNotifier {
     required this.executor,
     required this.settingsProvider,
     this.repository,
-  });
+    AutoClipService? autoClipService,
+  }) : _autoClipService = autoClipService;
 
   final PostProcessExecutor executor;
   final DownloadSettings Function() settingsProvider;
   final PostProcessRepository? repository;
+  AutoClipService? _autoClipService;
 
   final List<PostProcessTask> _queued = [];
   final List<PostProcessTask> _running = [];
@@ -24,7 +27,10 @@ class PostProcessController extends ChangeNotifier {
   final List<PostProcessTask> _cancelled = [];
   final List<ClipSegment> _clipSegments = [];
   final Set<String> _startedTaskIds = {};
+  final List<ClipRecord> _clipRecords = [];
   bool _isDisposed = false;
+
+  List<ClipRecord> get clipRecords => List.unmodifiable(_clipRecords);
 
   List<PostProcessTask> get queuedTasks => List.unmodifiable(_queued);
   List<PostProcessTask> get runningTasks => List.unmodifiable(_running);
@@ -109,6 +115,7 @@ class PostProcessController extends ChangeNotifier {
         _startedTaskIds.remove(task.id);
         _moveToTerminal(task, _completed);
         _saveClipSegments(task);
+        _startAutoCutIfEnabled(task);
         _startNext();
         break;
       case PostProcessStatus.failed:
@@ -273,6 +280,41 @@ class PostProcessController extends ChangeNotifier {
       adjustedEndMs: adjustedEndMs,
     );
     notifyListeners();
+  }
+
+  void _startAutoCutIfEnabled(PostProcessTask task) {
+    final service = _autoClipService;
+    if (service == null) return;
+    if (task.clipSegments.isEmpty) return;
+
+    // Ensure the service uses the latest settings config
+    service.config = settingsProvider().autoClipConfig;
+
+    if (!service.config.enabled) return;
+
+    unawaited(
+      service.startAutoCut(
+        segments: task.clipSegments,
+        settings: settingsProvider(),
+        onStatusChanged: (recordId, status) {
+          final index = _clipRecords.indexWhere((r) => r.id == recordId);
+          if (index >= 0) {
+            _clipRecords[index] = service.records.firstWhere(
+              (r) => r.id == recordId,
+              orElse: () => _clipRecords[index],
+            );
+          } else {
+            _clipRecords.addAll(service.records.where((r) => r.id == recordId));
+          }
+          notifyListeners();
+        },
+      ).then((newRecords) {
+        _clipRecords.addAll(
+          newRecords.where((r) => !_clipRecords.any((e) => e.id == r.id)),
+        );
+        notifyListeners();
+      }),
+    );
   }
 
   void _saveClipSegments(PostProcessTask task) {

@@ -74,6 +74,32 @@
     }
   },
   "concurrentDisabledHint": "Only effective in concurrent mode",
+  "autoClipSection": "Auto Clip",
+  "autoClipSectionDesc": "Configure automatic clip cutting after AI analysis",
+  "autoClipEnabled": "Enable Auto-Cut",
+  "autoClipMinConfidence": "Min Confidence",
+  "autoClipMaxClips": "Max Clips/Video",
+  "autoClipMaxDuration": "Max Duration",
+  "autoClipStartOffset": "Start Offset (ms)",
+  "autoClipEndOffset": "End Offset (ms)",
+  "cutClip": "Cut",
+  "cutAllClips": "Cut All ({count} uncut)",
+  "@cutAllClips": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "allClipsCut": "All clips cut",
+  "cuttingProgress": "Cutting {completed}/{total}",
+  "@cuttingProgress": {
+    "placeholders": {
+      "completed": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "reCut": "Re-Cut",
+  "clipCutComplete": "Cut complete",
+  "clipCutFailed": "Cut failed",
   "additionalOptions": "Additional Options",
   "downloadSubtitles": "Download Subtitles",
   "downloadSubtitlesDesc": "Append --write-subs to yt-dlp",
