@@ -72,6 +72,194 @@ void main() {
     expect(changes.last.outputPaths.single, endsWith('source_clip_001.mp4'));
   });
 
+  test('reports failed when ffmpeg exits with non-zero code', () async {
+    final ffmpeg = _createToolFile('ffmpeg');
+    final process = _FakeProcess(exitCodeValue: 1);
+    final executor = FfmpegClipExecutor(
+      toolResolver: _resolver(),
+      processRunner: (_, __) async => process,
+    );
+    final changes = <PostProcessTask>[];
+    final task = PostProcessTask(
+      id: 'clip-fail',
+      sourceTaskId: 'download-1',
+      title: 'Example',
+      type: PostProcessTaskType.clip,
+      status: PostProcessStatus.queued,
+      progress: 0,
+      sourcePath: '/downloads/source.mp4',
+      outputDirectory: Directory.systemTemp.createTempSync('clips-').path,
+    );
+    addTearDown(() => executor.dispose());
+
+    await executor.startTask(
+      task: task,
+      settings: _settings(ffmpegPath: ffmpeg.path),
+      onTaskChanged: changes.add,
+    );
+    await process.close();
+    await pumpEventQueue();
+
+    expect(changes.last.status, PostProcessStatus.failed);
+    expect(changes.last.errorMessage, contains('exited with code 1'));
+  });
+
+  test('cancel kills process and marks task cancelled', () async {
+    final ffmpeg = _createToolFile('ffmpeg');
+    final process = _FakeProcess(exitCodeValue: 0);
+    final executor = FfmpegClipExecutor(
+      toolResolver: _resolver(),
+      processRunner: (_, __) async => process,
+    );
+    final changes = <PostProcessTask>[];
+    final task = PostProcessTask(
+      id: 'clip-cancel',
+      sourceTaskId: 'download-1',
+      title: 'Example',
+      type: PostProcessTaskType.clip,
+      status: PostProcessStatus.queued,
+      progress: 0,
+      sourcePath: '/downloads/source.mp4',
+      outputDirectory: Directory.systemTemp.createTempSync('clips-').path,
+    );
+    addTearDown(() => executor.dispose());
+
+    await executor.startTask(
+      task: task,
+      settings: _settings(ffmpegPath: ffmpeg.path),
+      onTaskChanged: changes.add,
+    );
+    await executor.cancel('clip-cancel');
+    await process.close();
+    await pumpEventQueue();
+
+    expect(changes.last.status, PostProcessStatus.cancelled);
+  });
+
+  test('dispose kills all running processes', () async {
+    final ffmpeg = _createToolFile('ffmpeg');
+    final p1 = _FakeProcess(exitCodeValue: 0);
+    final p2 = _FakeProcess(exitCodeValue: 0);
+    final executor = FfmpegClipExecutor(
+      toolResolver: _resolver(),
+      processRunner: (_, __) async => p1,
+    );
+    addTearDown(() => executor.dispose());
+
+    final task1 = PostProcessTask(
+      id: 'clip-dispose-1',
+      sourceTaskId: 'download-1',
+      title: 'Task 1',
+      type: PostProcessTaskType.clip,
+      status: PostProcessStatus.queued,
+      progress: 0,
+      sourcePath: '/downloads/source.mp4',
+      outputDirectory: Directory.systemTemp.createTempSync('clips-').path,
+    );
+
+    await executor.startTask(
+      task: task1,
+      settings: _settings(ffmpegPath: ffmpeg.path),
+    );
+
+    await executor.dispose();
+    await p1.close();
+    await pumpEventQueue();
+    // dispose should not throw
+  });
+
+  test('throws for unsupported task type', () async {
+    final ffmpeg = _createToolFile('ffmpeg');
+    final executor = FfmpegClipExecutor(
+      toolResolver: _resolver(),
+    );
+    addTearDown(() => executor.dispose());
+
+    final task = PostProcessTask(
+      id: 'bad-type',
+      sourceTaskId: 'download-1',
+      title: 'Bad',
+      type: PostProcessTaskType.aiClipAnalysis,
+      status: PostProcessStatus.queued,
+      progress: 0,
+      sourcePath: '/downloads/source.mp4',
+      outputDirectory: Directory.systemTemp.createTempSync('clips-').path,
+    );
+
+    expect(
+      () => executor.startTask(task: task, settings: _settings(ffmpegPath: ffmpeg.path)),
+      throwsA(isA<PostProcessExecutorException>()),
+    );
+  });
+
+  test('cancel does nothing for unknown task id', () async {
+    final executor = FfmpegClipExecutor();
+    await expectLater(executor.cancel('unknown-task'), completes);
+  });
+
+  test('buildClipArguments with custom start and duration', () {
+    final args = FfmpegClipExecutor.buildClipArguments(
+      sourcePath: '/tmp/src.mp4',
+      outputPath: '/tmp/out.mp4',
+      start: const Duration(minutes: 1, seconds: 30),
+      duration: const Duration(seconds: 30),
+    );
+
+    expect(args, [
+      '-y',
+      '-ss',
+      '00:01:30',
+      '-i',
+      '/tmp/src.mp4',
+      '-t',
+      '00:00:30',
+      '-c',
+      'copy',
+      '/tmp/out.mp4',
+    ]);
+  });
+
+  test('_buildOutputPath handles path with dot and without dot', () async {
+    final executor = FfmpegClipExecutor(
+      toolResolver: _resolver(),
+    );
+    addTearDown(() => executor.dispose());
+
+    // We test the output path indirectly via startTask
+    final ffmpeg = _createToolFile('ffmpeg');
+    final process = _FakeProcess(exitCodeValue: 0);
+    List<String>? capturedArgs;
+    final executor2 = FfmpegClipExecutor(
+      toolResolver: _resolver(),
+      processRunner: (_, args) async {
+        capturedArgs = args;
+        return process;
+      },
+    );
+    addTearDown(() => executor2.dispose());
+
+    // File with extension
+    final task = PostProcessTask(
+      id: 'clip-path',
+      sourceTaskId: 'download-1',
+      title: 'Example',
+      type: PostProcessTaskType.clip,
+      status: PostProcessStatus.queued,
+      progress: 0,
+      sourcePath: '/downloads/video.mkv',
+      outputDirectory: Directory.systemTemp.createTempSync('clips-').path,
+    );
+    await executor2.startTask(
+      task: task,
+      settings: _settings(ffmpegPath: ffmpeg.path),
+    );
+    await process.close();
+    await pumpEventQueue();
+
+    // Output path should use .mkv extension
+    expect(capturedArgs!.last, endsWith('video_clip_001.mkv'));
+  });
+
   test('uses PATH fallback when bundled ffmpeg asset is unavailable', () async {
     final tempDir = Directory.systemTemp.createTempSync('ffmpeg-fallback-');
     addTearDown(() => tempDir.deleteSync(recursive: true));

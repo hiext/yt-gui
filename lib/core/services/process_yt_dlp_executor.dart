@@ -31,9 +31,13 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
 
   Future<String> _ensureExecutable(ResolvedEmbeddedTool tool) async {
     if (tool.isCustom) return tool.path;
-    if (File(tool.path).existsSync()) return tool.path;
+    // Always extract embedded tools from rootBundle — never trust
+    // the filesystem path, because CWD differs between dev and prod.
     final cached = _extractedPaths[tool.path];
-    if (cached != null) return cached;
+    if (cached != null) {
+      if (File(cached).existsSync()) return cached;
+      _extractedPaths.remove(tool.path);
+    }
 
     try {
       final data = await rootBundle.load(tool.path);
@@ -74,24 +78,22 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     AppLocalizations? localizations,
     InspectLogSink? onLog,
   }) async {
+    final sw = Stopwatch()..start();
     final normalizedSettings = (settings ?? DownloadSettings.defaults)
         .normalized();
     final tools = _toolResolver.resolveBundle(settings: normalizedSettings);
+    LogService.instance.info('inspect: resolveBundle took ${sw.elapsedMilliseconds}ms', 'executor');
     final ytDlpPath = await _ensureExecutable(tools.ytDlp);
-    LogService.instance.debug('inspect: yt-dlp=$ytDlpPath url=$url', 'executor');
+    LogService.instance.info('inspect: ensureExecutable took ${sw.elapsedMilliseconds}ms, path=$ytDlpPath', 'executor');
     final cookieFile = _resolveCookieFile(url, normalizedSettings);
     if (cookieFile != null) {
       LogService.instance.debug('inspect: using cookie $cookieFile', 'executor');
-    } else {
-      LogService.instance.warn(
-        'inspect: no cookie found for ${url.host} (${normalizedSettings.cookieConfigs.length} configs loaded)',
-        'executor',
-      );
     }
     final process = await _processRunner(
       ytDlpPath,
       buildInspectArguments(url, cookieFile: cookieFile),
     );
+    LogService.instance.info('inspect: process started at ${sw.elapsedMilliseconds}ms, pid=${process.pid}', 'executor');
     final l10n = localizations ?? currentAppLocalizations();
 
     final outputLines = <String>[];
@@ -118,15 +120,24 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       onLog: onLog,
     );
     final exitCode = await process.exitCode
-        .timeout(const Duration(seconds: 30), onTimeout: () {
-      process.kill();
+        .timeout(const Duration(seconds: 120), onTimeout: () {
+      process.kill(ProcessSignal.sigkill);
       return -1;
     });
-    await Future.wait([stdoutFuture, stderrFuture]);
+    LogService.instance.info('inspect: exitCode=$exitCode at ${sw.elapsedMilliseconds}ms', 'executor');
+
+    // Guard: don't hang forever if streams never close after kill
+    try {
+      await Future.wait([stdoutFuture, stderrFuture])
+          .timeout(const Duration(seconds: 10));
+    } on TimeoutException {
+      LogService.instance.warn('inspect: stream drain timed out, proceeding with partial data', 'executor');
+    }
+    LogService.instance.info('inspect: streams drained at ${sw.elapsedMilliseconds}ms, lines=${outputLines.length}', 'executor');
 
     if (exitCode == -1) {
-      LogService.instance.error('inspect timed out after 30s', 'executor');
-      throw YtDlpExecutorException('Parse timed out after 30 seconds');
+      LogService.instance.error('inspect timed out after 120s', 'executor');
+      throw YtDlpExecutorException('Parse timed out after 120 seconds');
     }
 
     if (exitCode != 0) {
@@ -328,11 +339,13 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       process.stdout,
       session,
       onTaskChanged: onTaskChanged,
+      expandCarriageReturns: true,
     );
     final stderrFuture = _consumeLines(
       process.stderr,
       session,
       onTaskChanged: onTaskChanged,
+      expandCarriageReturns: true,
     );
     final exitCode = await process.exitCode;
     await Future.wait([stdoutFuture, stderrFuture]);
@@ -420,20 +433,28 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     List<String>? collectedLines,
     DownloadTaskChanged? onTaskChanged,
     InspectLogSink? onLog,
+    bool expandCarriageReturns = false,
   }) async {
     var lastLoggedPercent = -1.0;
-    await for (final line
-        in stream
-            .transform(SystemEncoding().decoder)
-            // Older yt-dlp versions don't support --newline and use \r
-            // (carriage return) to update progress on the same line.
-            // Expand \r to \n so LineSplitter sees individual updates.
-            .transform(StreamTransformer<String, String>.fromHandlers(
-              handleData: (data, sink) {
-                sink.add(data.replaceAll('\r', '\n'));
-              },
-            ))
-            .transform(LineSplitter())) {
+    var lineStream = stream
+        .transform(SystemEncoding().decoder)
+        .transform(LineSplitter());
+    // Older yt-dlp versions don't support --newline and use \r
+    // (carriage return) to update progress on the same line.
+    // Only enable for download output — JSON inspect output may contain
+    // literal \r inside string values (e.g. MHTML storyboard URLs).
+    if (expandCarriageReturns) {
+      // \r not followed by \n is a progress overwrite — replace with \n
+      lineStream = stream
+          .transform(SystemEncoding().decoder)
+          .transform(StreamTransformer<String, String>.fromHandlers(
+            handleData: (data, sink) {
+              sink.add(data.replaceAll(RegExp(r'\r(?!\n)'), '\n'));
+            },
+          ))
+          .transform(LineSplitter());
+    }
+    await for (final line in lineStream) {
       collectedLines?.add(line);
       onLog?.call(line);
       if (_intentionalStops.contains(session.task.id)) {
