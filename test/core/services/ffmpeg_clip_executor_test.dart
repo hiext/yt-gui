@@ -77,7 +77,7 @@ void main() {
     final process = _FakeProcess(exitCodeValue: 1);
     final executor = FfmpegClipExecutor(
       toolResolver: _resolver(),
-      processRunner: (_, __) async => process,
+      processRunner: (_, _) async => process,
     );
     final changes = <PostProcessTask>[];
     final task = PostProcessTask(
@@ -109,7 +109,7 @@ void main() {
     final process = _FakeProcess(exitCodeValue: 0);
     final executor = FfmpegClipExecutor(
       toolResolver: _resolver(),
-      processRunner: (_, __) async => process,
+      processRunner: (_, _) async => process,
     );
     final changes = <PostProcessTask>[];
     final task = PostProcessTask(
@@ -139,10 +139,9 @@ void main() {
   test('dispose kills all running processes', () async {
     final ffmpeg = _createToolFile('ffmpeg');
     final p1 = _FakeProcess(exitCodeValue: 0);
-    final p2 = _FakeProcess(exitCodeValue: 0);
     final executor = FfmpegClipExecutor(
       toolResolver: _resolver(),
-      processRunner: (_, __) async => p1,
+      processRunner: (_, _) async => p1,
     );
     addTearDown(() => executor.dispose());
 
@@ -170,9 +169,7 @@ void main() {
 
   test('throws for unsupported task type', () async {
     final ffmpeg = _createToolFile('ffmpeg');
-    final executor = FfmpegClipExecutor(
-      toolResolver: _resolver(),
-    );
+    final executor = FfmpegClipExecutor(toolResolver: _resolver());
     addTearDown(() => executor.dispose());
 
     final task = PostProcessTask(
@@ -187,7 +184,10 @@ void main() {
     );
 
     expect(
-      () => executor.startTask(task: task, settings: _settings(ffmpegPath: ffmpeg.path)),
+      () => executor.startTask(
+        task: task,
+        settings: _settings(ffmpegPath: ffmpeg.path),
+      ),
       throwsA(isA<PostProcessExecutorException>()),
     );
   });
@@ -220,9 +220,7 @@ void main() {
   });
 
   test('_buildOutputPath handles path with dot and without dot', () async {
-    final executor = FfmpegClipExecutor(
-      toolResolver: _resolver(),
-    );
+    final executor = FfmpegClipExecutor(toolResolver: _resolver());
     addTearDown(() => executor.dispose());
 
     // We test the output path indirectly via startTask

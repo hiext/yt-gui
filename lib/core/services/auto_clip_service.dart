@@ -7,15 +7,10 @@ import 'embedded_tool_resolver.dart';
 import 'ffmpeg_clip_executor.dart';
 
 class AutoClipService {
-  AutoClipService({
-    FfmpegClipExecutor? executor,
-    ClipRecordRepository? repository,
-    AutoClipConfig? config,
-  }) : _executor = executor ?? FfmpegClipExecutor(),
-       _repo = repository ?? ClipRecordRepository(),
-       config = config ?? AutoClipConfig.defaults;
+  AutoClipService({ClipRecordRepository? repository, AutoClipConfig? config})
+    : _repo = repository ?? ClipRecordRepository(),
+      config = config ?? AutoClipConfig.defaults;
 
-  final FfmpegClipExecutor _executor;
   final ClipRecordRepository _repo;
 
   /// Configuration (can be updated from settings).
@@ -52,7 +47,10 @@ class AutoClipService {
     // Apply offsets and duration limits
     final records = <ClipRecord>[];
     for (final segment in limited) {
-      final effectiveStart = max(0, segment.effectiveStartMs + config.startOffsetMs);
+      final effectiveStart = max(
+        0,
+        segment.effectiveStartMs + config.startOffsetMs,
+      );
       final effectiveEnd = max(
         effectiveStart + 1000,
         segment.effectiveEndMs + config.endOffsetMs,
@@ -150,8 +148,14 @@ class AutoClipService {
     required DownloadSettings settings,
     void Function(double progress)? onProgress,
   }) async {
-    final effectiveStart = max(0, segment.effectiveStartMs + config.startOffsetMs);
-    final effectiveEnd = max(effectiveStart + 1000, segment.effectiveEndMs + config.endOffsetMs);
+    final effectiveStart = max(
+      0,
+      segment.effectiveStartMs + config.startOffsetMs,
+    );
+    final effectiveEnd = max(
+      effectiveStart + 1000,
+      segment.effectiveEndMs + config.endOffsetMs,
+    );
     final maxDurationMs = config.maxClipDurationSec * 1000;
     final clippedEnd = effectiveStart + maxDurationMs < effectiveEnd
         ? effectiveStart + maxDurationMs
@@ -275,7 +279,9 @@ class AutoClipService {
     required String outputPath,
     required DownloadSettings settings,
   }) async {
-    final tools = const EmbeddedToolResolver().resolveBundle(settings: settings);
+    final tools = const EmbeddedToolResolver().resolveBundle(
+      settings: settings,
+    );
     final ffmpegPath = tools.ffmpeg.path;
 
     // Ensure output directory exists

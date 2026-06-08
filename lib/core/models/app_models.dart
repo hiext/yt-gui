@@ -1296,10 +1296,8 @@ class AutoClipConfig {
           parseInt(json['maxClipsPerVideo']) ?? defaults.maxClipsPerVideo,
       maxClipDurationSec:
           parseInt(json['maxClipDurationSec']) ?? defaults.maxClipDurationSec,
-      startOffsetMs:
-          parseInt(json['startOffsetMs']) ?? defaults.startOffsetMs,
-      endOffsetMs:
-          parseInt(json['endOffsetMs']) ?? defaults.endOffsetMs,
+      startOffsetMs: parseInt(json['startOffsetMs']) ?? defaults.startOffsetMs,
+      endOffsetMs: parseInt(json['endOffsetMs']) ?? defaults.endOffsetMs,
     );
   }
 }
@@ -1356,8 +1354,9 @@ class ClipRecord {
       id: id ?? this.id,
       sourceTaskId: sourceTaskId ?? this.sourceTaskId,
       sourcePath: sourcePath ?? this.sourcePath,
-      outputPath:
-          outputPath == _unchanged ? this.outputPath : outputPath as String?,
+      outputPath: outputPath == _unchanged
+          ? this.outputPath
+          : outputPath as String?,
       title: title ?? this.title,
       confidence: confidence ?? this.confidence,
       startMs: startMs ?? this.startMs,
@@ -1372,22 +1371,34 @@ class ClipRecord {
     );
   }
 
-  Map<String, Object> toJson() => {
-    'id': id,
-    'sourceTaskId': sourceTaskId,
-    'sourcePath': sourcePath,
-    if (outputPath != null) 'outputPath': outputPath!,
-    'title': title,
-    'confidence': confidence,
-    'startMs': startMs,
-    'endMs': endMs,
-    'durationMs': durationMs,
-    'status': status.name,
-    'progress': progress,
-    if (errorMessage != null) 'errorMessage': errorMessage!,
-    'createdAt': createdAt.toIso8601String(),
-    if (completedAt != null) 'completedAt': completedAt!.toIso8601String(),
-  };
+  Map<String, Object> toJson() {
+    final json = <String, Object>{
+      'id': id,
+      'sourceTaskId': sourceTaskId,
+      'sourcePath': sourcePath,
+      'title': title,
+      'confidence': confidence,
+      'startMs': startMs,
+      'endMs': endMs,
+      'durationMs': durationMs,
+      'status': status.name,
+      'progress': progress,
+      'createdAt': createdAt.toIso8601String(),
+    };
+    final outputPath = this.outputPath;
+    if (outputPath != null) {
+      json['outputPath'] = outputPath;
+    }
+    final errorMessage = this.errorMessage;
+    if (errorMessage != null) {
+      json['errorMessage'] = errorMessage;
+    }
+    final completedAt = this.completedAt;
+    if (completedAt != null) {
+      json['completedAt'] = completedAt.toIso8601String();
+    }
+    return json;
+  }
 
   factory ClipRecord.fromJson(Map<String, Object?> json) {
     final statusStr = json['status'] as String?;

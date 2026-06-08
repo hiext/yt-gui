@@ -2,38 +2,34 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiext_yt_gui/core/controllers/download_controller.dart';
-import 'package:hiext_yt_gui/core/controllers/post_process_controller.dart';
 import 'package:hiext_yt_gui/l10n/app_localizations.dart';
 import 'package:hiext_yt_gui/core/models/app_models.dart';
 import 'package:hiext_yt_gui/core/services/download_scheduler.dart';
-import 'package:hiext_yt_gui/core/services/post_process_executor.dart';
-import 'package:hiext_yt_gui/core/services/task_repository.dart';
 import 'package:hiext_yt_gui/core/services/yt_dlp_executor.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-
-import '../../sqlite_test_setup.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('DownloadController extended', () {
-    test('queuedTasks, runningTasks, pausedTasks getters return correct lists',
-        () {
-      final scheduler = DownloadScheduler(settingsProvider: _settings);
-      final controller = DownloadController(
-        scheduler: scheduler,
-        executor: _FakeExecutor(),
-        settingsProvider: _settings,
-      );
+    test(
+      'queuedTasks, runningTasks, pausedTasks getters return correct lists',
+      () {
+        final scheduler = DownloadScheduler(settingsProvider: _settings);
+        final controller = DownloadController(
+          scheduler: scheduler,
+          executor: _FakeExecutor(),
+          settingsProvider: _settings,
+        );
 
-      scheduler.enqueue(_makeTask('q1', DownloadStatus.ready));
-      scheduler.enqueue(_makeTask('q2', DownloadStatus.ready));
-      scheduler.startNext(); // moves first to running
+        scheduler.enqueue(_makeTask('q1', DownloadStatus.ready));
+        scheduler.enqueue(_makeTask('q2', DownloadStatus.ready));
+        scheduler.startNext(); // moves first to running
 
-      expect(controller.queuedTasks, hasLength(1));
-      expect(controller.runningTasks, hasLength(1));
-      expect(controller.pausedTasks, isEmpty);
-    });
+        expect(controller.queuedTasks, hasLength(1));
+        expect(controller.runningTasks, hasLength(1));
+        expect(controller.pausedTasks, isEmpty);
+      },
+    );
 
     test('handleTaskChanged with various statuses', () {
       final scheduler = DownloadScheduler(settingsProvider: _settings);
@@ -64,7 +60,10 @@ void main() {
       );
 
       expect(controller.completedTasks, hasLength(1));
-      expect(controller.completedTasks.single.mediaPath, '/downloads/video.mp4');
+      expect(
+        controller.completedTasks.single.mediaPath,
+        '/downloads/video.mp4',
+      );
       expect(controller.runningTasks, isEmpty);
     });
 
@@ -105,10 +104,7 @@ void main() {
       );
 
       // retry for nonexistent task should throw
-      expect(
-        () => controller.retry('nonexistent'),
-        throwsA(isA<Exception>()),
-      );
+      expect(() => controller.retry('nonexistent'), throwsA(isA<Exception>()));
     });
 
     test('handleFailed marks task as failed with message', () {
@@ -121,8 +117,11 @@ void main() {
 
       scheduler.enqueue(
         DownloadTask(
-          id: 'task-err', title: 'Task', source: 'https://x.com',
-          status: DownloadStatus.ready, progress: 0,
+          id: 'task-err',
+          title: 'Task',
+          source: 'https://x.com',
+          status: DownloadStatus.ready,
+          progress: 0,
           variants: const <ResourceVariant>[],
         ),
       );
@@ -146,8 +145,11 @@ void main() {
 
       scheduler.enqueue(
         DownloadTask(
-          id: 'task-cancel', title: 'Task', source: 'https://x.com',
-          status: DownloadStatus.ready, progress: 0,
+          id: 'task-cancel',
+          title: 'Task',
+          source: 'https://x.com',
+          status: DownloadStatus.ready,
+          progress: 0,
           variants: const <ResourceVariant>[],
         ),
       );
@@ -169,8 +171,11 @@ void main() {
 
       scheduler.enqueue(
         DownloadTask(
-          id: 'task-pause', title: 'Task', source: 'https://x.com',
-          status: DownloadStatus.ready, progress: 0,
+          id: 'task-pause',
+          title: 'Task',
+          source: 'https://x.com',
+          status: DownloadStatus.ready,
+          progress: 0,
           variants: const <ResourceVariant>[],
         ),
       );
@@ -229,7 +234,11 @@ DownloadSettings _settings() {
   );
 }
 
-DownloadTask _makeTask(String id, DownloadStatus status, {String source = 'https://example.com'}) {
+DownloadTask _makeTask(
+  String id,
+  DownloadStatus status, {
+  String source = 'https://example.com',
+}) {
   return DownloadTask(
     id: id,
     title: 'Task $id',
@@ -250,23 +259,44 @@ class _FakeExecutor implements YtDlpExecutor {
   bool disposed = false;
 
   @override
-  Future<void> cancel(String taskId) async { cancelled.add(taskId); }
-  @override
-  Future<void> dispose() async { disposed = true; }
+  Future<void> cancel(String taskId) async {
+    cancelled.add(taskId);
+  }
 
   @override
-  Future<List<ResourceVariant>> inspect(Uri url, {DownloadSettings? settings, AppLocalizations? localizations, InspectLogSink? onLog}) async {
+  Future<void> dispose() async {
+    disposed = true;
+  }
+
+  @override
+  Future<List<ResourceVariant>> inspect(
+    Uri url, {
+    DownloadSettings? settings,
+    AppLocalizations? localizations,
+    InspectLogSink? onLog,
+  }) async {
     inspected.add(url);
     return inspectResult;
   }
 
   @override
-  Future<void> pause(String taskId) async { paused.add(taskId); }
-  @override
-  Future<void> resume(String taskId) async { resumed.add(taskId); }
+  Future<void> pause(String taskId) async {
+    paused.add(taskId);
+  }
 
   @override
-  Future<void> startDownload({required String taskId, required Uri url, required ResourceVariant variant, required DownloadSettings settings, DownloadTaskChanged? onTaskChanged}) async {
+  Future<void> resume(String taskId) async {
+    resumed.add(taskId);
+  }
+
+  @override
+  Future<void> startDownload({
+    required String taskId,
+    required Uri url,
+    required ResourceVariant variant,
+    required DownloadSettings settings,
+    DownloadTaskChanged? onTaskChanged,
+  }) async {
     started.add(taskId);
   }
 }

@@ -118,6 +118,17 @@
   "reimport": "Re-import",
   "viewDetails": "View Details",
   "cookieImportFailed": "Cookie import failed after trying all browsers",
+  "cookieImportTimedOut": "{browser}: cookie import exceeded {seconds} seconds and was stopped. Check whether the browser is waiting on a Keychain or permission prompt.",
+  "@cookieImportTimedOut": {
+    "placeholders": {
+      "browser": {
+        "type": "String"
+      },
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "cookieImportSuccess": "Imported cookies for {domain}",
   "@cookieImportSuccess": {
     "placeholders": {

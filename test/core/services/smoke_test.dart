@@ -29,10 +29,16 @@ void main() {
       );
 
       final customTools = resolver.resolveBundle(settings: customSettings);
-      expect(File(customTools.ytDlp.path).existsSync(), isTrue,
-          reason: 'yt-dlp binary not found at ${customTools.ytDlp.path}');
-      expect(File(customTools.ffmpeg.path).existsSync(), isTrue,
-          reason: 'ffmpeg binary not found at ${customTools.ffmpeg.path}');
+      expect(
+        File(customTools.ytDlp.path).existsSync(),
+        isTrue,
+        reason: 'yt-dlp binary not found at ${customTools.ytDlp.path}',
+      );
+      expect(
+        File(customTools.ffmpeg.path).existsSync(),
+        isTrue,
+        reason: 'ffmpeg binary not found at ${customTools.ffmpeg.path}',
+      );
 
       settings = customSettings.normalized();
 
@@ -44,45 +50,52 @@ void main() {
       tmpDir.deleteSync(recursive: true);
     });
 
-    test('yt-dlp --version returns version string via process', () async {
-      final result = await Process.run(
-        'assets/bin/linux/yt-dlp',
-        ['--version'],
-      );
+    test(
+      'yt-dlp --version returns version string via process',
+      () async {
+        final result = await Process.run('assets/bin/linux/yt-dlp', [
+          '--version',
+        ]);
 
-      expect(result.exitCode, 0);
-      expect(result.stdout.toString(), isNotEmpty);
-    }, timeout: const Timeout(Duration(seconds: 10)));
+        expect(result.exitCode, 0);
+        expect(result.stdout.toString(), isNotEmpty);
+      },
+      timeout: const Timeout(Duration(seconds: 10)),
+    );
 
-    test('ffmpeg -version returns version string via process', () async {
-      final result = await Process.run(
-        'assets/bin/linux/ffmpeg',
-        ['-version'],
-      );
+    test(
+      'ffmpeg -version returns version string via process',
+      () async {
+        final result = await Process.run('assets/bin/linux/ffmpeg', [
+          '-version',
+        ]);
 
-      expect(result.exitCode, 0);
-      expect(result.stdout.toString(), contains('ffmpeg version'));
-    }, timeout: const Timeout(Duration(seconds: 10)));
+        expect(result.exitCode, 0);
+        expect(result.stdout.toString(), contains('ffmpeg version'));
+      },
+      timeout: const Timeout(Duration(seconds: 10)),
+    );
 
-    test('inspects URL and handles errors (real network call)', () async {
-      try {
-        final variants = await executor.inspect(
-          Uri.parse('https://www.youtube.com/watch?v=jNQXAC9IVRw'),
-          settings: settings,
-        );
+    test(
+      'inspects URL and handles errors (real network call)',
+      () async {
+        try {
+          final variants = await executor.inspect(
+            Uri.parse('https://www.youtube.com/watch?v=NCtc5lIV7pM'),
+            settings: settings,
+          );
 
-        expect(variants, isNotEmpty);
-      } on YtDlpExecutorException catch (e) {
-        // YouTube may block server IPs with anti-bot measures.
-        // This is expected and not a code defect.
-        expect(
-          e.message,
-          anyOf(
-            contains('Sign in to confirm'),
-            contains('non-zero status'),
-          ),
-        );
-      }
-    }, timeout: const Timeout(Duration(seconds: 30)));
+          expect(variants, isNotEmpty);
+        } on YtDlpExecutorException catch (e) {
+          // YouTube may block server IPs with anti-bot measures.
+          // This is expected and not a code defect.
+          expect(
+            e.message,
+            anyOf(contains('Sign in to confirm'), contains('non-zero status')),
+          );
+        }
+      },
+      timeout: const Timeout(Duration(seconds: 30)),
+    );
   });
 }

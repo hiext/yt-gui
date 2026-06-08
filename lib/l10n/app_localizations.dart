@@ -656,6 +656,12 @@ abstract class AppLocalizations {
   /// **'Cookie 导入失败（已尝试所有浏览器）'**
   String get cookieImportFailed;
 
+  /// No description provided for @cookieImportTimedOut.
+  ///
+  /// In zh, this message translates to:
+  /// **'{browser}: Cookie 导入超过 {seconds} 秒，已停止。请确认浏览器未卡在钥匙串或权限弹窗。'**
+  String cookieImportTimedOut(String browser, int seconds);
+
   /// No description provided for @cookieImportSuccess.
   ///
   /// In zh, this message translates to:
