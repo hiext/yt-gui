@@ -331,7 +331,9 @@ class _CompactTaskTile extends StatelessWidget {
         ClipRRect(
           borderRadius: BorderRadius.circular(3),
           child: LinearProgressIndicator(
-            value: progress,
+            value: task.status == DownloadStatus.downloading && progress <= 0
+                ? null
+                : progress,
             minHeight: 4,
             backgroundColor: colorScheme.surfaceContainerHighest,
           ),

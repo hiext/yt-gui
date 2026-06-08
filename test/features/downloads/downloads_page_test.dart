@@ -31,7 +31,7 @@ void main() {
     );
 
     await tester.pumpWidget(_buildApp(DownloadsPage(controller: controller)));
-    await tester.pumpAndSettle();
+    await tester.pump();
 
     expect(find.textContaining('example.com'), findsWidgets);
     expect(find.textContaining('视频'), findsWidgets);
@@ -45,7 +45,7 @@ void main() {
     expect(find.byIcon(Icons.play_arrow_outlined), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.play_arrow_outlined));
-    await tester.pumpAndSettle();
+    await tester.pump();
 
     expect(executor.started, [
       'https://example.com/video#1',
@@ -98,6 +98,37 @@ void main() {
     expect(find.text(l10n.downloading), findsOneWidget);
     expect(find.textContaining(l10n.completedTasks), findsOneWidget);
     expect(find.text(l10n.expandCompleted), findsOneWidget);
+  });
+
+  testWidgets('shows indeterminate progress before first download percent', (
+    tester,
+  ) async {
+    final executor = _FakeExecutor();
+    final controller = DownloadController(
+      scheduler: DownloadScheduler(settingsProvider: _settings),
+      executor: executor,
+      settingsProvider: _settings,
+    );
+    addTearDown(controller.dispose);
+
+    await controller.queueDownload(
+      url: Uri.parse('https://www.youtube.com/watch?v=NCtc5lIV7pM'),
+      variant: const ResourceVariant(
+        label: '最佳品质（1080p 视频+音频合并）',
+        description: 'mp4',
+        isRecommended: true,
+        formatId: '399+251',
+        type: ResourceType.video,
+      ),
+    );
+
+    await tester.pumpWidget(_buildApp(DownloadsPage(controller: controller)));
+    await tester.pump();
+
+    final indicators = tester.widgetList<LinearProgressIndicator>(
+      find.byType(LinearProgressIndicator),
+    );
+    expect(indicators.any((indicator) => indicator.value == null), isTrue);
   });
 
   testWidgets('excludes cancelled tasks from group progress', (tester) async {
