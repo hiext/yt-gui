@@ -207,6 +207,56 @@ class AppLocalizationsEn extends AppLocalizations {
   String get concurrentDisabledHint => 'Only effective in concurrent mode';
 
   @override
+  String get autoClipSection => 'Auto Clip';
+
+  @override
+  String get autoClipSectionDesc =>
+      'Configure automatic clip cutting after AI analysis';
+
+  @override
+  String get autoClipEnabled => 'Enable Auto-Cut';
+
+  @override
+  String get autoClipMinConfidence => 'Min Confidence';
+
+  @override
+  String get autoClipMaxClips => 'Max Clips/Video';
+
+  @override
+  String get autoClipMaxDuration => 'Max Duration';
+
+  @override
+  String get autoClipStartOffset => 'Start Offset (ms)';
+
+  @override
+  String get autoClipEndOffset => 'End Offset (ms)';
+
+  @override
+  String get cutClip => 'Cut';
+
+  @override
+  String cutAllClips(int count) {
+    return 'Cut All ($count uncut)';
+  }
+
+  @override
+  String get allClipsCut => 'All clips cut';
+
+  @override
+  String cuttingProgress(int completed, int total) {
+    return 'Cutting $completed/$total';
+  }
+
+  @override
+  String get reCut => 'Re-Cut';
+
+  @override
+  String get clipCutComplete => 'Cut complete';
+
+  @override
+  String get clipCutFailed => 'Cut failed';
+
+  @override
   String get additionalOptions => 'Additional Options';
 
   @override

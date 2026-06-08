@@ -370,6 +370,64 @@ void main() {
     expect(starts.last, contains('--part'));
   });
 
+  test(
+    'inspect handles JSON with embedded \\r characters gracefully',
+    () async {
+      final process = _FakeProcess(exitCodeValue: 0);
+      final executor = ProcessYtDlpExecutor(
+        toolResolver: _resolver(),
+        processRunner: (_, _) async => process,
+      );
+
+      final inspectFuture = executor.inspect(
+        Uri.parse('https://example.com/video'),
+        localizations: lookupAppLocalizations(const Locale('en')),
+      );
+      // Simulate JSON output with \r inside a string value (like MHTML URLs)
+      process.addStdout(
+        '{"id":"test","title":"Test","formats":['
+        '{"format_id":"sb3","format_note":"storyboard",'
+        '"ext":"mhtml","acodec":"none","vcodec":"none",'
+        '"url":"https://example.com/sb/L0.jpg?M\\u0026M",'
+        '"width":48,"height":27,"fps":0.03}'
+        ']}\r\n',
+      );
+      await process.close();
+
+      final variants = await inspectFuture;
+      expect(variants, isNotEmpty);
+    },
+  );
+
+  test(
+    'inspect handles JSON with special characters in string values',
+    () async {
+      final process = _FakeProcess(exitCodeValue: 0);
+      final executor = ProcessYtDlpExecutor(
+        toolResolver: _resolver(),
+        processRunner: (_, _) async => process,
+      );
+
+      final inspectFuture = executor.inspect(
+        Uri.parse('https://example.com/video'),
+        localizations: lookupAppLocalizations(const Locale('en')),
+      );
+      // JSON with escaped special characters (realistic for MHTML URLs)
+      process.addStdout(
+        '{"id":"test","title":"Test with unicode \\\\u0026",'
+        '"formats":[{"format_id":"sb3","format_note":"storyboard",'
+        '"ext":"mhtml","acodec":"none","vcodec":"none",'
+        '"url":"https://example.com/sb/L0.jpg?sigh=rs\\\\u0026M",'
+        '"width":48,"height":27,"fps":0.03}]'
+        '}',
+      );
+      await process.close();
+
+      final variants = await inspectFuture;
+      expect(variants, isNotEmpty);
+    },
+  );
+
   test('reports final media path printed by yt-dlp', () async {
     final process = _FakeProcess(exitCodeValue: 0);
     final executor = ProcessYtDlpExecutor(

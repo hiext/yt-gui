@@ -568,6 +568,13 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
             const SizedBox(height: 16),
+            // ── Auto Clip ──
+            SectionCard(
+              title: l10n.autoClipSection,
+              subtitle: l10n.autoClipSectionDesc,
+              child: _buildAutoClipSection(l10n, settings),
+            ),
+            const SizedBox(height: 16),
             SectionCard(
               title: l10n.downloadMode,
               subtitle: l10n.downloadModeDesc,
@@ -753,6 +760,134 @@ class _SettingsPageState extends State<SettingsPage> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildAutoClipSection(AppLocalizations l10n, DownloadSettings settings) {
+    final config = settings.autoClipConfig;
+    final enabled = config.enabled;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SwitchListTile(
+          key: const Key('auto-clip-enabled'),
+          contentPadding: EdgeInsets.zero,
+          title: Text(l10n.autoClipEnabled),
+          value: enabled,
+          onChanged: (v) {
+            widget.controller.updateAutoClipConfig(
+              config.copyWith(enabled: v),
+            );
+          },
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '${l10n.autoClipMinConfidence}: ${config.minConfidence.toStringAsFixed(2)}',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        Slider(
+          key: const Key('auto-clip-confidence'),
+          value: config.minConfidence,
+          min: 0,
+          max: 1,
+          divisions: 20,
+          label: config.minConfidence.toStringAsFixed(2),
+          onChanged: enabled
+              ? (v) {
+                  widget.controller.updateAutoClipConfig(
+                    config.copyWith(minConfidence: double.parse(v.toStringAsFixed(2))),
+                  );
+                }
+              : null,
+        ),
+        Text(
+          '${l10n.autoClipMaxClips}: ${config.maxClipsPerVideo}',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        Slider(
+          key: const Key('auto-clip-max-clips'),
+          value: config.maxClipsPerVideo.toDouble(),
+          min: 1,
+          max: 20,
+          divisions: 19,
+          label: '${config.maxClipsPerVideo}',
+          onChanged: enabled
+              ? (v) {
+                  widget.controller.updateAutoClipConfig(
+                    config.copyWith(maxClipsPerVideo: v.round()),
+                  );
+                }
+              : null,
+        ),
+        Text(
+          '${l10n.autoClipMaxDuration}: ${config.maxClipDurationSec}s',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+        Slider(
+          key: const Key('auto-clip-max-duration'),
+          value: config.maxClipDurationSec.toDouble(),
+          min: 10,
+          max: 120,
+          divisions: 22,
+          label: '${config.maxClipDurationSec}s',
+          onChanged: enabled
+              ? (v) {
+                  widget.controller.updateAutoClipConfig(
+                    config.copyWith(maxClipDurationSec: v.round()),
+                  );
+                }
+              : null,
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                key: const Key('auto-clip-start-offset'),
+                initialValue: config.startOffsetMs.toString(),
+                enabled: enabled,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: l10n.autoClipStartOffset,
+                  border: const OutlineInputBorder(),
+                  isDense: true,
+                ),
+                onChanged: (v) {
+                  final ms = int.tryParse(v);
+                  if (ms != null) {
+                    widget.controller.updateAutoClipConfig(
+                      config.copyWith(startOffsetMs: ms),
+                    );
+                  }
+                },
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextFormField(
+                key: const Key('auto-clip-end-offset'),
+                initialValue: config.endOffsetMs.toString(),
+                enabled: enabled,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: l10n.autoClipEndOffset,
+                  border: const OutlineInputBorder(),
+                  isDense: true,
+                ),
+                onChanged: (v) {
+                  final ms = int.tryParse(v);
+                  if (ms != null) {
+                    widget.controller.updateAutoClipConfig(
+                      config.copyWith(endOffsetMs: ms),
+                    );
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
