@@ -12,13 +12,13 @@ class PostProcessController extends ChangeNotifier {
     required this.executor,
     required this.settingsProvider,
     this.repository,
-    AutoClipService? autoClipService,
-  }) : _autoClipService = autoClipService;
+    this._autoClipService,
+  });
 
   final PostProcessExecutor executor;
   final DownloadSettings Function() settingsProvider;
   final PostProcessRepository? repository;
-  AutoClipService? _autoClipService;
+  final AutoClipService? _autoClipService;
 
   final List<PostProcessTask> _queued = [];
   final List<PostProcessTask> _running = [];
@@ -293,27 +293,31 @@ class PostProcessController extends ChangeNotifier {
     if (!service.config.enabled) return;
 
     unawaited(
-      service.startAutoCut(
-        segments: task.clipSegments,
-        settings: settingsProvider(),
-        onStatusChanged: (recordId, status) {
-          final index = _clipRecords.indexWhere((r) => r.id == recordId);
-          if (index >= 0) {
-            _clipRecords[index] = service.records.firstWhere(
-              (r) => r.id == recordId,
-              orElse: () => _clipRecords[index],
+      service
+          .startAutoCut(
+            segments: task.clipSegments,
+            settings: settingsProvider(),
+            onStatusChanged: (recordId, status) {
+              final index = _clipRecords.indexWhere((r) => r.id == recordId);
+              if (index >= 0) {
+                _clipRecords[index] = service.records.firstWhere(
+                  (r) => r.id == recordId,
+                  orElse: () => _clipRecords[index],
+                );
+              } else {
+                _clipRecords.addAll(
+                  service.records.where((r) => r.id == recordId),
+                );
+              }
+              notifyListeners();
+            },
+          )
+          .then((newRecords) {
+            _clipRecords.addAll(
+              newRecords.where((r) => !_clipRecords.any((e) => e.id == r.id)),
             );
-          } else {
-            _clipRecords.addAll(service.records.where((r) => r.id == recordId));
-          }
-          notifyListeners();
-        },
-      ).then((newRecords) {
-        _clipRecords.addAll(
-          newRecords.where((r) => !_clipRecords.any((e) => e.id == r.id)),
-        );
-        notifyListeners();
-      }),
+            notifyListeners();
+          }),
     );
   }
 
