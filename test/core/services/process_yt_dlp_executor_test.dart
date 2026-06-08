@@ -108,10 +108,7 @@ void main() {
 
     await inspectFuture;
 
-    expect(
-      logs,
-      contains('[debug] Extracting URL: https://example.com/video'),
-    );
+    expect(logs, contains('[debug] Extracting URL: https://example.com/video'));
     expect(
       logs,
       isNot(
@@ -208,10 +205,7 @@ void main() {
       Uri.parse('https://example.com/video'),
     );
 
-    expect(
-      args,
-      ['--dump-json', '--no-playlist', 'https://example.com/video'],
-    );
+    expect(args, ['--dump-json', '--no-playlist', 'https://example.com/video']);
   });
 
   test('builds resumable download arguments', () {
@@ -238,6 +232,16 @@ void main() {
     expect(
       args,
       containsAll(['--newline', '--continue', '--part', '--ffmpeg-location']),
+    );
+    expect(
+      args,
+      containsAll([
+        '--progress-template',
+        'download:__HIEYT_PROGRESS__:%(progress.status)s|'
+            '%(progress._percent_str)s|'
+            '%(progress._speed_str)s|'
+            '%(progress._eta_str)s',
+      ]),
     );
     expect(
       args,
@@ -458,6 +462,34 @@ void main() {
     );
     expect(changes.last.status, DownloadStatus.completed);
     expect(changes.last.mediaPath, '/downloads/video.mp4');
+  });
+
+  test('reports progress from custom progress template output', () async {
+    final process = _FakeProcess(exitCodeValue: 0);
+    final executor = ProcessYtDlpExecutor(
+      toolResolver: _resolver(),
+      processRunner: (_, _) async => process,
+    );
+    final changes = <DownloadTask>[];
+
+    await executor.startDownload(
+      taskId: 'task-1',
+      url: Uri.parse('https://www.youtube.com/watch?v=NCtc5lIV7pM'),
+      variant: const ResourceVariant(
+        label: '最佳品质（1080p 视频+音频合并）',
+        description: '适合大多数人',
+        isRecommended: true,
+        formatId: '399+251',
+      ),
+      settings: _settings(),
+      onTaskChanged: changes.add,
+    );
+    process.addStdout('__HIEYT_PROGRESS__:downloading| 12.5%|1.23MiB/s|00:42');
+    await process.close();
+    await pumpEventQueue();
+
+    expect(changes.any((task) => task.progress == 12.5), isTrue);
+    expect(changes.any((task) => task.speed == '1.23MiB/s'), isTrue);
   });
 }
 

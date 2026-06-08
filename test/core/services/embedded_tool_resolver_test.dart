@@ -173,7 +173,111 @@ void main() {
       expect(bundle.ytDlp.fallbackPath, ytDlp.absolute.path);
       expect(bundle.ffmpeg.fallbackPath, ffmpeg.absolute.path);
     });
+
+    test('resolves linux bundled executable from flutter assets', () {
+      const expected = '/opt/hiext/data/flutter_assets/assets/bin/linux/yt-dlp';
+      const resolver = EmbeddedToolResolver(
+        manifest: EmbeddedToolManifest.bundled,
+        platformOverride: EmbeddedToolPlatform.linux,
+        environment: {'PATH': ''},
+        resolvedExecutablePath: '/opt/hiext/hiext_yt_gui',
+        fileExists: _linuxBundledYtDlpExists,
+      );
+
+      final tool = resolver.resolveExecutable(kind: EmbeddedToolKind.ytDlp);
+
+      expect(tool.path, expected);
+      expect(tool.isCustom, isFalse);
+    });
+
+    test('resolves macos bundled executable from App.framework assets', () {
+      const expected =
+          '/Applications/Hiext YT GUI.app/Contents/Frameworks/App.framework/Versions/A/Resources/flutter_assets/assets/bin/macos/yt-dlp';
+      const resolver = EmbeddedToolResolver(
+        manifest: EmbeddedToolManifest.bundled,
+        platformOverride: EmbeddedToolPlatform.macos,
+        environment: {'PATH': ''},
+        resolvedExecutablePath:
+            '/Applications/Hiext YT GUI.app/Contents/MacOS/hiext_yt_gui',
+        fileExists: _macosBundledYtDlpExists,
+      );
+
+      final tool = resolver.resolveExecutable(kind: EmbeddedToolKind.ytDlp);
+
+      expect(tool.path, expected);
+      expect(tool.isCustom, isFalse);
+    });
+
+    test('resolves windows bundled executable with exe suffix', () {
+      const expected =
+          r'C:\Program Files\Hiext YT GUI\data\flutter_assets\assets\bin\windows\yt-dlp.exe';
+      const resolver = EmbeddedToolResolver(
+        manifest: EmbeddedToolManifest.bundled,
+        platformOverride: EmbeddedToolPlatform.windows,
+        environment: {'PATH': ''},
+        resolvedExecutablePath:
+            r'C:\Program Files\Hiext YT GUI\hiext_yt_gui.exe',
+        fileExists: _windowsBundledYtDlpExists,
+      );
+
+      final tool = resolver.resolveExecutable(kind: EmbeddedToolKind.ytDlp);
+
+      expect(tool.path, expected);
+      expect(tool.isCustom, isFalse);
+    });
+
+    test(
+      'falls back to platform executable name when bundled tool is missing',
+      () {
+        const resolver = EmbeddedToolResolver(
+          manifest: EmbeddedToolManifest.bundled,
+          platformOverride: EmbeddedToolPlatform.windows,
+          environment: {'PATH': ''},
+          resolvedExecutablePath:
+              r'C:\Program Files\Hiext YT GUI\hiext_yt_gui.exe',
+          fileExists: _noFilesExist,
+        );
+
+        final tool = resolver.resolveExecutable(kind: EmbeddedToolKind.ytDlp);
+
+        expect(tool.path, 'yt-dlp.exe');
+        expect(tool.isCustom, isFalse);
+      },
+    );
+
+    test('can ignore a missing custom path and use bundled executable', () {
+      const expected = '/opt/hiext/data/flutter_assets/assets/bin/linux/yt-dlp';
+      const resolver = EmbeddedToolResolver(
+        manifest: EmbeddedToolManifest.bundled,
+        platformOverride: EmbeddedToolPlatform.linux,
+        environment: {'PATH': ''},
+        resolvedExecutablePath: '/opt/hiext/hiext_yt_gui',
+        fileExists: _linuxBundledYtDlpExists,
+      );
+
+      final tool = resolver.resolveExecutable(
+        kind: EmbeddedToolKind.ytDlp,
+        settings: DownloadSettings.defaults.copyWith(
+          ytDlpPath: '/missing/yt-dlp',
+        ),
+        allowMissingCustomFallback: true,
+      );
+
+      expect(tool.path, expected);
+      expect(tool.isCustom, isFalse);
+    });
   });
 }
 
 bool _noFilesExist(String path) => false;
+
+bool _linuxBundledYtDlpExists(String path) =>
+    path == '/opt/hiext/data/flutter_assets/assets/bin/linux/yt-dlp';
+
+bool _macosBundledYtDlpExists(String path) =>
+    path ==
+    '/Applications/Hiext YT GUI.app/Contents/Frameworks/App.framework/Versions/A/Resources/flutter_assets/assets/bin/macos/yt-dlp';
+
+bool _windowsBundledYtDlpExists(String path) =>
+    path ==
+    r'C:\Program Files\Hiext YT GUI\data\flutter_assets\assets\bin\windows\yt-dlp.exe';

@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hiext_yt_gui/core/controllers/post_process_controller.dart';
 import 'package:hiext_yt_gui/core/models/app_models.dart';
 import 'package:hiext_yt_gui/core/services/post_process_executor.dart';
-import 'package:hiext_yt_gui/core/services/post_process_repository.dart';
 
 void main() {
   group('PostProcessController extended', () {
@@ -314,9 +313,7 @@ class _FakePostProcessExecutor implements PostProcessExecutor {
         ),
       );
     } else {
-      onTaskChanged?.call(
-        task.copyWith(status: PostProcessStatus.running),
-      );
+      onTaskChanged?.call(task.copyWith(status: PostProcessStatus.running));
     }
   }
 }

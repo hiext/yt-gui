@@ -7,6 +7,8 @@ import '../../core/controllers/settings_controller.dart';
 import '../../core/models/app_models.dart';
 import '../../core/services/cookie_service.dart'
     show CookieService, CookieEntry, CookieImportResult;
+import '../../core/services/embedded_tool_manifest.dart';
+import '../../core/services/embedded_tool_resolver.dart';
 import '../../core/services/log_service.dart';
 import '../../shared/widgets/section_card.dart';
 
@@ -89,8 +91,14 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   static const _qualityPresets = [
-    'best', 'bestvideo+bestaudio', 'bestvideo', 'bestaudio',
-    'bv*+ba*', 'bv*+ba/b', 'worstvideo+worstaudio', 'worst',
+    'best',
+    'bestvideo+bestaudio',
+    'bestvideo',
+    'bestaudio',
+    'bv*+ba*',
+    'bv*+ba/b',
+    'worstvideo+worstaudio',
+    'worst',
   ];
 
   String _normalizeQualityValue(String value) {
@@ -214,8 +222,14 @@ class _SettingsPageState extends State<SettingsPage> {
                         value: 'bestvideo+bestaudio',
                         child: Text('bestvideo+bestaudio'),
                       ),
-                      DropdownMenuItem(value: 'bestvideo', child: Text('bestvideo')),
-                      DropdownMenuItem(value: 'bestaudio', child: Text('bestaudio')),
+                      DropdownMenuItem(
+                        value: 'bestvideo',
+                        child: Text('bestvideo'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'bestaudio',
+                        child: Text('bestaudio'),
+                      ),
                       DropdownMenuItem(
                         value: 'bv*+ba*',
                         child: Text('bv*+ba* (最佳视频+音频)'),
@@ -669,7 +683,10 @@ class _SettingsPageState extends State<SettingsPage> {
                 items: const [
                   DropdownMenuItem(value: LogLevel.debug, child: Text('Debug')),
                   DropdownMenuItem(value: LogLevel.info, child: Text('Info')),
-                  DropdownMenuItem(value: LogLevel.warning, child: Text('Warning')),
+                  DropdownMenuItem(
+                    value: LogLevel.warning,
+                    child: Text('Warning'),
+                  ),
                   DropdownMenuItem(value: LogLevel.error, child: Text('Error')),
                 ],
                 onChanged: (v) {
@@ -746,10 +763,10 @@ class _SettingsPageState extends State<SettingsPage> {
               child: Text(
                 _saveStatusText(l10n),
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: saved
-                          ? Theme.of(context).colorScheme.onSurface
-                          : Theme.of(context).colorScheme.onPrimaryContainer,
-                    ),
+                  color: saved
+                      ? Theme.of(context).colorScheme.onSurface
+                      : Theme.of(context).colorScheme.onPrimaryContainer,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -763,7 +780,10 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildAutoClipSection(AppLocalizations l10n, DownloadSettings settings) {
+  Widget _buildAutoClipSection(
+    AppLocalizations l10n,
+    DownloadSettings settings,
+  ) {
     final config = settings.autoClipConfig;
     final enabled = config.enabled;
 
@@ -776,9 +796,7 @@ class _SettingsPageState extends State<SettingsPage> {
           title: Text(l10n.autoClipEnabled),
           value: enabled,
           onChanged: (v) {
-            widget.controller.updateAutoClipConfig(
-              config.copyWith(enabled: v),
-            );
+            widget.controller.updateAutoClipConfig(config.copyWith(enabled: v));
           },
         ),
         const SizedBox(height: 8),
@@ -796,7 +814,9 @@ class _SettingsPageState extends State<SettingsPage> {
           onChanged: enabled
               ? (v) {
                   widget.controller.updateAutoClipConfig(
-                    config.copyWith(minConfidence: double.parse(v.toStringAsFixed(2))),
+                    config.copyWith(
+                      minConfidence: double.parse(v.toStringAsFixed(2)),
+                    ),
                   );
                 }
               : null,
@@ -900,6 +920,16 @@ class _SettingsPageState extends State<SettingsPage> {
     _markDirty();
   }
 
+  String _resolveYtDlpPath(DownloadSettings settings) {
+    return const EmbeddedToolResolver()
+        .resolveExecutable(
+          kind: EmbeddedToolKind.ytDlp,
+          settings: settings,
+          allowMissingCustomFallback: true,
+        )
+        .path;
+  }
+
   Future<void> _importCookies(String browser, String domain) async {
     final l10n = AppLocalizations.of(context)!;
     final settings = widget.controller.settings;
@@ -907,23 +937,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final cookieFile =
         '$saveDir/.cookies/$domain'
         '_$browser.txt';
-
-    // Resolve yt-dlp path: custom path → PATH lookup → bundled fallback
-    String ytDlpPath;
-    if (settings.ytDlpPath != null && File(settings.ytDlpPath!).existsSync()) {
-      ytDlpPath = settings.ytDlpPath!;
-    } else {
-      // Check bundled release path first
-      final exeDir = File(Platform.resolvedExecutable).parent.path;
-      final bundledPath =
-          '$exeDir/data/flutter_assets/assets/bin/linux/yt-dlp';
-      if (File(bundledPath).existsSync()) {
-        ytDlpPath = bundledPath;
-      } else {
-        // Fall back to PATH
-        ytDlpPath = 'yt-dlp';
-      }
-    }
+    final ytDlpPath = _resolveYtDlpPath(settings);
 
     final service = CookieService();
     try {
@@ -992,7 +1006,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final fileSize = fileExists ? File(cookieFile).lengthSync() : 0;
     LogService.instance.info(
       'Cookie import OK: $domain ($browser) → $cookieFile '
-      '($fileSize bytes, exists=$fileExists)',
+          '($fileSize bytes, exists=$fileExists)',
       'cookie',
     );
 
@@ -1178,8 +1192,9 @@ class _CookieSectionState extends State<_CookieSection> {
                 onFieldSubmitted: (v) => _doImport(v.trim()),
               );
               final importButton = FilledButton.tonalIcon(
-                onPressed:
-                    _importing ? null : () => _doImport(_domainCtrl.text.trim()),
+                onPressed: _importing
+                    ? null
+                    : () => _doImport(_domainCtrl.text.trim()),
                 icon: _importing
                     ? const SizedBox(
                         width: 18,
