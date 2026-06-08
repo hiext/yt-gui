@@ -31,9 +31,13 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
 
   Future<String> _ensureExecutable(ResolvedEmbeddedTool tool) async {
     if (tool.isCustom) return tool.path;
-    if (File(tool.path).existsSync()) return tool.path;
+    // Always extract embedded tools from rootBundle — never trust
+    // the filesystem path, because CWD differs between dev and prod.
     final cached = _extractedPaths[tool.path];
-    if (cached != null) return cached;
+    if (cached != null) {
+      if (File(cached).existsSync()) return cached;
+      _extractedPaths.remove(tool.path);
+    }
 
     try {
       final data = await rootBundle.load(tool.path);
@@ -76,86 +80,137 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
   }) async {
     final normalizedSettings = (settings ?? DownloadSettings.defaults)
         .normalized();
-    final tools = _toolResolver.resolveBundle(settings: normalizedSettings);
-    final ytDlpPath = await _ensureExecutable(tools.ytDlp);
-    LogService.instance.debug('inspect: yt-dlp=$ytDlpPath url=$url', 'executor');
     final cookieFile = _resolveCookieFile(url, normalizedSettings);
+
+    // First attempt: with cookies (if available)
+    if (cookieFile != null) {
+      try {
+        return await _doInspect(
+          url,
+          normalizedSettings: normalizedSettings,
+          cookieFile: cookieFile,
+          localizations: localizations,
+          onLog: onLog,
+          timeoutSeconds: 120,
+        );
+      } on YtDlpExecutorException catch (e) {
+        LogService.instance.warn(
+          'inspect with cookie failed: ${e.message}, retrying without cookie',
+          'executor',
+        );
+      }
+    }
+
+    // Second attempt: without cookies (or first attempt if no cookie)
+    return _doInspect(
+      url,
+      normalizedSettings: normalizedSettings,
+      cookieFile: null,
+      localizations: localizations,
+      onLog: onLog,
+      timeoutSeconds: 120,
+    );
+  }
+
+  Future<List<ResourceVariant>> _doInspect(
+    Uri url, {
+    required DownloadSettings normalizedSettings,
+    required String? cookieFile,
+    AppLocalizations? localizations,
+    InspectLogSink? onLog,
+    required int timeoutSeconds,
+  }) async {
+    final sw = Stopwatch()..start();
+    final tools = _toolResolver.resolveBundle(settings: normalizedSettings);
+    LogService.instance.info('inspect: resolveBundle took ${sw.elapsedMilliseconds}ms', 'executor');
+    final ytDlpPath = await _ensureExecutable(tools.ytDlp);
+    LogService.instance.info('inspect: ensureExecutable took ${sw.elapsedMilliseconds}ms, path=$ytDlpPath', 'executor');
     if (cookieFile != null) {
       LogService.instance.debug('inspect: using cookie $cookieFile', 'executor');
-    } else {
-      LogService.instance.warn(
-        'inspect: no cookie found for ${url.host} (${normalizedSettings.cookieConfigs.length} configs loaded)',
-        'executor',
-      );
     }
-    final process = await _processRunner(
-      ytDlpPath,
-      buildInspectArguments(url, cookieFile: cookieFile),
-    );
+    final args = buildInspectArguments(url, cookieFile: cookieFile);
     final l10n = localizations ?? currentAppLocalizations();
+
+    // Use Process.run for production (avoids stream hang with subprocesses),
+    // use injected _processRunner when customized (for unit testing).
+    if (_processRunner == _defaultProcessRunner) {
+      try {
+        final result = await Process.run(ytDlpPath, args, runInShell: false)
+            .timeout(Duration(seconds: timeoutSeconds));
+        LogService.instance.info('inspect: exitCode=${result.exitCode} at ${sw.elapsedMilliseconds}ms', 'executor');
+
+        final stderr = result.stderr as String;
+        if (stderr.isNotEmpty && onLog != null) {
+          for (final line in stderr.split('\n')) {
+            if (line.trim().isNotEmpty) onLog(line);
+          }
+        }
+
+        if (result.exitCode != 0) {
+          final msg = stderr.trim().isNotEmpty
+              ? stderr.trim().split('\n').last
+              : 'yt-dlp exit code ${result.exitCode}';
+          LogService.instance.error('inspect failed: exit=${result.exitCode} $msg', 'executor');
+          throw YtDlpExecutorException(msg);
+        }
+
+        final stdout = result.stdout as String;
+        final outputLines = stdout.split('\n').where((l) => l.trim().isNotEmpty).toList();
+        final variants = _parseInspectVariants(
+          outputLines, l10n,
+          recommendedVariantCount: normalizedSettings.recommendedVariantCount,
+        );
+        LogService.instance.info('inspect: found ${variants.length} variants at ${sw.elapsedMilliseconds}ms', 'executor');
+        return variants;
+      } on TimeoutException {
+        LogService.instance.error('inspect timed out after ${timeoutSeconds}s', 'executor');
+        throw YtDlpExecutorException('Parse timed out after $timeoutSeconds seconds');
+      }
+    }
+
+    // Custom process runner path (for tests with _FakeProcess)
+    final process = await _processRunner(ytDlpPath, args);
+    LogService.instance.info('inspect: process started at ${sw.elapsedMilliseconds}ms, pid=${process.pid}', 'executor');
 
     final outputLines = <String>[];
     final session = YtDlpSession.forTesting(
       task: DownloadTask(
         id: 'inspect:${url.toString()}',
-        title: url.toString(),
-        source: url.toString(),
-        status: DownloadStatus.parsing,
-        progress: 0,
-        variants: const [],
+        title: url.toString(), source: url.toString(),
+        status: DownloadStatus.parsing, progress: 0, variants: const [],
       ),
     );
 
-    final stdoutFuture = _consumeLines(
-      process.stdout,
-      session,
-      collectedLines: outputLines,
-    );
-    final stderrFuture = _consumeLines(
-      process.stderr,
-      session,
-      collectedLines: outputLines,
-      onLog: onLog,
-    );
+    final stdoutFuture = _consumeLines(process.stdout, session, collectedLines: outputLines);
+    final stderrFuture = _consumeLines(process.stderr, session, collectedLines: outputLines, onLog: onLog);
     final exitCode = await process.exitCode
-        .timeout(const Duration(seconds: 30), onTimeout: () {
-      process.kill();
+        .timeout(Duration(seconds: timeoutSeconds), onTimeout: () {
+      process.kill(ProcessSignal.sigkill);
       return -1;
     });
-    await Future.wait([stdoutFuture, stderrFuture]);
+    LogService.instance.info('inspect: exitCode=$exitCode at ${sw.elapsedMilliseconds}ms', 'executor');
 
-    if (exitCode == -1) {
-      LogService.instance.error('inspect timed out after 30s', 'executor');
-      throw YtDlpExecutorException('Parse timed out after 30 seconds');
+    try {
+      await Future.wait([stdoutFuture, stderrFuture]).timeout(const Duration(seconds: 10));
+    } on TimeoutException {
+      LogService.instance.warn('inspect: stream drain timed out', 'executor');
     }
 
+    if (exitCode == -1) {
+      LogService.instance.error('inspect timed out after ${timeoutSeconds}s', 'executor');
+      throw YtDlpExecutorException('Parse timed out after $timeoutSeconds seconds');
+    }
     if (exitCode != 0) {
       final message = session.errorMessage ?? l10n.ytDlpNonZeroExit;
-      LogService.instance.error(
-        'inspect failed: exit=$exitCode $message',
-        'executor',
-      );
       throw YtDlpExecutorException(message);
     }
 
     final variants = _parseInspectVariants(
-      outputLines,
-      l10n,
+      outputLines, l10n,
       recommendedVariantCount: normalizedSettings.recommendedVariantCount,
     );
-    LogService.instance.info(
-      'inspect: found ${variants.length} variants',
-      'executor',
-    );
-    return variants.isEmpty
-        ? [
-            ResourceVariant(
-              label: l10n.recommendedOptionLabel,
-              description: l10n.recommendedOptionDesc,
-              isRecommended: true,
-            ),
-          ]
-        : variants;
+    LogService.instance.info('inspect: found ${variants.length} variants', 'executor');
+    return variants;
   }
 
   @override
@@ -328,11 +383,13 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       process.stdout,
       session,
       onTaskChanged: onTaskChanged,
+      expandCarriageReturns: true,
     );
     final stderrFuture = _consumeLines(
       process.stderr,
       session,
       onTaskChanged: onTaskChanged,
+      expandCarriageReturns: true,
     );
     final exitCode = await process.exitCode;
     await Future.wait([stdoutFuture, stderrFuture]);
@@ -420,20 +477,28 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     List<String>? collectedLines,
     DownloadTaskChanged? onTaskChanged,
     InspectLogSink? onLog,
+    bool expandCarriageReturns = false,
   }) async {
     var lastLoggedPercent = -1.0;
-    await for (final line
-        in stream
-            .transform(SystemEncoding().decoder)
-            // Older yt-dlp versions don't support --newline and use \r
-            // (carriage return) to update progress on the same line.
-            // Expand \r to \n so LineSplitter sees individual updates.
-            .transform(StreamTransformer<String, String>.fromHandlers(
-              handleData: (data, sink) {
-                sink.add(data.replaceAll('\r', '\n'));
-              },
-            ))
-            .transform(LineSplitter())) {
+    var lineStream = stream
+        .transform(SystemEncoding().decoder)
+        .transform(LineSplitter());
+    // Older yt-dlp versions don't support --newline and use \r
+    // (carriage return) to update progress on the same line.
+    // Only enable for download output — JSON inspect output may contain
+    // literal \r inside string values (e.g. MHTML storyboard URLs).
+    if (expandCarriageReturns) {
+      // \r not followed by \n is a progress overwrite — replace with \n
+      lineStream = stream
+          .transform(SystemEncoding().decoder)
+          .transform(StreamTransformer<String, String>.fromHandlers(
+            handleData: (data, sink) {
+              sink.add(data.replaceAll(RegExp(r'\r(?!\n)'), '\n'));
+            },
+          ))
+          .transform(LineSplitter());
+    }
+    await for (final line in lineStream) {
       collectedLines?.add(line);
       onLog?.call(line);
       if (_intentionalStops.contains(session.task.id)) {

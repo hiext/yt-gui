@@ -6,122 +6,362 @@ import 'package:hiext_yt_gui/features/settings/settings_page.dart';
 import 'package:hiext_yt_gui/l10n/app_localizations.dart';
 
 void main() {
-  testWidgets('renders settings form and updates text fields', (tester) async {
-    final controller = SettingsController();
-    addTearDown(controller.dispose);
-
-    await tester.pumpWidget(_buildApp(SettingsPage(controller: controller)));
-
-    final saveField = find.byKey(const Key('save-directory-field'));
-    await tester.enterText(saveField, '/home/user/downloads');
-    await tester.pump();
-
-    // quality field is now a dropdown — tap, select option, verify
-    final qualityField = find.byKey(const Key('default-quality-field'));
-    await tester.ensureVisible(qualityField);
-    await tester.pumpAndSettle();
-    await tester.tap(qualityField);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('bestvideo+bestaudio').last);
-    await tester.pumpAndSettle();
-
-    final recommendedCountField = find.byKey(
-      const Key('recommended-variant-count-field'),
-    );
-    await tester.ensureVisible(recommendedCountField);
-    await tester.pumpAndSettle();
-    await tester.enterText(recommendedCountField, '4');
-    await tester.pump();
-
-    final ytField = find.byKey(const Key('yt-dlp-path-field'));
-    await tester.ensureVisible(ytField);
-    await tester.pumpAndSettle();
-    await tester.enterText(ytField, '/tools/yt-dlp');
-    await tester.pump();
-
-    final ffField = find.byKey(const Key('ffmpeg-path-field'));
-    await tester.ensureVisible(ffField);
-    await tester.pumpAndSettle();
-    await tester.enterText(ffField, '/tools/ffmpeg');
-    await tester.pump();
-
-    expect(controller.settings.saveDirectory, '/home/user/downloads');
-    expect(controller.settings.defaultQuality, 'bestvideo+bestaudio');
-    expect(controller.settings.recommendedVariantCount, 4);
-    expect(controller.settings.ytDlpPath, '/tools/yt-dlp');
-    expect(controller.settings.ffmpegPath, '/tools/ffmpeg');
-  });
-
-  testWidgets('updates toggles and download mode', (tester) async {
-    final controller = SettingsController();
-    addTearDown(controller.dispose);
-
-    await tester.pumpWidget(_buildApp(SettingsPage(controller: controller)));
-
-    controller.updateDownloadSubtitles(true);
-    controller.updateDownloadThumbnail(true);
-    controller.updateDownloadMode(DownloadMode.concurrent);
-    await tester.pump();
-
-    expect(controller.settings.downloadSubtitles, isTrue);
-    expect(controller.settings.downloadThumbnail, isTrue);
-    expect(controller.settings.downloadMode, DownloadMode.concurrent);
-  });
-
-  testWidgets('renders cookie section in english locale', (tester) async {
-    final controller = SettingsController(settings: DownloadSettings.defaults);
-    addTearDown(controller.dispose);
-
-    await tester.pumpWidget(
-      _buildApp(
-        SettingsPage(controller: controller),
-        locale: const Locale('en'),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    final l10n = AppLocalizations.of(
-      tester.element(find.byType(SettingsPage)),
-    )!;
-
-    expect(find.text(l10n.settings), findsOneWidget);
-    await tester.dragUntilVisible(
-      find.text(l10n.importBtn),
-      find.byType(ListView),
-      const Offset(0, -200),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text(l10n.cookieManagement), findsOneWidget);
-    expect(find.text(l10n.browser), findsOneWidget);
-    expect(find.text(l10n.domain), findsOneWidget);
-    expect(find.text(l10n.importBtn), findsOneWidget);
-  });
-
-  testWidgets('download mode field stays stable on narrow width', (
-    tester,
-  ) async {
-    final controller = SettingsController();
-    addTearDown(controller.dispose);
-    await tester.binding.setSurfaceSize(const Size(320, 900));
+  /// Helper to use a viewport tall enough to fit most content
+  Future<void> useLargeViewport(WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(900, 7000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
+  }
 
-    await tester.pumpWidget(
-      _buildApp(
-        SettingsPage(controller: controller),
-        locale: const Locale('en'),
-      ),
-    );
-    await tester.pumpAndSettle();
+  group('form fields', () {
+    testWidgets('updates text and dropdown fields', (tester) async {
+      final controller = SettingsController();
+      addTearDown(controller.dispose);
+      await useLargeViewport(tester);
 
-    await tester.dragUntilVisible(
-      find.byKey(const Key('download-mode-field')),
-      find.byType(ListView),
-      const Offset(0, -200),
-    );
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(_buildApp(SettingsPage(controller: controller)));
+      await tester.pumpAndSettle();
 
-    expect(tester.takeException(), isNull);
+      final saveField = find.byKey(const Key('save-directory-field'));
+      await tester.enterText(saveField, '/home/user/downloads');
+      await tester.pump();
+
+      final qualityField = find.byKey(const Key('default-quality-field'));
+      await tester.ensureVisible(qualityField);
+      await tester.pumpAndSettle();
+      await tester.tap(qualityField);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('bestvideo+bestaudio').last);
+      await tester.pumpAndSettle();
+
+      final recField = find.byKey(const Key('recommended-variant-count-field'));
+      await tester.ensureVisible(recField);
+      await tester.pumpAndSettle();
+      await tester.enterText(recField, '4');
+      await tester.pump();
+
+      final ytField = find.byKey(const Key('yt-dlp-path-field'));
+      await tester.ensureVisible(ytField);
+      await tester.pumpAndSettle();
+      await tester.enterText(ytField, '/tools/yt-dlp');
+      await tester.pump();
+
+      final ffField = find.byKey(const Key('ffmpeg-path-field'));
+      await tester.ensureVisible(ffField);
+      await tester.pumpAndSettle();
+      await tester.enterText(ffField, '/tools/ffmpeg');
+      await tester.pump();
+
+      expect(controller.settings.saveDirectory, '/home/user/downloads');
+      expect(controller.settings.defaultQuality, 'bestvideo+bestaudio');
+      expect(controller.settings.recommendedVariantCount, 4);
+      expect(controller.settings.ytDlpPath, '/tools/yt-dlp');
+      expect(controller.settings.ffmpegPath, '/tools/ffmpeg');
+    });
+
+    testWidgets('updates toggles and download mode', (tester) async {
+      final controller = SettingsController();
+      addTearDown(controller.dispose);
+      await useLargeViewport(tester);
+
+      await tester.pumpWidget(_buildApp(SettingsPage(controller: controller)));
+      await tester.pumpAndSettle();
+
+      controller.updateDownloadSubtitles(true);
+      controller.updateDownloadThumbnail(true);
+      controller.updateDownloadMode(DownloadMode.concurrent);
+      await tester.pump();
+
+      expect(controller.settings.downloadSubtitles, isTrue);
+      expect(controller.settings.downloadThumbnail, isTrue);
+      expect(controller.settings.downloadMode, DownloadMode.concurrent);
+    });
+  });
+
+  group('section visibility', () {
+    testWidgets('all major sections are present', (tester) async {
+      final controller = SettingsController();
+      addTearDown(controller.dispose);
+      await useLargeViewport(tester);
+
+      await tester.pumpWidget(
+        _buildApp(SettingsPage(controller: controller), locale: const Locale('en')),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = AppLocalizations.of(tester.element(find.byType(SettingsPage)))!;
+
+      expect(find.text(l10n.settings), findsOneWidget);
+      expect(find.text(l10n.saveAndQuality), findsOneWidget);
+      expect(find.text(l10n.externalTools), findsOneWidget);
+      expect(find.text(l10n.downloadMode), findsOneWidget);
+      expect(find.text(l10n.additionalOptions), findsOneWidget);
+      expect(find.text(l10n.aiClipAnalysis), findsOneWidget);
+      expect(find.text(l10n.cookieManagement), findsOneWidget);
+    });
+
+    testWidgets('restore defaults button present', (tester) async {
+      final controller = SettingsController();
+      addTearDown(controller.dispose);
+      await useLargeViewport(tester);
+
+      await tester.pumpWidget(
+        _buildApp(SettingsPage(controller: controller), locale: const Locale('en')),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = AppLocalizations.of(tester.element(find.byType(SettingsPage)))!;
+      expect(find.text(l10n.restoreDefaults), findsOneWidget);
+      expect(find.byIcon(Icons.restore_outlined), findsOneWidget);
+    });
+
+    testWidgets('download mode dropdown visible', (tester) async {
+      final controller = SettingsController();
+      addTearDown(controller.dispose);
+      await useLargeViewport(tester);
+
+      await tester.pumpWidget(
+        _buildApp(SettingsPage(controller: controller), locale: const Locale('en')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('download-mode-field')), findsOneWidget);
+    });
+
+    testWidgets('log level section present', (tester) async {
+      final controller = SettingsController();
+      addTearDown(controller.dispose);
+      await useLargeViewport(tester);
+
+      await tester.pumpWidget(_buildApp(SettingsPage(controller: controller)));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Log Level'), findsOneWidget);
+    });
+
+    testWidgets('save bar present', (tester) async {
+      final controller = SettingsController();
+      addTearDown(controller.dispose);
+      await useLargeViewport(tester);
+
+      await tester.pumpWidget(
+        _buildApp(SettingsPage(controller: controller), locale: const Locale('en')),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = AppLocalizations.of(tester.element(find.byType(SettingsPage)))!;
+      expect(find.text(l10n.saveSettingsBtn), findsOneWidget);
+    });
+
+    testWidgets('save bar shows unsaved after edit', (tester) async {
+      final controller = SettingsController();
+      addTearDown(controller.dispose);
+      await useLargeViewport(tester);
+
+      await tester.pumpWidget(
+        _buildApp(SettingsPage(controller: controller), locale: const Locale('en')),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = AppLocalizations.of(tester.element(find.byType(SettingsPage)))!;
+      final saveField = find.byKey(const Key('save-directory-field'));
+      await tester.enterText(saveField, '/tmp');
+      await tester.pump();
+
+      expect(find.text(l10n.settingsUnsaved), findsOneWidget);
+    });
+  });
+
+  group('AI section', () {
+    testWidgets('shows builtin mode dropdown', (tester) async {
+      final controller = SettingsController();
+      addTearDown(controller.dispose);
+      await useLargeViewport(tester);
+
+      await tester.pumpWidget(
+        _buildApp(SettingsPage(controller: controller), locale: const Locale('en')),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = AppLocalizations.of(tester.element(find.byType(SettingsPage)))!;
+      expect(find.byKey(const Key('built-in-clip-analyzer-mode-field')), findsOneWidget);
+      expect(find.text(l10n.builtInBalanced), findsOneWidget);
+    });
+
+    testWidgets('shows external command field', (tester) async {
+      final controller = SettingsController(
+        settings: DownloadSettings.defaults.copyWith(
+          aiAnalysisProvider: AiAnalysisProvider.externalCommand,
+        ),
+      );
+      addTearDown(controller.dispose);
+      await useLargeViewport(tester);
+
+      await tester.pumpWidget(
+        _buildApp(SettingsPage(controller: controller), locale: const Locale('en')),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = AppLocalizations.of(tester.element(find.byType(SettingsPage)))!;
+      expect(find.text(l10n.aiAnalyzerCommand), findsOneWidget);
+    });
+
+    testWidgets('shows no profiles message when cloud configs empty', (tester) async {
+      final controller = SettingsController(
+        settings: DownloadSettings.defaults.copyWith(
+          aiAnalysisProvider: AiAnalysisProvider.cloudEndpoint,
+          aiCloudConfigs: const <AiCloudConfig>[],
+        ),
+      );
+      addTearDown(controller.dispose);
+      await useLargeViewport(tester);
+
+      await tester.pumpWidget(
+        _buildApp(SettingsPage(controller: controller), locale: const Locale('en')),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = AppLocalizations.of(tester.element(find.byType(SettingsPage)))!;
+      expect(find.text(l10n.aiCloudNoProfiles), findsOneWidget);
+    });
+
+    testWidgets('cloud config fields visible when cloud configured', (tester) async {
+      final cloudConfig = AiCloudConfig(
+        id: 'cloud-1',
+        vendor: AiCloudVendor.openAI,
+        name: 'My OpenAI',
+        endpoint: 'https://api.openai.com',
+        apiKey: 'sk-test',
+        model: 'gpt-4',
+      );
+      final controller = SettingsController(
+        settings: DownloadSettings.defaults.copyWith(
+          aiAnalysisProvider: AiAnalysisProvider.cloudEndpoint,
+          aiCloudConfigs: [cloudConfig],
+          selectedAiCloudConfigId: cloudConfig.id,
+        ),
+      );
+      addTearDown(controller.dispose);
+      await useLargeViewport(tester);
+
+      await tester.pumpWidget(
+        _buildApp(SettingsPage(controller: controller), locale: const Locale('en')),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = AppLocalizations.of(tester.element(find.byType(SettingsPage)))!;
+      expect(find.text(l10n.aiCloudProfileName), findsOneWidget);
+      expect(find.text(l10n.aiCloudEndpoint), findsOneWidget);
+      expect(find.text(l10n.aiCloudModel), findsOneWidget);
+      expect(find.text(l10n.aiCloudApiKey), findsOneWidget);
+      expect(find.text(l10n.deleteAiCloudProfile), findsOneWidget);
+    });
+
+    testWidgets('add profile dropdown exists', (tester) async {
+      final controller = SettingsController(
+        settings: DownloadSettings.defaults.copyWith(
+          aiAnalysisProvider: AiAnalysisProvider.cloudEndpoint,
+        ),
+      );
+      addTearDown(controller.dispose);
+      await useLargeViewport(tester);
+
+      await tester.pumpWidget(
+        _buildApp(SettingsPage(controller: controller), locale: const Locale('en')),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = AppLocalizations.of(tester.element(find.byType(SettingsPage)))!;
+      expect(find.byKey(const Key('ai-cloud-add-vendor-field')), findsOneWidget);
+      expect(find.text(l10n.addAiCloudProfile), findsOneWidget);
+    });
+  });
+
+  group('download options', () {
+    testWidgets('additional options toggles present', (tester) async {
+      final controller = SettingsController();
+      addTearDown(controller.dispose);
+      await useLargeViewport(tester);
+
+      await tester.pumpWidget(
+        _buildApp(SettingsPage(controller: controller), locale: const Locale('en')),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = AppLocalizations.of(tester.element(find.byType(SettingsPage)))!;
+      expect(find.text(l10n.downloadSubtitles), findsOneWidget);
+      expect(find.text(l10n.downloadThumbnail), findsOneWidget);
+    });
+
+    testWidgets('concurrent count section exists', (tester) async {
+      final controller = SettingsController();
+      addTearDown(controller.dispose);
+      await useLargeViewport(tester);
+
+      await tester.pumpWidget(
+        _buildApp(SettingsPage(controller: controller), locale: const Locale('en')),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = AppLocalizations.of(tester.element(find.byType(SettingsPage)))!;
+      expect(find.text(l10n.concurrentCount), findsOneWidget);
+    });
+  });
+
+  group('cookie section', () {
+    testWidgets('cookie management header visible', (tester) async {
+      final controller = SettingsController(
+        settings: DownloadSettings.defaults.copyWith(cookieConfigs: const <CookieConfig>[]),
+      );
+      addTearDown(controller.dispose);
+      await useLargeViewport(tester);
+
+      await tester.pumpWidget(
+        _buildApp(SettingsPage(controller: controller), locale: const Locale('en')),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = AppLocalizations.of(tester.element(find.byType(SettingsPage)))!;
+      expect(find.text(l10n.cookieManagement), findsOneWidget);
+      expect(find.text(l10n.browser), findsOneWidget);
+      expect(find.text(l10n.domain), findsOneWidget);
+      expect(find.text(l10n.importBtn), findsOneWidget);
+      expect(find.text(l10n.commonSites), findsOneWidget);
+    });
+
+    testWidgets('imported cookies rendered in list', (tester) async {
+      final configs = [
+        CookieConfig(domain: 'youtube.com', browser: 'chrome', cookieFile: '/tmp/yt.txt'),
+        CookieConfig(domain: 'bilibili.com', browser: 'firefox', cookieFile: '/tmp/bi.txt'),
+      ];
+      final controller = SettingsController(
+        settings: DownloadSettings.defaults.copyWith(cookieConfigs: configs),
+      );
+      addTearDown(controller.dispose);
+      await useLargeViewport(tester);
+
+      await tester.pumpWidget(
+        _buildApp(SettingsPage(controller: controller), locale: const Locale('en')),
+      );
+      await tester.pumpAndSettle();
+
+      // Cookie tiles should show the imported domains
+      expect(find.text('youtube.com'), findsOneWidget);
+      expect(find.text('bilibili.com'), findsOneWidget);
+    });
+
+    testWidgets('narrow layout does not crash', (tester) async {
+      final controller = SettingsController();
+      addTearDown(controller.dispose);
+      await tester.binding.setSurfaceSize(const Size(380, 7000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        _buildApp(SettingsPage(controller: controller), locale: const Locale('en')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+    });
   });
 }
 

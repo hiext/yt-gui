@@ -74,6 +74,32 @@
     }
   },
   "concurrentDisabledHint": "仅并发模式下生效",
+  "autoClipSection": "自动切片",
+  "autoClipSectionDesc": "AI 分析完成后自动切割片段",
+  "autoClipEnabled": "启用自动切割",
+  "autoClipMinConfidence": "最低置信度",
+  "autoClipMaxClips": "每视频最多片段",
+  "autoClipMaxDuration": "最大时长",
+  "autoClipStartOffset": "开始偏移 (ms)",
+  "autoClipEndOffset": "结束偏移 (ms)",
+  "cutClip": "切割",
+  "cutAllClips": "一键切割 ({count})",
+  "@cutAllClips": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "allClipsCut": "全部已切割",
+  "cuttingProgress": "切割中 {completed}/{total}",
+  "@cuttingProgress": {
+    "placeholders": {
+      "completed": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "reCut": "重新切割",
+  "clipCutComplete": "切割完成",
+  "clipCutFailed": "切割失败",
   "additionalOptions": "附加选项",
   "downloadSubtitles": "下载字幕",
   "downloadSubtitlesDesc": "启动 yt-dlp 时追加 --write-subs",

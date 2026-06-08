@@ -23,9 +23,13 @@ class FfmpegClipExecutor implements PostProcessExecutor {
 
   Future<String> _ensureExecutable(ResolvedEmbeddedTool tool) async {
     if (tool.isCustom) return tool.path;
-    if (File(tool.path).existsSync()) return tool.path;
+    // Always extract embedded tools from rootBundle — never trust
+    // the filesystem path, because CWD differs between dev and prod.
     final cached = _extractedPaths[tool.path];
-    if (cached != null) return cached;
+    if (cached != null) {
+      if (File(cached).existsSync()) return cached;
+      _extractedPaths.remove(tool.path);
+    }
 
     try {
       final data = await rootBundle.load(tool.path);

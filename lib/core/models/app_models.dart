@@ -9,6 +9,8 @@ enum AiAnalysisProvider { builtIn, externalCommand, cloudEndpoint }
 
 enum BuiltInClipAnalyzerMode { balanced, visualFocused, audioFocused }
 
+enum ClipRecordStatus { pending, cutting, completed, failed }
+
 enum AiCloudVendor {
   custom,
   openAI,
@@ -229,6 +231,7 @@ class DownloadSettings {
     this.aiCloudConfigs = const [],
     this.cookieConfigs = const [],
     this.defaultCookieBrowser,
+    this.autoClipConfig = AutoClipConfig.defaults,
   });
 
   static const defaults = DownloadSettings(
@@ -273,6 +276,7 @@ class DownloadSettings {
   final List<AiCloudConfig> aiCloudConfigs;
   final List<CookieConfig> cookieConfigs;
   final String? defaultCookieBrowser;
+  final AutoClipConfig autoClipConfig;
 
   AiCloudConfig? get selectedAiCloudConfig {
     AiCloudConfig? fallback;
@@ -321,6 +325,7 @@ class DownloadSettings {
     Object? aiCloudConfigs = _unchanged,
     Object? cookieConfigs = _unchanged,
     Object? defaultCookieBrowser = _unchanged,
+    AutoClipConfig? autoClipConfig,
   }) {
     return DownloadSettings(
       saveDirectory: saveDirectory ?? this.saveDirectory,
@@ -366,6 +371,7 @@ class DownloadSettings {
       defaultCookieBrowser: defaultCookieBrowser == _unchanged
           ? this.defaultCookieBrowser
           : defaultCookieBrowser as String?,
+      autoClipConfig: autoClipConfig ?? this.autoClipConfig,
     ).normalized();
   }
 
@@ -421,6 +427,7 @@ class DownloadSettings {
       aiCloudConfigs: normalizedAiCloudConfigs,
       cookieConfigs: cookieConfigs,
       defaultCookieBrowser: defaultCookieBrowser,
+      autoClipConfig: autoClipConfig,
     );
   }
 
@@ -468,6 +475,7 @@ class DownloadSettings {
     if (defaultCookieBrowser != null) {
       map['defaultCookieBrowser'] = defaultCookieBrowser!;
     }
+    map['autoClipConfig'] = autoClipConfig.toJson();
     return map;
   }
 
@@ -540,6 +548,11 @@ class DownloadSettings {
       selectedAiCloudConfigId: json['selectedAiCloudConfigId'] as String?,
       aiCloudConfigs: aiCloudConfigs,
       defaultCookieBrowser: json['defaultCookieBrowser'] as String?,
+      autoClipConfig: json['autoClipConfig'] is Map
+          ? AutoClipConfig.fromJson(
+              Map<String, Object?>.from(json['autoClipConfig'] as Map),
+            )
+          : AutoClipConfig.defaults,
     ).normalized();
   }
 
@@ -1206,6 +1219,202 @@ class PostProcessTask {
       outputPaths: outputs,
       clipSegments: segments,
       errorMessage: json['errorMessage'] as String?,
+    );
+  }
+}
+
+// ────────────────────────────────────────────────────────────
+// Auto-Clip
+// ────────────────────────────────────────────────────────────
+
+class AutoClipConfig {
+  const AutoClipConfig({
+    this.enabled = true,
+    this.minConfidence = 0.7,
+    this.maxClipsPerVideo = 5,
+    this.maxClipDurationSec = 60,
+    this.startOffsetMs = -500,
+    this.endOffsetMs = 500,
+  });
+
+  static const defaults = AutoClipConfig();
+
+  final bool enabled;
+  final double minConfidence;
+  final int maxClipsPerVideo;
+  final int maxClipDurationSec;
+  final int startOffsetMs;
+  final int endOffsetMs;
+
+  AutoClipConfig copyWith({
+    bool? enabled,
+    double? minConfidence,
+    int? maxClipsPerVideo,
+    int? maxClipDurationSec,
+    int? startOffsetMs,
+    int? endOffsetMs,
+  }) {
+    return AutoClipConfig(
+      enabled: enabled ?? this.enabled,
+      minConfidence: minConfidence ?? this.minConfidence,
+      maxClipsPerVideo: maxClipsPerVideo ?? this.maxClipsPerVideo,
+      maxClipDurationSec: maxClipDurationSec ?? this.maxClipDurationSec,
+      startOffsetMs: startOffsetMs ?? this.startOffsetMs,
+      endOffsetMs: endOffsetMs ?? this.endOffsetMs,
+    );
+  }
+
+  Map<String, Object> toJson() => {
+    'enabled': enabled,
+    'minConfidence': minConfidence,
+    'maxClipsPerVideo': maxClipsPerVideo,
+    'maxClipDurationSec': maxClipDurationSec,
+    'startOffsetMs': startOffsetMs,
+    'endOffsetMs': endOffsetMs,
+  };
+
+  factory AutoClipConfig.fromJson(Map<String, Object?> json) {
+    double? parseDouble(dynamic v) {
+      if (v is double) return v;
+      if (v is int) return v.toDouble();
+      if (v is String) return double.tryParse(v);
+      return null;
+    }
+
+    int? parseInt(dynamic v) {
+      if (v is int) return v;
+      if (v is double) return v.round();
+      if (v is String) return int.tryParse(v);
+      return null;
+    }
+
+    return AutoClipConfig(
+      enabled: json['enabled'] as bool? ?? defaults.enabled,
+      minConfidence:
+          parseDouble(json['minConfidence']) ?? defaults.minConfidence,
+      maxClipsPerVideo:
+          parseInt(json['maxClipsPerVideo']) ?? defaults.maxClipsPerVideo,
+      maxClipDurationSec:
+          parseInt(json['maxClipDurationSec']) ?? defaults.maxClipDurationSec,
+      startOffsetMs:
+          parseInt(json['startOffsetMs']) ?? defaults.startOffsetMs,
+      endOffsetMs:
+          parseInt(json['endOffsetMs']) ?? defaults.endOffsetMs,
+    );
+  }
+}
+
+class ClipRecord {
+  ClipRecord({
+    required this.id,
+    required this.sourceTaskId,
+    required this.sourcePath,
+    this.outputPath,
+    required this.title,
+    required this.confidence,
+    required this.startMs,
+    required this.endMs,
+    required this.durationMs,
+    this.status = ClipRecordStatus.pending,
+    this.progress = 0,
+    this.errorMessage,
+    DateTime? createdAt,
+    this.completedAt,
+  }) : createdAt = createdAt ?? DateTime.now();
+
+  final String id;
+  final String sourceTaskId;
+  final String sourcePath;
+  final String? outputPath;
+  final String title;
+  final double confidence;
+  final int startMs;
+  final int endMs;
+  final int durationMs;
+  final ClipRecordStatus status;
+  final int progress;
+  final String? errorMessage;
+  final DateTime createdAt;
+  final DateTime? completedAt;
+
+  ClipRecord copyWith({
+    String? id,
+    String? sourceTaskId,
+    String? sourcePath,
+    Object? outputPath = _unchanged,
+    String? title,
+    double? confidence,
+    int? startMs,
+    int? endMs,
+    int? durationMs,
+    ClipRecordStatus? status,
+    int? progress,
+    Object? errorMessage = _unchanged,
+    DateTime? completedAt,
+  }) {
+    return ClipRecord(
+      id: id ?? this.id,
+      sourceTaskId: sourceTaskId ?? this.sourceTaskId,
+      sourcePath: sourcePath ?? this.sourcePath,
+      outputPath:
+          outputPath == _unchanged ? this.outputPath : outputPath as String?,
+      title: title ?? this.title,
+      confidence: confidence ?? this.confidence,
+      startMs: startMs ?? this.startMs,
+      endMs: endMs ?? this.endMs,
+      durationMs: durationMs ?? this.durationMs,
+      status: status ?? this.status,
+      progress: progress ?? this.progress,
+      errorMessage: errorMessage == _unchanged
+          ? this.errorMessage
+          : errorMessage as String?,
+      completedAt: completedAt ?? this.completedAt,
+    );
+  }
+
+  Map<String, Object> toJson() => {
+    'id': id,
+    'sourceTaskId': sourceTaskId,
+    'sourcePath': sourcePath,
+    if (outputPath != null) 'outputPath': outputPath!,
+    'title': title,
+    'confidence': confidence,
+    'startMs': startMs,
+    'endMs': endMs,
+    'durationMs': durationMs,
+    'status': status.name,
+    'progress': progress,
+    if (errorMessage != null) 'errorMessage': errorMessage!,
+    'createdAt': createdAt.toIso8601String(),
+    if (completedAt != null) 'completedAt': completedAt!.toIso8601String(),
+  };
+
+  factory ClipRecord.fromJson(Map<String, Object?> json) {
+    final statusStr = json['status'] as String?;
+    return ClipRecord(
+      id: json['id'] as String? ?? '',
+      sourceTaskId: json['sourceTaskId'] as String? ?? '',
+      sourcePath: json['sourcePath'] as String? ?? '',
+      outputPath: json['outputPath'] as String?,
+      title: json['title'] as String? ?? '',
+      confidence: (json['confidence'] as num?)?.toDouble() ?? 0,
+      startMs: (json['startMs'] as num?)?.toInt() ?? 0,
+      endMs: (json['endMs'] as num?)?.toInt() ?? 0,
+      durationMs: (json['durationMs'] as num?)?.toInt() ?? 0,
+      status: statusStr != null
+          ? ClipRecordStatus.values.firstWhere(
+              (s) => s.name == statusStr,
+              orElse: () => ClipRecordStatus.pending,
+            )
+          : ClipRecordStatus.pending,
+      progress: (json['progress'] as num?)?.toInt() ?? 0,
+      errorMessage: json['errorMessage'] as String?,
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
+          : DateTime.now(),
+      completedAt: json['completedAt'] != null
+          ? DateTime.tryParse(json['completedAt'] as String)
+          : null,
     );
   }
 }
