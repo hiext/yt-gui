@@ -210,7 +210,7 @@ void main() {
 
     expect(
       args,
-      ['--dump-json', '--verbose', '--no-playlist', 'https://example.com/video'],
+      ['--dump-json', '--no-playlist', 'https://example.com/video'],
     );
   });
 
@@ -238,15 +238,6 @@ void main() {
     expect(
       args,
       containsAll(['--newline', '--continue', '--part', '--ffmpeg-location']),
-    );
-    expect(
-      args,
-      containsAll([
-        '--progress-template',
-        '__HIEYT_PROGRESS__:%(progress.status)s|'
-            '%(progress._percent_str)s|%(progress._speed_str)s|'
-            '%(progress._eta_str)s',
-      ]),
     );
     expect(
       args,

@@ -234,9 +234,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get importBtn => '导入';
 
   @override
-  String get importing => '导入中…';
-
-  @override
   String get commonSites => '常用网站';
 
   @override
@@ -771,4 +768,21 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get clipEndLater => '结束 +1秒';
+
+  @override
+  String get importing => '导入中…';
+
+  @override
+  String get saveSettingsBtn => '保存设置';
+
+  @override
+  String get settingsSaved => '设置已保存';
+
+  @override
+  String get settingsUnsaved => '有未保存的更改 — 点击保存';
+
+  @override
+  String settingsSavedAt(String hour, String minute) {
+    return '已于 $hour:$minute 保存';
+  }
 }

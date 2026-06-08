@@ -536,9 +536,6 @@ abstract class AppLocalizations {
   /// **'导入'**
   String get importBtn;
 
-  /// **'导入中...'**
-  String get importing;
-
   /// No description provided for @commonSites.
   ///
   /// In zh, this message translates to:
@@ -1492,6 +1489,36 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'结束 +1秒'**
   String get clipEndLater;
+
+  /// No description provided for @importing.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入中…'**
+  String get importing;
+
+  /// No description provided for @saveSettingsBtn.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存设置'**
+  String get saveSettingsBtn;
+
+  /// No description provided for @settingsSaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'设置已保存'**
+  String get settingsSaved;
+
+  /// No description provided for @settingsUnsaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'有未保存的更改 — 点击保存'**
+  String get settingsUnsaved;
+
+  /// No description provided for @settingsSavedAt.
+  ///
+  /// In zh, this message translates to:
+  /// **'已于 {hour}:{minute} 保存'**
+  String settingsSavedAt(String hour, String minute);
 }
 
 class _AppLocalizationsDelegate

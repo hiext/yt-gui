@@ -7,6 +7,7 @@ import '../../core/controllers/settings_controller.dart';
 import '../../core/models/app_models.dart';
 import '../../core/services/cookie_service.dart'
     show CookieService, CookieEntry, CookieImportResult;
+import '../../core/services/log_service.dart';
 import '../../shared/widgets/section_card.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -29,6 +30,8 @@ class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _aiCloudApiKeyCtrl;
   late final TextEditingController _aiCloudModelCtrl;
   AiCloudVendor _newAiCloudVendor = AiCloudVendor.openAI;
+  bool _saved = true;
+  DateTime? _lastSavedAt;
 
   @override
   void initState() {
@@ -76,12 +79,22 @@ class _SettingsPageState extends State<SettingsPage> {
     _updateCtrlIfChanged(_aiCloudEndpointCtrl, cloudConfig?.endpoint ?? '');
     _updateCtrlIfChanged(_aiCloudApiKeyCtrl, cloudConfig?.apiKey ?? '');
     _updateCtrlIfChanged(_aiCloudModelCtrl, cloudConfig?.model ?? '');
+    _markDirty();
   }
 
   void _updateCtrlIfChanged(TextEditingController ctrl, String value) {
     if (ctrl.text != value) {
       ctrl.text = value;
     }
+  }
+
+  static const _qualityPresets = [
+    'best', 'bestvideo+bestaudio', 'bestvideo', 'bestaudio',
+    'bv*+ba*', 'bv*+ba/b', 'worstvideo+worstaudio', 'worst',
+  ];
+
+  String _normalizeQualityValue(String value) {
+    return _qualityPresets.contains(value) ? value : 'best';
   }
 
   List<DropdownMenuItem<AiCloudVendor>> _aiCloudVendorItems(
@@ -185,15 +198,44 @@ class _SettingsPageState extends State<SettingsPage> {
                     onChanged: widget.controller.updateSaveDirectory,
                   ),
                   const SizedBox(height: 16),
-                  TextFormField(
+                  DropdownButtonFormField<String>(
                     key: const Key('default-quality-field'),
-                    controller: _qualityCtrl,
+                    initialValue: _normalizeQualityValue(
+                      settings.defaultQuality,
+                    ),
+                    isExpanded: true,
                     decoration: InputDecoration(
                       labelText: l10n.defaultQuality,
-                      helperText: l10n.defaultQualityHint,
                       border: const OutlineInputBorder(),
                     ),
-                    onChanged: widget.controller.updateDefaultQuality,
+                    items: const [
+                      DropdownMenuItem(value: 'best', child: Text('best (推荐)')),
+                      DropdownMenuItem(
+                        value: 'bestvideo+bestaudio',
+                        child: Text('bestvideo+bestaudio'),
+                      ),
+                      DropdownMenuItem(value: 'bestvideo', child: Text('bestvideo')),
+                      DropdownMenuItem(value: 'bestaudio', child: Text('bestaudio')),
+                      DropdownMenuItem(
+                        value: 'bv*+ba*',
+                        child: Text('bv*+ba* (最佳视频+音频)'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'bv*+ba/b',
+                        child: Text('bv*+ba/b'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'worstvideo+worstaudio',
+                        child: Text('worstvideo+worstaudio'),
+                      ),
+                      DropdownMenuItem(value: 'worst', child: Text('worst')),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) {
+                        widget.controller.updateDefaultQuality(v);
+                        _qualityCtrl.text = v;
+                      }
+                    },
                   ),
                   const SizedBox(height: 16),
                   SizedBox(
@@ -606,6 +648,34 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
             ),
             const SizedBox(height: 16),
+            // ── Log Level ──
+            SectionCard(
+              title: 'Log Level / 日志级别',
+              subtitle: 'Set the verbosity of debug logging.',
+              child: DropdownButtonFormField<LogLevel>(
+                initialValue: settings.logLevel,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Log Level',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: LogLevel.debug, child: Text('Debug')),
+                  DropdownMenuItem(value: LogLevel.info, child: Text('Info')),
+                  DropdownMenuItem(value: LogLevel.warning, child: Text('Warning')),
+                  DropdownMenuItem(value: LogLevel.error, child: Text('Error')),
+                ],
+                onChanged: (v) {
+                  if (v != null) {
+                    LogService.instance.setLevel(v);
+                    widget.controller.updateSettings(
+                      widget.controller.settings.copyWith(logLevel: v),
+                    );
+                  }
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
             _CookieSection(
               configs: settings.cookieConfigs,
               defaultBrowser: settings.defaultCookieBrowser,
@@ -613,9 +683,76 @@ class _SettingsPageState extends State<SettingsPage> {
               onRemove: (domain) => _removeCookie(domain),
               onReimport: (config) => _reimportCookie(config),
             ),
+            const SizedBox(height: 24),
+            // ── Save status bar ──
+            _buildSaveBar(l10n),
+            const SizedBox(height: 48),
           ],
         );
       },
+    );
+  }
+
+  void _markDirty() {
+    if (_saved) setState(() => _saved = false);
+  }
+
+  void _doSave() {
+    // Flush all text field values now — each onChanged already updates
+    // the controller immediately; this just provides confirmation.
+    widget.controller.updateSettings(widget.controller.settings);
+    setState(() {
+      _saved = true;
+      _lastSavedAt = DateTime.now();
+    });
+  }
+
+  String _saveStatusText(AppLocalizations l10n) {
+    if (_saved && _lastSavedAt != null) {
+      final h = _lastSavedAt!.hour.toString().padLeft(2, '0');
+      final m = _lastSavedAt!.minute.toString().padLeft(2, '0');
+      return l10n.settingsSavedAt(h, m);
+    }
+    if (_saved) return l10n.settingsSaved;
+    return l10n.settingsUnsaved;
+  }
+
+  Widget _buildSaveBar(AppLocalizations l10n) {
+    final saved = _saved;
+    return Card(
+      color: saved
+          ? Theme.of(context).colorScheme.surfaceContainerLow
+          : Theme.of(context).colorScheme.primaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Icon(
+              saved ? Icons.check_circle_outline : Icons.info_outline,
+              size: 20,
+              color: saved
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.onPrimaryContainer,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                _saveStatusText(l10n),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: saved
+                          ? Theme.of(context).colorScheme.onSurface
+                          : Theme.of(context).colorScheme.onPrimaryContainer,
+                    ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            FilledButton.tonal(
+              onPressed: saved ? null : _doSave,
+              child: Text(l10n.saveSettingsBtn),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -625,6 +762,7 @@ class _SettingsPageState extends State<SettingsPage> {
         disclaimerAccepted: widget.controller.settings.disclaimerAccepted,
       ),
     );
+    _markDirty();
   }
 
   Future<void> _importCookies(String browser, String domain) async {
@@ -685,6 +823,10 @@ class _SettingsPageState extends State<SettingsPage> {
     final settings = widget.controller.settings;
 
     if (!result.success) {
+      LogService.instance.error(
+        'Cookie import failed: $domain ($browser) — ${result.detail}',
+        'cookie',
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -711,6 +853,14 @@ class _SettingsPageState extends State<SettingsPage> {
       return;
     }
 
+    final fileExists = File(cookieFile).existsSync();
+    final fileSize = fileExists ? File(cookieFile).lengthSync() : 0;
+    LogService.instance.info(
+      'Cookie import OK: $domain ($browser) → $cookieFile '
+      '($fileSize bytes, exists=$fileExists)',
+      'cookie',
+    );
+
     final configs = List<CookieConfig>.from(settings.cookieConfigs)
       ..removeWhere((c) => c.domain == domain)
       ..add(
@@ -727,7 +877,7 @@ class _SettingsPageState extends State<SettingsPage> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(result.detail ?? l10n.cookieImportSuccess(domain)),
+          content: Text(l10n.cookieImportSuccess(domain)),
           duration: const Duration(seconds: 3),
         ),
       );

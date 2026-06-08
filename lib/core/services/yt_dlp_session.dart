@@ -34,12 +34,18 @@ class YtDlpSession {
       case YtDlpProgressEventType.info:
         break;
       case YtDlpProgressEventType.error:
-        status = DownloadStatus.failed;
+        // Don't immediately mark the task as failed — yt-dlp may output
+        // non-fatal ERROR lines during normal operation (e.g. fragment
+        // retries, format fallback). Accumulate the message and let the
+        // final exit code determine the outcome.
         errorMessage = event.message;
-        task = task.copyWith(
-          status: DownloadStatus.failed,
-          errorMessage: event.message,
-        );
+        if (status != DownloadStatus.downloading) {
+          status = DownloadStatus.failed;
+          task = task.copyWith(
+            status: DownloadStatus.failed,
+            errorMessage: event.message,
+          );
+        }
     }
   }
 

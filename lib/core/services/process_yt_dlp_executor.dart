@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/services.dart' show rootBundle;
 
 import '../../l10n/app_localizations.dart';
+import 'log_service.dart';
 import '../../l10n/app_localizations_current.dart';
 import '../models/app_models.dart';
 import 'embedded_tool_resolver.dart';
@@ -25,6 +26,8 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
   final Map<String, Process> _processes = {};
   final Set<String> _intentionalStops = {};
   final Map<String, String> _extractedPaths = {};
+  final Map<String, _DownloadRequest> _pendingRetries = {};
+  static const _maxRetries = 3;
 
   Future<String> _ensureExecutable(ResolvedEmbeddedTool tool) async {
     if (tool.isCustom) return tool.path;
@@ -40,14 +43,27 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       File(filePath).writeAsBytesSync(data.buffer.asUint8List());
       await Process.run('chmod', ['+x', filePath]);
       _extractedPaths[tool.path] = filePath;
+      LogService.instance.debug(
+        'Extracted ${tool.kind.name} to $filePath',
+        'executor',
+      );
       return filePath;
-    } catch (_) {
+    } catch (e) {
+      LogService.instance.warn(
+        'Failed to extract ${tool.kind.name}: $e',
+        'executor',
+      );
       if (tool.fallbackPath != null) {
+        LogService.instance.info(
+          'Using fallback ${tool.kind.name}: ${tool.fallbackPath}',
+          'executor',
+        );
         return tool.fallbackPath!;
       }
-      throw EmbeddedToolResolutionException(
-        'Missing ${tool.kind.baseExecutableName}. Install ${tool.kind.baseExecutableName} on PATH, add ${tool.path} to the app bundle, or set a custom path in Settings.',
-      );
+      final msg =
+          'Missing ${tool.kind.baseExecutableName}. Install ${tool.kind.baseExecutableName} on PATH, add ${tool.path} to the app bundle, or set a custom path in Settings.';
+      LogService.instance.error(msg, 'executor');
+      throw EmbeddedToolResolutionException(msg);
     }
   }
 
@@ -62,7 +78,16 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
         .normalized();
     final tools = _toolResolver.resolveBundle(settings: normalizedSettings);
     final ytDlpPath = await _ensureExecutable(tools.ytDlp);
+    LogService.instance.debug('inspect: yt-dlp=$ytDlpPath url=$url', 'executor');
     final cookieFile = _resolveCookieFile(url, normalizedSettings);
+    if (cookieFile != null) {
+      LogService.instance.debug('inspect: using cookie $cookieFile', 'executor');
+    } else {
+      LogService.instance.warn(
+        'inspect: no cookie found for ${url.host} (${normalizedSettings.cookieConfigs.length} configs loaded)',
+        'executor',
+      );
+    }
     final process = await _processRunner(
       ytDlpPath,
       buildInspectArguments(url, cookieFile: cookieFile),
@@ -92,11 +117,24 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       collectedLines: outputLines,
       onLog: onLog,
     );
-    final exitCode = await process.exitCode;
+    final exitCode = await process.exitCode
+        .timeout(const Duration(seconds: 30), onTimeout: () {
+      process.kill();
+      return -1;
+    });
     await Future.wait([stdoutFuture, stderrFuture]);
+
+    if (exitCode == -1) {
+      LogService.instance.error('inspect timed out after 30s', 'executor');
+      throw YtDlpExecutorException('Parse timed out after 30 seconds');
+    }
 
     if (exitCode != 0) {
       final message = session.errorMessage ?? l10n.ytDlpNonZeroExit;
+      LogService.instance.error(
+        'inspect failed: exit=$exitCode $message',
+        'executor',
+      );
       throw YtDlpExecutorException(message);
     }
 
@@ -104,6 +142,10 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       outputLines,
       l10n,
       recommendedVariantCount: normalizedSettings.recommendedVariantCount,
+    );
+    LogService.instance.info(
+      'inspect: found ${variants.length} variants',
+      'executor',
     );
     return variants.isEmpty
         ? [
@@ -127,6 +169,10 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     final tools = _toolResolver.resolveBundle(settings: settings);
     final ytDlpPath = await _ensureExecutable(tools.ytDlp);
     final ffmpegPath = await _ensureExecutable(tools.ffmpeg);
+    LogService.instance.debug(
+      'startDownload: yt-dlp=$ytDlpPath ffmpeg=$ffmpegPath',
+      'executor',
+    );
     final process = await _processRunner(
       ytDlpPath,
       buildDownloadArguments(
@@ -150,7 +196,19 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     _intentionalStops.remove(task.id);
     _sessions[task.id] = session;
     _processes[task.id] = process;
+    final prevAttempts = _pendingRetries[task.id]?.attempts ?? 0;
+    _pendingRetries[task.id] = _DownloadRequest(
+      url: url,
+      variant: variant,
+      settings: settings,
+      onTaskChanged: onTaskChanged,
+      attempts: prevAttempts,
+    );
 
+    LogService.instance.info(
+      'Starting download: $taskId (attempt ${_pendingRetries[task.id]!.attempts + 1}/$_maxRetries)',
+      'executor',
+    );
     unawaited(_streamProcess(process, session, onTaskChanged));
   }
 
@@ -187,6 +245,7 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
 
     _intentionalStops.add(taskId);
     session.status = DownloadStatus.cancelled;
+    _pendingRetries.remove(taskId);
     process?.kill(ProcessSignal.sigterm);
   }
 
@@ -203,11 +262,32 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
   static List<String> buildInspectArguments(Uri url, {String? cookieFile}) {
     return [
       '--dump-json',
-      '--verbose',
       '--no-playlist',
+      ..._antiBotHeaders(url),
       if (cookieFile != null) ...['--cookies', cookieFile],
       url.toString(),
     ];
+  }
+
+  /// Sites that require additional HTTP headers to bypass anti-bot protection.
+  static List<String> _antiBotHeaders(Uri url) {
+    final host = url.host;
+    if (host.contains('bilibili.com') || host.contains('bilibili.tv')) {
+      return [
+        '--add-header', 'Referer:https://www.bilibili.com',
+        '--add-header', 'Origin:https://www.bilibili.com',
+        '--add-header',
+          'User-Agent:Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
+              '(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+        '--add-header', 'Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        '--add-header', 'Accept-Language:zh-CN,zh;q=0.9,en;q=0.8',
+        '--add-header', 'Accept-Encoding:gzip, deflate, br',
+        '--add-header', 'Sec-Fetch-Site:none',
+        '--add-header', 'Sec-Fetch-Mode:navigate',
+        '--add-header', 'Sec-Fetch-Dest:document',
+      ];
+    }
+    return const [];
   }
 
   static List<String> buildDownloadArguments({
@@ -223,12 +303,9 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       '--part',
       '--ffmpeg-location',
       ffmpegPath,
-      '--progress-template',
-      '${YtDlpProgressParser.progressPrefix}'
-          '%(progress.status)s|%(progress._percent_str)s|'
-          '%(progress._speed_str)s|%(progress._eta_str)s',
+      ..._antiBotHeaders(url),
       '--print',
-      'after_move:$_filepathPrefix%(filepath)s',
+      'after_move:__HIEYT_FILEPATH__:%(filepath)s',
       if (settings.downloadSubtitles) '--write-subs',
       if (settings.downloadThumbnail) '--write-thumbnail',
       if (cookieFile != null) ...['--cookies', cookieFile],
@@ -278,15 +355,59 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
 
     if (exitCode == 0 && session.status != DownloadStatus.failed) {
       session.markCompleted();
+      _pendingRetries.remove(session.task.id);
+      LogService.instance.info(
+        'Download completed: ${session.task.id}, mediaPath: ${session.task.mediaPath}',
+        'executor',
+      );
       onTaskChanged?.call(session.task);
       return;
     }
 
     if (session.status != DownloadStatus.failed) {
+      // Auto-retry on failure (network flakiness, transient errors).
+      final retry = _pendingRetries[session.task.id];
+      if (retry != null && retry.attempts < _maxRetries - 1) {
+        final next = retry.attempts + 1;
+        _pendingRetries[session.task.id] = _DownloadRequest(
+          url: retry.url,
+          variant: retry.variant,
+          settings: retry.settings,
+          onTaskChanged: retry.onTaskChanged,
+          attempts: next,
+        );
+        LogService.instance.warn(
+          'Retrying ${session.task.id} (attempt ${next + 1}/$_maxRetries) '
+          'after exit=$exitCode',
+          'executor',
+        );
+        // Small delay before retry to let transient issues resolve.
+        await Future<void>.delayed(const Duration(seconds: 2));
+        if (_intentionalStops.contains(session.task.id)) return;
+        unawaited(startDownload(
+          taskId: session.task.id,
+          url: retry.url,
+          variant: retry.variant,
+          settings: retry.settings,
+          onTaskChanged: retry.onTaskChanged,
+        ));
+        return;
+      }
+
+      final detail = session.errorMessage;
+      final msg = detail?.isNotEmpty == true
+          ? detail!
+          : currentAppLocalizations().ytDlpNonZeroExit;
+      _pendingRetries.remove(session.task.id);
+      LogService.instance.error(
+        'Download failed after ${(retry?.attempts ?? 0) + 1} attempts: '
+        'exit=$exitCode ${session.task.id} — $msg',
+        'executor',
+      );
       session.handleEvent(
         YtDlpProgressEvent(
           type: YtDlpProgressEventType.error,
-          message: currentAppLocalizations().ytDlpNonZeroExit,
+          message: msg,
         ),
       );
       onTaskChanged?.call(session.task);
@@ -300,9 +421,18 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     DownloadTaskChanged? onTaskChanged,
     InspectLogSink? onLog,
   }) async {
+    var lastLoggedPercent = -1.0;
     await for (final line
         in stream
             .transform(SystemEncoding().decoder)
+            // Older yt-dlp versions don't support --newline and use \r
+            // (carriage return) to update progress on the same line.
+            // Expand \r to \n so LineSplitter sees individual updates.
+            .transform(StreamTransformer<String, String>.fromHandlers(
+              handleData: (data, sink) {
+                sink.add(data.replaceAll('\r', '\n'));
+              },
+            ))
             .transform(LineSplitter())) {
       collectedLines?.add(line);
       onLog?.call(line);
@@ -310,9 +440,21 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
         continue;
       }
       session.handleLine(line);
-      if (line.startsWith(_filepathPrefix)) {
-        final path = line.substring(_filepathPrefix.length);
-        session.task = session.task.copyWith(mediaPath: path);
+      final filepathMatch = _filepathRe.firstMatch(line);
+      if (filepathMatch != null) {
+        session.task = session.task.copyWith(
+          mediaPath: filepathMatch.namedGroup('path'),
+        );
+      }
+      // Log progress milestones (every ~20%)
+      final pct = session.task.progress;
+      if (pct - lastLoggedPercent >= 20) {
+        lastLoggedPercent = pct - (pct % 20);
+        LogService.instance.debug(
+          'Progress ${session.task.id}: ${pct.toStringAsFixed(0)}% '
+          'speed=${session.task.speed} eta=${session.task.eta}',
+          'executor',
+        );
       }
       onTaskChanged?.call(session.task);
     }
@@ -505,7 +647,25 @@ String _formatFileSize(int bytes) {
 typedef ProcessRunner =
     Future<Process> Function(String executable, List<String> arguments);
 
-const _filepathPrefix = '__HIEYT_FILEPATH__:';
+class _DownloadRequest {
+  const _DownloadRequest({
+    required this.url,
+    required this.variant,
+    required this.settings,
+    required this.onTaskChanged,
+    required this.attempts,
+  });
+
+  final Uri url;
+  final ResourceVariant variant;
+  final DownloadSettings settings;
+  final DownloadTaskChanged? onTaskChanged;
+  final int attempts;
+}
+
+/// Matches the after_move print output:
+///   __HIEYT_FILEPATH__:/path/to/video.mp4
+final _filepathRe = RegExp(r'^__HIEYT_FILEPATH__:(?<path>.+)$');
 
 class YtDlpExecutorException implements Exception {
   const YtDlpExecutorException(this.message);

@@ -165,10 +165,34 @@ class _HistoryTaskTile extends StatelessWidget {
             const SizedBox(height: 8),
             Text(_truncateSource(task.source), maxLines: 1, overflow: TextOverflow.ellipsis,
                 style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-            if (task.errorMessage != null) ...[
-              const SizedBox(height: 4),
-              Text(task.errorMessage!, maxLines: 2, overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.error)),
+            if (task.status == DownloadStatus.failed) ...[
+              const SizedBox(height: 6),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.error.withAlpha(15),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.error_outline, size: 14, color: theme.colorScheme.error),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        task.errorMessage?.isNotEmpty == true
+                            ? task.errorMessage!
+                            : l10n.downloadFailedFallback,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.error,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
             const SizedBox(height: 10),
             Row(mainAxisAlignment: MainAxisAlignment.end, children: [

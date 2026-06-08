@@ -19,7 +19,9 @@ import '../features/help/help_page.dart';
 import '../features/history/history_page.dart';
 import '../features/home/home_page.dart';
 import '../features/settings/settings_page.dart';
+import '../shared/widgets/debug_log_overlay.dart';
 import '../shared/widgets/section_card.dart';
+import '../core/services/log_service.dart';
 
 enum AppSection { home, downloads, clips, history, settings, help }
 
@@ -39,6 +41,8 @@ class _AppShellState extends State<AppShell> {
   late final DownloadController _downloadController;
   late final PostProcessController _postProcessController;
   bool _startupDisclaimerHandled = false;
+  bool _debugLogVisible = false;
+  final _debugTapTimes = <DateTime>[];
 
   @override
   void initState() {
@@ -53,6 +57,7 @@ class _AppShellState extends State<AppShell> {
       unawaited(_loadCookieConfigs());
     }
     _settingsController.addListener(_handleSettingsChanged);
+    LogService.instance.info('AppShell init — settings loaded, disclaimer=${_settingsController.settings.disclaimerAccepted}', 'app');
     _postProcessController = PostProcessController(
       executor: AiClipAnalyzerExecutor(),
       settingsProvider: () => _settingsController.settings,
@@ -106,8 +111,11 @@ class _AppShellState extends State<AppShell> {
 
     final l10n = AppLocalizations.of(context)!;
 
-    return Scaffold(
-      body: SafeArea(
+    return DebugLogOverlay(
+      visible: _debugLogVisible,
+      onClose: () => setState(() => _debugLogVisible = false),
+      child: Scaffold(
+        body: SafeArea(
         child: Row(
           children: [
             NavigationRail(
@@ -120,10 +128,13 @@ class _AppShellState extends State<AppShell> {
               labelType: NavigationRailLabelType.all,
               leading: Padding(
                 padding: const EdgeInsets.only(top: 16),
-                child: SectionCard(
-                  title: l10n.appTitle,
-                  subtitle: l10n.appSubtitle,
-                  child: const SizedBox(height: 1),
+                child: GestureDetector(
+                  onTap: _onBrandTap,
+                  child: SectionCard(
+                    title: l10n.appTitle,
+                    subtitle: l10n.appSubtitle,
+                    child: const SizedBox(height: 1),
+                  ),
                 ),
               ),
               destinations: [
@@ -166,6 +177,7 @@ class _AppShellState extends State<AppShell> {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -173,6 +185,25 @@ class _AppShellState extends State<AppShell> {
     setState(() {
       _section = section;
     });
+    LogService.instance.debug('Navigated to ${section.name}', 'nav');
+  }
+
+  void _onBrandTap() {
+    final now = DateTime.now();
+    _debugTapTimes.removeWhere(
+      (t) => now.difference(t) > const Duration(minutes: 1),
+    );
+    _debugTapTimes.add(now);
+    if (_debugTapTimes.length >= 3) {
+      _debugTapTimes.clear();
+      setState(() {
+        _debugLogVisible = !_debugLogVisible;
+      });
+      LogService.instance.info(
+        'Debug log panel ${_debugLogVisible ? "opened" : "closed"}',
+        'debug',
+      );
+    }
   }
 
   void _handleSettingsChanged() {

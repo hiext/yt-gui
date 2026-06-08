@@ -3,6 +3,8 @@ import 'dart:io';
 
 enum DownloadMode { serial, queue, concurrent }
 
+enum LogLevel { debug, info, warning, error }
+
 enum AiAnalysisProvider { builtIn, externalCommand, cloudEndpoint }
 
 enum BuiltInClipAnalyzerMode { balanced, visualFocused, audioFocused }
@@ -213,6 +215,7 @@ class DownloadSettings {
     required this.downloadSubtitles,
     required this.downloadThumbnail,
     required this.disclaimerAccepted,
+    this.logLevel = LogLevel.debug,
     this.recommendedVariantCount = 2,
     this.aiAnalysisProvider = AiAnalysisProvider.builtIn,
     this.builtInClipAnalyzerMode = BuiltInClipAnalyzerMode.balanced,
@@ -237,6 +240,7 @@ class DownloadSettings {
     downloadSubtitles: false,
     downloadThumbnail: false,
     disclaimerAccepted: false,
+    logLevel: LogLevel.debug,
   );
 
   static String defaultSaveDirectory() {
@@ -256,6 +260,7 @@ class DownloadSettings {
   final bool downloadSubtitles;
   final bool downloadThumbnail;
   final bool disclaimerAccepted;
+  final LogLevel logLevel;
   final AiAnalysisProvider aiAnalysisProvider;
   final BuiltInClipAnalyzerMode builtInClipAnalyzerMode;
   final String? ytDlpPath;
@@ -303,6 +308,7 @@ class DownloadSettings {
     bool? downloadSubtitles,
     bool? downloadThumbnail,
     bool? disclaimerAccepted,
+    LogLevel? logLevel,
     AiAnalysisProvider? aiAnalysisProvider,
     BuiltInClipAnalyzerMode? builtInClipAnalyzerMode,
     Object? ytDlpPath = _unchanged,
@@ -326,6 +332,7 @@ class DownloadSettings {
       downloadSubtitles: downloadSubtitles ?? this.downloadSubtitles,
       downloadThumbnail: downloadThumbnail ?? this.downloadThumbnail,
       disclaimerAccepted: disclaimerAccepted ?? this.disclaimerAccepted,
+      logLevel: logLevel ?? this.logLevel,
       aiAnalysisProvider: aiAnalysisProvider ?? this.aiAnalysisProvider,
       builtInClipAnalyzerMode:
           builtInClipAnalyzerMode ?? this.builtInClipAnalyzerMode,
@@ -432,6 +439,7 @@ class DownloadSettings {
       'downloadSubtitles': downloadSubtitles,
       'downloadThumbnail': downloadThumbnail,
       'disclaimerAccepted': disclaimerAccepted,
+      'logLevel': logLevel.name,
       'aiAnalysisProvider': aiAnalysisProvider.name,
       'builtInClipAnalyzerMode': builtInClipAnalyzerMode.name,
     };
@@ -518,6 +526,7 @@ class DownloadSettings {
           parseBool(json['downloadThumbnail']) ?? defaults.downloadThumbnail,
       disclaimerAccepted:
           parseBool(json['disclaimerAccepted']) ?? defaults.disclaimerAccepted,
+      logLevel: _parseLogLevel(json['logLevel']) ?? defaults.logLevel,
       aiAnalysisProvider: aiAnalysisProvider,
       builtInClipAnalyzerMode: _parseBuiltInClipAnalyzerMode(
         json['builtInClipAnalyzerMode'],
@@ -543,6 +552,18 @@ class DownloadSettings {
     } catch (_) {
       return value;
     }
+  }
+
+  static LogLevel? _parseLogLevel(dynamic v) {
+    if (v is LogLevel) return v;
+    if (v is String) {
+      try {
+        return LogLevel.values.byName(v);
+      } catch (_) {
+        return null;
+      }
+    }
+    return null;
   }
 
   static List<AiCloudConfig> _normalizeAiCloudConfigs(
