@@ -7,6 +7,8 @@ import '../../core/controllers/settings_controller.dart';
 import '../../core/models/app_models.dart';
 import '../../core/services/cookie_service.dart'
     show CookieService, CookieEntry, CookieImportResult;
+import '../../core/services/embedded_tool_manifest.dart';
+import '../../core/services/embedded_tool_resolver.dart';
 import '../../core/services/log_service.dart';
 import '../../shared/widgets/section_card.dart';
 
@@ -918,46 +920,14 @@ class _SettingsPageState extends State<SettingsPage> {
     _markDirty();
   }
 
-  String _platformToolDirectory() {
-    if (Platform.isMacOS) return 'macos';
-    if (Platform.isWindows) return 'windows';
-    return 'linux';
-  }
-
-  String _ytDlpExecutableName() {
-    return Platform.isWindows ? 'yt-dlp.exe' : 'yt-dlp';
-  }
-
-  List<String> _bundledYtDlpCandidates() {
-    final platformDir = _platformToolDirectory();
-    final executableName = _ytDlpExecutableName();
-    final assetPath = 'assets/bin/$platformDir/$executableName';
-    final exeDir = File(Platform.resolvedExecutable).parent.path;
-    final macContentsDir = exeDir.endsWith('${Platform.pathSeparator}MacOS')
-        ? Directory(exeDir).parent.path
-        : exeDir;
-
-    return [
-      assetPath,
-      '$exeDir/data/flutter_assets/$assetPath',
-      '$macContentsDir/Frameworks/App.framework/Versions/A/Resources/flutter_assets/$assetPath',
-      '$macContentsDir/Resources/flutter_assets/$assetPath',
-    ];
-  }
-
   String _resolveYtDlpPath(DownloadSettings settings) {
-    final customPath = settings.ytDlpPath;
-    if (customPath != null && File(customPath).existsSync()) {
-      return customPath;
-    }
-
-    for (final candidate in _bundledYtDlpCandidates()) {
-      if (File(candidate).existsSync()) {
-        return candidate;
-      }
-    }
-
-    return _ytDlpExecutableName();
+    return const EmbeddedToolResolver()
+        .resolveExecutable(
+          kind: EmbeddedToolKind.ytDlp,
+          settings: settings,
+          allowMissingCustomFallback: true,
+        )
+        .path;
   }
 
   Future<void> _importCookies(String browser, String domain) async {
