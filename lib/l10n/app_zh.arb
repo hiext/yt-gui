@@ -118,6 +118,17 @@
   "reimport": "重新导入",
   "viewDetails": "查看详情",
   "cookieImportFailed": "Cookie 导入失败（已尝试所有浏览器）",
+  "cookieImportTimedOut": "{browser}: Cookie 导入超过 {seconds} 秒，已停止。请确认浏览器未卡在钥匙串或权限弹窗。",
+  "@cookieImportTimedOut": {
+    "placeholders": {
+      "browser": {
+        "type": "String"
+      },
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "cookieImportSuccess": "已导入 {domain} 的 cookies",
   "@cookieImportSuccess": {
     "placeholders": {

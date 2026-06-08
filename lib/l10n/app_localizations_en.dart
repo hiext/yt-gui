@@ -313,6 +313,11 @@ class AppLocalizationsEn extends AppLocalizations {
       'Cookie import failed after trying all browsers';
 
   @override
+  String cookieImportTimedOut(String browser, int seconds) {
+    return '$browser: cookie import exceeded $seconds seconds and was stopped. Check whether the browser is waiting on a Keychain or permission prompt.';
+  }
+
+  @override
   String cookieImportSuccess(String domain) {
     return 'Imported cookies for $domain';
   }

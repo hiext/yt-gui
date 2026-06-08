@@ -12,6 +12,7 @@ File _createFakeYtDlp(
   String stderr = '',
   Map<String, String>? stderrByBrowser,
   bool createOutput = true,
+  int sleepSeconds = 0,
 }) {
   final script = File('${dir.path}/yt-dlp-fake');
 
@@ -40,6 +41,9 @@ File _createFakeYtDlp(
   buf.writeln(r'    next_is_cookie=1');
   buf.writeln(r'  fi');
   buf.writeln(r'done');
+  if (sleepSeconds > 0) {
+    buf.writeln('sleep $sleepSeconds');
+  }
   // Write the actual stderr (Dart interpolation here is intentional)
   if (stderrByBrowser == null) {
     buf.writeln("printf '%s\\n' ${_shellQuote(stderr)} >&2");
@@ -222,6 +226,31 @@ void main() {
       );
 
       expect(result.success, isFalse);
+    });
+
+    test('times out hanging browser cookie import', () async {
+      final dir = Directory.systemTemp.createTempSync('cookie-test-');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final outputFile = '${dir.path}/cookies.txt';
+
+      final fakeYtDlp = _createFakeYtDlp(
+        dir,
+        createOutput: false,
+        sleepSeconds: 1,
+      );
+
+      final result = await CookieService().importFromBrowser(
+        browser: 'chrome',
+        domain: 'youtube.com',
+        ytDlpPath: fakeYtDlp.path,
+        outputFile: outputFile,
+        localizations: l10n,
+        browserTimeout: const Duration(milliseconds: 30),
+      );
+
+      expect(result.success, isFalse);
+      expect(result.reason, 'all_failed');
+      expect(result.detail, contains('cookie import exceeded 1 seconds'));
     });
 
     test(

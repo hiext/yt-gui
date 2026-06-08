@@ -298,6 +298,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cookieImportFailed => 'Cookie 导入失败（已尝试所有浏览器）';
 
   @override
+  String cookieImportTimedOut(String browser, int seconds) {
+    return '$browser: Cookie 导入超过 $seconds 秒，已停止。请确认浏览器未卡在钥匙串或权限弹窗。';
+  }
+
+  @override
   String cookieImportSuccess(String domain) {
     return '已导入 $domain 的 cookies';
   }
