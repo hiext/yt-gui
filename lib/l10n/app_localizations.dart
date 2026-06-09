@@ -626,6 +626,24 @@ abstract class AppLocalizations {
   /// **'导入'**
   String get importBtn;
 
+  /// No description provided for @importCookieFile.
+  ///
+  /// In zh, this message translates to:
+  /// **'导入 cookies.txt'**
+  String get importCookieFile;
+
+  /// No description provided for @cookieFilePickerTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择 cookies.txt 文件'**
+  String get cookieFilePickerTitle;
+
+  /// No description provided for @cookieManualImportInvalid.
+  ///
+  /// In zh, this message translates to:
+  /// **'请选择 Netscape 格式的 cookies.txt 文件。可使用浏览器 Cookie 导出扩展生成后再导入。'**
+  String get cookieManualImportInvalid;
+
   /// No description provided for @commonSites.
   ///
   /// In zh, this message translates to:
@@ -659,7 +677,7 @@ abstract class AppLocalizations {
   /// No description provided for @cookieImportTimedOut.
   ///
   /// In zh, this message translates to:
-  /// **'{browser}: Cookie 导入超过 {seconds} 秒，已停止。请确认浏览器未卡在钥匙串或权限弹窗。'**
+  /// **'{browser}: Cookie 导入超过 {seconds} 秒，已停止。macOS 正式包可能正在等待钥匙串授权；请查看是否有系统权限弹窗，或改用“导入 cookies.txt”。'**
   String cookieImportTimedOut(String browser, int seconds);
 
   /// No description provided for @cookieImportSuccess.
