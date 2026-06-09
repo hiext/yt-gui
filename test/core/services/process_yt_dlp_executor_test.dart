@@ -497,6 +497,45 @@ void main() {
     expect(changes.any((task) => task.progress == 12.5), isTrue);
     expect(changes.any((task) => task.speed == '1.23MiB/s'), isTrue);
   });
+
+  test('reports progress while also printing final filepath', () async {
+    final process = _FakeProcess(exitCodeValue: 0);
+    final executor = ProcessYtDlpExecutor(
+      toolResolver: _resolver(),
+      processRunner: (_, _) async => process,
+    );
+    final changes = <DownloadTask>[];
+
+    await executor.startDownload(
+      taskId: 'task-1',
+      url: Uri.parse('https://www.youtube.com/watch?v=NCtc5lIV7pM'),
+      variant: const ResourceVariant(
+        label: '最佳品质（1080p 视频+音频合并）',
+        description: '适合大多数人',
+        isRecommended: true,
+        formatId: '399+251',
+      ),
+      settings: _settings(),
+      onTaskChanged: changes.add,
+    );
+
+    process.addStdout(
+      '__HIEYT_PROGRESS__:downloading| 18.2%|   1.16MiB/s|00:38',
+    );
+    process.addStdout(
+      '[download] download:__HIEYT_PROGRESS__:downloading| 71.5%| Unknown B/s|Unknown',
+    );
+    process.addStdout('__HIEYT_FILEPATH__:/downloads/NCtc5lIV7pM.webm');
+    await process.close();
+    await pumpEventQueue();
+
+    expect(
+      changes.map((task) => task.progress),
+      containsAll(<double>[18.2, 71.5, 100]),
+    );
+    expect(changes.last.status, DownloadStatus.completed);
+    expect(changes.last.mediaPath, '/downloads/NCtc5lIV7pM.webm');
+  });
 }
 
 DownloadSettings _settings({String? ytDlpPath, String? ffmpegPath}) {
