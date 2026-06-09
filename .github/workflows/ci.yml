@@ -53,9 +53,21 @@ jobs:
           path: test-output.log
 
   build-linux:
-    name: Build (Linux)
-    runs-on: ubuntu-latest
+    name: Build (Linux ${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
     needs: [analyze]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            flutter-arch: x64
+            deb-arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            flutter-arch: arm64
+            deb-arch: arm64
+            runner: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -63,22 +75,67 @@ jobs:
           channel: stable
       - run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq cmake ninja-build clang pkg-config libgtk-3-dev
+          sudo apt-get install -y -qq cmake ninja-build clang pkg-config libgtk-3-dev dpkg-dev
       - run: flutter pub get
-      - run: flutter build linux --release
+      - run: flutter build linux --release --target-platform linux-${{ matrix.flutter-arch }}
       - run: |
+          set -euo pipefail
+          APP_NAME="hiext-yt-gui"
+          BINARY_NAME="hiext_yt_gui"
+          VERSION="$(sed -n 's/^version: //p' pubspec.yaml | tr '+' '-')"
+          BUNDLE_DIR="build/linux/${{ matrix.flutter-arch }}/release/bundle"
+          DIST_NAME="${APP_NAME}-linux-${{ matrix.arch }}"
           mkdir -p dist
-          tar -C build/linux/x64/release -czf dist/hiext-yt-gui-linux-x64.tar.gz bundle
+          tar -C "$BUNDLE_DIR" -czf "dist/${DIST_NAME}.tar.gz" .
+
+          PACKAGE_ROOT="dist/deb-root"
+          rm -rf "$PACKAGE_ROOT"
+          mkdir -p "$PACKAGE_ROOT/DEBIAN" "$PACKAGE_ROOT/opt/$APP_NAME" "$PACKAGE_ROOT/usr/bin" "$PACKAGE_ROOT/usr/share/applications"
+          cp -a "$BUNDLE_DIR/." "$PACKAGE_ROOT/opt/$APP_NAME/"
+          ln -s "/opt/$APP_NAME/$BINARY_NAME" "$PACKAGE_ROOT/usr/bin/$APP_NAME"
+          cat > "$PACKAGE_ROOT/DEBIAN/control" << EOF
+          Package: $APP_NAME
+          Version: $VERSION
+          Section: utils
+          Priority: optional
+          Architecture: ${{ matrix.deb-arch }}
+          Depends: libgtk-3-0, libnotify4, libsqlite3-0
+          Maintainer: Hiext <support@hiext.com>
+          Description: yt-dlp visual desktop downloader
+           Hiext YT GUI is a desktop download manager powered by yt-dlp and ffmpeg.
+          EOF
+          cat > "$PACKAGE_ROOT/usr/share/applications/$APP_NAME.desktop" << EOF
+          [Desktop Entry]
+          Name=Hiext YT GUI
+          Comment=yt-dlp visual downloader
+          Exec=/opt/$APP_NAME/$BINARY_NAME
+          Icon=/opt/$APP_NAME/data/flutter_assets/assets/branding/hiext-yt-logo-mark.png
+          Type=Application
+          Categories=Utility;Video;
+          EOF
+          dpkg-deb --build --root-owner-group "$PACKAGE_ROOT" "dist/${DIST_NAME}.deb"
       - uses: actions/upload-artifact@v4
         with:
-          name: hiext-yt-gui-linux-x64
-          path: dist/hiext-yt-gui-linux-x64.tar.gz
+          name: hiext-yt-gui-linux-${{ matrix.arch }}
+          path: |
+            dist/hiext-yt-gui-linux-${{ matrix.arch }}.tar.gz
+            dist/hiext-yt-gui-linux-${{ matrix.arch }}.deb
           if-no-files-found: error
 
   build-macos:
-    name: Build (macOS)
-    runs-on: macos-latest
+    name: Build (macOS ${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
     needs: [analyze]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            label: apple-silicon
+            runner: macos-15
+          - arch: x64
+            label: intel
+            runner: macos-15-intel
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -88,17 +145,27 @@ jobs:
       - run: flutter build macos --release
       - run: |
           mkdir -p dist
-          ditto -c -k --keepParent build/macos/Build/Products/Release/hiext_yt_gui.app dist/hiext-yt-gui-macos.zip
+          ditto -c -k --keepParent build/macos/Build/Products/Release/hiext_yt_gui.app dist/hiext-yt-gui-macos-${{ matrix.arch }}.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: hiext-yt-gui-macos
-          path: dist/hiext-yt-gui-macos.zip
+          name: hiext-yt-gui-macos-${{ matrix.arch }}
+          path: dist/hiext-yt-gui-macos-${{ matrix.arch }}.zip
           if-no-files-found: error
 
   build-windows:
-    name: Build (Windows)
-    runs-on: windows-latest
+    name: Build (Windows ${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
     needs: [analyze]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            flutter-arch: x64
+            runner: windows-latest
+          - arch: arm64
+            flutter-arch: arm64
+            runner: windows-11-arm
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -109,11 +176,11 @@ jobs:
       - shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist | Out-Null
-          Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath dist/hiext-yt-gui-windows-x64.zip -Force
+          Compress-Archive -Path build/windows/${{ matrix.flutter-arch }}/runner/Release/* -DestinationPath dist/hiext-yt-gui-windows-${{ matrix.arch }}.zip -Force
       - uses: actions/upload-artifact@v4
         with:
-          name: hiext-yt-gui-windows-x64
-          path: dist/hiext-yt-gui-windows-x64.zip
+          name: hiext-yt-gui-windows-${{ matrix.arch }}
+          path: dist/hiext-yt-gui-windows-${{ matrix.arch }}.zip
           if-no-files-found: error
 
   publish-release:
