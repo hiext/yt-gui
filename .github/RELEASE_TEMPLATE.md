@@ -6,9 +6,14 @@
 
 ## 下载说明
 
-- macOS：
-- Windows：
-- Linux：
+- macOS Apple Silicon / M 系列：`hiext-yt-gui-macos-arm64.zip`
+- macOS Intel：`hiext-yt-gui-macos-x64.zip`
+- Windows x64：`hiext-yt-gui-windows-x64.zip`
+- Windows arm64：`hiext-yt-gui-windows-arm64.zip`
+- Linux x64：`hiext-yt-gui-linux-x64.tar.gz` 或 `hiext-yt-gui-linux-x64.deb`
+- Linux arm64：`hiext-yt-gui-linux-arm64.tar.gz` 或 `hiext-yt-gui-linux-arm64.deb`
+
+> Windows 32 位桌面包当前不提供；Flutter 桌面发布目标覆盖 Windows x64 / arm64。
 
 ## 内置工具
 
