@@ -15,6 +15,8 @@
 
 > Windows 32 位桌面包当前不提供；Flutter 桌面发布目标覆盖 Windows x64 / arm64。
 
+> macOS 正式发布包应已使用 Developer ID 签名并完成 Apple 公证。如果你下载的是未签名测试包，首次启动可能被 Gatekeeper 拦截；确认来源可信后，可在“系统设置 → 隐私与安全性”中选择“仍要打开”，或执行 `xattr -cr hiext_yt_gui.app` 移除下载隔离属性。
+
 ## 内置工具
 
 - yt-dlp：

@@ -92,14 +92,17 @@ yt-dlp 可视化桌面下载器，面向普通用户的图形化视频/音频下
 
    解压后得到 `hiext_yt_gui.app`。
 
-2. 由于应用未经过 Apple 公证，首次打开时需绕过 Gatekeeper：
+2. 如果下载的是未签名测试包，首次打开可能出现“Apple 无法验证是否包含恶意软件”的提示。确认来源可信后，可任选一种方式放行：
 
    ```bash
-   # 移除隔离属性
+   # 方式一：移除下载隔离属性
    xattr -cr hiext_yt_gui.app
 
-   # 或右键点击 .app → 按住 Option 键 → 选择"打开"
+   # 方式二：右键点击 .app → 选择"打开"
+   # 方式三：系统设置 → 隐私与安全性 → 安全性 → 仍要打开
    ```
+
+   > 正式发布包应使用 Developer ID 签名并完成 Apple 公证；已公证版本无需执行此步骤。
 
 3. 将 `hiext_yt_gui.app` 拖入 `/Applications` 文件夹即可。
 
@@ -282,6 +285,21 @@ tar -C build/linux/arm64/release/bundle -czf hiext-yt-gui-linux-arm64.tar.gz .
 ```bash
 # 创建 .dmg（需先安装 create-dmg）
 # create-dmg --volname "Hiext YT GUI" build/macos/Build/Products/Release/hiext_yt_gui.app
+```
+
+正式发布到 GitHub Release 前，macOS 包需要使用 Developer ID Application 证书签名并通过 Apple 公证。CI 会在 tag 构建时自动检测以下 Secrets，存在证书时执行 `tools/sign_and_notarize_macos.sh`：
+
+- `MACOS_CERTIFICATE_P12_BASE64`：Developer ID Application 证书 `.p12` 的 base64。
+- `MACOS_CERTIFICATE_PASSWORD`：导出 `.p12` 时设置的密码。
+- `MACOS_CODESIGN_IDENTITY`：例如 `Developer ID Application: Hiext (...)`。
+- `APP_STORE_CONNECT_API_KEY_BASE64`、`APP_STORE_CONNECT_API_KEY_ID`、`APP_STORE_CONNECT_API_KEY_ISSUER_ID`：推荐的 notarization API Key 配置。
+- 或使用 `APPLE_ID`、`APPLE_TEAM_ID`、`APPLE_APP_SPECIFIC_PASSWORD` 作为备用公证配置。
+
+本地验证签名与 Gatekeeper 状态：
+
+```bash
+codesign -dv --verbose=4 build/macos/Build/Products/Release/hiext_yt_gui.app
+spctl --assess --type execute --verbose=4 build/macos/Build/Products/Release/hiext_yt_gui.app
 ```
 
 ### Windows 打包建议
