@@ -29,6 +29,20 @@ void main() {
       expect(event.eta, isNull);
     });
 
+    test('parses custom progress template with output prefix noise', () {
+      const line =
+          '[download] download:__HIEYT_PROGRESS__:downloading| 31.9%|740.21KiB/s|00:04';
+
+      final event = YtDlpProgressParser.parse(line);
+
+      expect(event, isA<YtDlpProgressEvent>());
+      expect(event!.type, YtDlpProgressEventType.progress);
+      expect(event.stage, 'downloading');
+      expect(event.percent, closeTo(31.9, 0.01));
+      expect(event.speed, '740.21KiB/s');
+      expect(event.eta, '00:04');
+    });
+
     test('normalizes unknown custom progress fields', () {
       const line = '__HIEYT_PROGRESS__:downloading| 0.1%| Unknown B/s|Unknown';
 

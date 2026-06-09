@@ -283,6 +283,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get importBtn => '导入';
 
   @override
+  String get importCookieFile => '导入 cookies.txt';
+
+  @override
+  String get cookieFilePickerTitle => '选择 cookies.txt 文件';
+
+  @override
+  String get cookieManualImportInvalid =>
+      '请选择 Netscape 格式的 cookies.txt 文件。可使用浏览器 Cookie 导出扩展生成后再导入。';
+
+  @override
   String get commonSites => '常用网站';
 
   @override
@@ -299,7 +309,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String cookieImportTimedOut(String browser, int seconds) {
-    return '$browser: Cookie 导入超过 $seconds 秒，已停止。请确认浏览器未卡在钥匙串或权限弹窗。';
+    return '$browser: Cookie 导入超过 $seconds 秒，已停止。macOS 正式包可能正在等待钥匙串授权；请查看是否有系统权限弹窗，或改用“导入 cookies.txt”。';
   }
 
   @override

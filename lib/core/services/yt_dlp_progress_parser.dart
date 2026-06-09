@@ -21,6 +21,8 @@ class YtDlpProgressEvent {
 class YtDlpProgressParser {
   const YtDlpProgressParser._();
 
+  static const _templateMarker = '__HIEYT_PROGRESS__:';
+
   /// Matches yt-dlp default progress output:
   ///   [download]   5.2% of ~100.00MiB at  2.50MiB/s ETA 00:38
   ///   [download]   0.1% of  261.91MiB at  Unknown B/s ETA Unknown
@@ -76,8 +78,14 @@ class YtDlpProgressParser {
       );
     }
 
-    // 2. Custom template format (backward compat)
-    final templateMatch = _templateRe.firstMatch(trimmed);
+    // 2. Custom template format. yt-dlp may prepend log fragments around
+    // --progress-template output, so extract from the marker instead of
+    // requiring it at the beginning of the line.
+    final templateIndex = trimmed.indexOf(_templateMarker);
+    final templateLine = templateIndex >= 0
+        ? trimmed.substring(templateIndex)
+        : trimmed;
+    final templateMatch = _templateRe.firstMatch(templateLine);
     if (templateMatch != null) {
       return YtDlpProgressEvent(
         type: YtDlpProgressEventType.progress,

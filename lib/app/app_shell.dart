@@ -57,7 +57,11 @@ class _AppShellState extends State<AppShell> {
       unawaited(_loadCookieConfigs());
     }
     _settingsController.addListener(_handleSettingsChanged);
-    LogService.instance.info('AppShell init — settings loaded, disclaimer=${_settingsController.settings.disclaimerAccepted}', 'app');
+    _syncLogLevel();
+    LogService.instance.info(
+      'AppShell init — settings loaded, disclaimer=${_settingsController.settings.disclaimerAccepted}',
+      'app',
+    );
     _postProcessController = PostProcessController(
       executor: AiClipAnalyzerExecutor(),
       settingsProvider: () => _settingsController.settings,
@@ -116,67 +120,67 @@ class _AppShellState extends State<AppShell> {
       onClose: () => setState(() => _debugLogVisible = false),
       child: Scaffold(
         body: SafeArea(
-        child: Row(
-          children: [
-            NavigationRail(
-              selectedIndex: _section.index,
-              onDestinationSelected: (index) {
-                setState(() {
-                  _section = AppSection.values[index];
-                });
-              },
-              labelType: NavigationRailLabelType.all,
-              leading: Padding(
-                padding: const EdgeInsets.only(top: 16),
-                child: GestureDetector(
-                  onTap: _onBrandTap,
-                  child: SectionCard(
-                    title: l10n.appTitle,
-                    subtitle: l10n.appSubtitle,
-                    child: const SizedBox(height: 1),
+          child: Row(
+            children: [
+              NavigationRail(
+                selectedIndex: _section.index,
+                onDestinationSelected: (index) {
+                  setState(() {
+                    _section = AppSection.values[index];
+                  });
+                },
+                labelType: NavigationRailLabelType.all,
+                leading: Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: GestureDetector(
+                    onTap: _onBrandTap,
+                    child: SectionCard(
+                      title: l10n.appTitle,
+                      subtitle: l10n.appSubtitle,
+                      child: const SizedBox(height: 1),
+                    ),
                   ),
                 ),
+                destinations: [
+                  NavigationRailDestination(
+                    icon: const Icon(Icons.add_link_outlined),
+                    selectedIcon: const Icon(Icons.add_link),
+                    label: Text(l10n.newDownload),
+                  ),
+                  NavigationRailDestination(
+                    icon: const Icon(Icons.downloading_outlined),
+                    selectedIcon: const Icon(Icons.downloading),
+                    label: Text(l10n.downloading),
+                  ),
+                  NavigationRailDestination(
+                    icon: const Icon(Icons.auto_awesome_motion_outlined),
+                    selectedIcon: const Icon(Icons.auto_awesome_motion),
+                    label: Text(l10n.clips),
+                  ),
+                  NavigationRailDestination(
+                    icon: const Icon(Icons.history_outlined),
+                    selectedIcon: const Icon(Icons.history),
+                    label: Text(l10n.history),
+                  ),
+                  NavigationRailDestination(
+                    icon: const Icon(Icons.settings_outlined),
+                    selectedIcon: const Icon(Icons.settings),
+                    label: Text(l10n.settings),
+                  ),
+                  NavigationRailDestination(
+                    icon: const Icon(Icons.help_outline),
+                    selectedIcon: const Icon(Icons.help),
+                    label: Text(l10n.help),
+                  ),
+                ],
               ),
-              destinations: [
-                NavigationRailDestination(
-                  icon: const Icon(Icons.add_link_outlined),
-                  selectedIcon: const Icon(Icons.add_link),
-                  label: Text(l10n.newDownload),
-                ),
-                NavigationRailDestination(
-                  icon: const Icon(Icons.downloading_outlined),
-                  selectedIcon: const Icon(Icons.downloading),
-                  label: Text(l10n.downloading),
-                ),
-                NavigationRailDestination(
-                  icon: const Icon(Icons.auto_awesome_motion_outlined),
-                  selectedIcon: const Icon(Icons.auto_awesome_motion),
-                  label: Text(l10n.clips),
-                ),
-                NavigationRailDestination(
-                  icon: const Icon(Icons.history_outlined),
-                  selectedIcon: const Icon(Icons.history),
-                  label: Text(l10n.history),
-                ),
-                NavigationRailDestination(
-                  icon: const Icon(Icons.settings_outlined),
-                  selectedIcon: const Icon(Icons.settings),
-                  label: Text(l10n.settings),
-                ),
-                NavigationRailDestination(
-                  icon: const Icon(Icons.help_outline),
-                  selectedIcon: const Icon(Icons.help),
-                  label: Text(l10n.help),
-                ),
-              ],
-            ),
-            const VerticalDivider(width: 1),
-            Expanded(
-              child: IndexedStack(index: _section.index, children: pages),
-            ),
-          ],
+              const VerticalDivider(width: 1),
+              Expanded(
+                child: IndexedStack(index: _section.index, children: pages),
+              ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -207,6 +211,7 @@ class _AppShellState extends State<AppShell> {
   }
 
   void _handleSettingsChanged() {
+    _syncLogLevel();
     if (_startupDisclaimerHandled ||
         !_settingsController.hasLoaded ||
         _settingsController.settings.disclaimerAccepted ||
@@ -220,6 +225,12 @@ class _AppShellState extends State<AppShell> {
       }
       unawaited(_showStartupDisclaimerDialog());
     });
+  }
+
+  void _syncLogLevel() {
+    if (LogService.instance.level != _settingsController.settings.logLevel) {
+      LogService.instance.setLevel(_settingsController.settings.logLevel);
+    }
   }
 
   Future<void> _showStartupDisclaimerDialog() async {
