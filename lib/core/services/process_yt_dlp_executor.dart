@@ -290,16 +290,18 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       'startDownload: yt-dlp=$ytDlpPath ffmpeg=$ffmpegPath',
       'executor',
     );
-    final process = await _processRunner(
-      ytDlpPath,
-      buildDownloadArguments(
-        url: url,
-        variant: variant,
-        settings: settings,
-        ffmpegPath: ffmpegPath,
-        cookieFile: _resolveCookieFile(url, settings),
-      ),
+    final downloadArgs = buildDownloadArguments(
+      url: url,
+      variant: variant,
+      settings: settings,
+      ffmpegPath: ffmpegPath,
+      cookieFile: _resolveCookieFile(url, settings),
     );
+    LogService.instance.debug(
+      'startDownload args: ${_redactDownloadArgs(downloadArgs)}',
+      'executor',
+    );
+    final process = await _processRunner(ytDlpPath, downloadArgs);
 
     final task = DownloadTask(
       id: taskId,
@@ -424,6 +426,7 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
   }) {
     return [
       '--newline',
+      '--progress',
       '--continue',
       '--part',
       '--progress-template',
@@ -447,6 +450,19 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
           : settings.saveDirectory,
       url.toString(),
     ];
+  }
+
+  static String _redactDownloadArgs(List<String> args) {
+    final redacted = <String>[];
+    for (var i = 0; i < args.length; i += 1) {
+      final arg = args[i];
+      redacted.add(arg);
+      if (arg == '--cookies' && i + 1 < args.length) {
+        redacted.add('[cookie-file]');
+        i += 1;
+      }
+    }
+    return redacted.join(' ');
   }
 
   Future<void> _streamProcess(
@@ -580,11 +596,25 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       if (_intentionalStops.contains(session.task.id)) {
         continue;
       }
+      final previousProgress = session.task.progress;
       session.handleLine(line);
       final filepathMatch = _filepathRe.firstMatch(line);
       if (filepathMatch != null) {
         session.task = session.task.copyWith(
           mediaPath: filepathMatch.namedGroup('path'),
+        );
+      }
+      if (session.task.progress != previousProgress) {
+        LogService.instance.debug(
+          'Parsed progress ${session.task.id}: '
+              '${session.task.progress.toStringAsFixed(1)}% '
+              'speed=${session.task.speed} eta=${session.task.eta}',
+          'executor',
+        );
+      } else if (line.contains('__HIEYT_PROGRESS__')) {
+        LogService.instance.warn(
+          'Unparsed progress line ${session.task.id}: $line',
+          'executor',
         );
       }
       // Log progress milestones (every ~20%)

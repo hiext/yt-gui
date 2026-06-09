@@ -9,6 +9,7 @@ import 'database_service.dart';
 
 class CookieService {
   static const defaultBrowserImportTimeout = Duration(seconds: 20);
+  static const macosBrowserImportTimeout = Duration(seconds: 75);
 
   Future<List<CookieConfig>> loadConfigs() async {
     return DatabaseService().loadCookieConfigs();
@@ -32,6 +33,12 @@ class CookieService {
   ];
 
   static const _chromeBased = {'chrome', 'edge', 'brave', 'opera', 'chromium'};
+
+  static Duration defaultImportTimeoutForPlatform() {
+    return Platform.isMacOS
+        ? macosBrowserImportTimeout
+        : defaultBrowserImportTimeout;
+  }
 
   String? _findExtractScript() {
     // Check development paths (relative to project root)
@@ -146,9 +153,10 @@ class CookieService {
     required String ytDlpPath,
     required String outputFile,
     AppLocalizations? localizations,
-    Duration browserTimeout = defaultBrowserImportTimeout,
+    Duration? browserTimeout,
   }) async {
     final l10n = localizations ?? currentAppLocalizations();
+    final resolvedTimeout = browserTimeout ?? defaultImportTimeoutForPlatform();
     final file = File(outputFile);
     if (!file.parent.existsSync()) {
       file.parent.createSync(recursive: true);
@@ -182,15 +190,15 @@ class CookieService {
         outputFile: outputFile,
         testUrl: testUrl,
         environment: env,
-        timeout: browserTimeout,
+        timeout: resolvedTimeout,
       );
       final stderr = runResult.stderr;
 
       if (runResult.timedOut) {
         if (file.existsSync()) file.deleteSync();
-        final timeoutSeconds = browserTimeout.inSeconds < 1
+        final timeoutSeconds = resolvedTimeout.inSeconds < 1
             ? 1
-            : browserTimeout.inSeconds;
+            : resolvedTimeout.inSeconds;
         failures.add(l10n.cookieImportTimedOut(br, timeoutSeconds));
         continue;
       }
