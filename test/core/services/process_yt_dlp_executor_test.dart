@@ -231,7 +231,13 @@ void main() {
 
     expect(
       args,
-      containsAll(['--newline', '--continue', '--part', '--ffmpeg-location']),
+      containsAll([
+        '--newline',
+        '--progress',
+        '--continue',
+        '--part',
+        '--ffmpeg-location',
+      ]),
     );
     expect(
       args,

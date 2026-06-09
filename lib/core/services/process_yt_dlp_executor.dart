@@ -424,6 +424,7 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
   }) {
     return [
       '--newline',
+      '--progress',
       '--continue',
       '--part',
       '--progress-template',
