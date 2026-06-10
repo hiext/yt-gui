@@ -64,15 +64,18 @@ jobs:
             flutter-arch: x64
             deb-arch: amd64
             runner: ubuntu-24.04
+            flutter-channel: stable
           - arch: arm64
             flutter-arch: arm64
             deb-arch: arm64
             runner: ubuntu-24.04-arm
+            # GitHub ARM runners currently fail with flutter-action on stable.
+            flutter-channel: master
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          channel: ${{ matrix.flutter-channel }}
       - run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq cmake ninja-build clang pkg-config libgtk-3-dev dpkg-dev
@@ -178,14 +181,17 @@ jobs:
           - arch: x64
             flutter-arch: x64
             runner: windows-latest
+            flutter-channel: stable
           - arch: arm64
             flutter-arch: arm64
             runner: windows-11-arm
+            # GitHub ARM runners currently fail with flutter-action on stable.
+            flutter-channel: master
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          channel: ${{ matrix.flutter-channel }}
       - run: flutter pub get
       - run: flutter build windows --release
       - shell: pwsh
