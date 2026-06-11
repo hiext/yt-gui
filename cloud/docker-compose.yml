@@ -1,0 +1,16 @@
+services:
+  edge-cloud-clips:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: edge-cloud-clips
+    environment:
+      PORT: "8731"
+      DATA_DIR: /data
+      PAIRING_TOKEN: ${PAIRING_TOKEN:-change-me}
+      ACCESS_TOKEN: ${ACCESS_TOKEN:-}
+    ports:
+      - "${EDGE_CLOUD_CLIPS_PORT:-8731}:8731"
+    volumes:
+      - ./data:/data
+    restart: unless-stopped

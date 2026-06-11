@@ -790,6 +790,53 @@ class CookieConfig {
 
 const Object _unchanged = Object();
 
+DateTime? _parseDateTime(Object? value) {
+  if (value is DateTime) return value;
+  if (value is String) return DateTime.tryParse(value);
+  return null;
+}
+
+Map<String, Object?> _readObjectMap(Object? value) {
+  if (value is Map<String, Object?>) return value;
+  if (value is Map) return Map<String, Object?>.from(value);
+  return const <String, Object?>{};
+}
+
+List<String> _readStringList(Object? value) {
+  if (value is List) {
+    return value.map((item) => item.toString()).toList();
+  }
+  if (value is String) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return const <String>[];
+    try {
+      final decoded = jsonDecode(trimmed);
+      if (decoded is List) return _readStringList(decoded);
+    } catch (_) {
+      return trimmed.split(RegExp(r'\s+'));
+    }
+  }
+  return const <String>[];
+}
+
+List<double> _readDoubleList(Object? value) {
+  if (value is List) {
+    return value.whereType<num>().map((item) => item.toDouble()).toList();
+  }
+  return const <double>[];
+}
+
+T _enumByName<T extends Enum>(List<T> values, Object? value, T fallback) {
+  if (value is T) return value;
+  if (value is String) {
+    return values.firstWhere(
+      (item) => item.name == value,
+      orElse: () => fallback,
+    );
+  }
+  return fallback;
+}
+
 class DownloadTask {
   DownloadTask({
     required this.id,
@@ -1296,10 +1343,8 @@ class AutoClipConfig {
           parseInt(json['maxClipsPerVideo']) ?? defaults.maxClipsPerVideo,
       maxClipDurationSec:
           parseInt(json['maxClipDurationSec']) ?? defaults.maxClipDurationSec,
-      startOffsetMs:
-          parseInt(json['startOffsetMs']) ?? defaults.startOffsetMs,
-      endOffsetMs:
-          parseInt(json['endOffsetMs']) ?? defaults.endOffsetMs,
+      startOffsetMs: parseInt(json['startOffsetMs']) ?? defaults.startOffsetMs,
+      endOffsetMs: parseInt(json['endOffsetMs']) ?? defaults.endOffsetMs,
     );
   }
 }
@@ -1356,8 +1401,9 @@ class ClipRecord {
       id: id ?? this.id,
       sourceTaskId: sourceTaskId ?? this.sourceTaskId,
       sourcePath: sourcePath ?? this.sourcePath,
-      outputPath:
-          outputPath == _unchanged ? this.outputPath : outputPath as String?,
+      outputPath: outputPath == _unchanged
+          ? this.outputPath
+          : outputPath as String?,
       title: title ?? this.title,
       confidence: confidence ?? this.confidence,
       startMs: startMs ?? this.startMs,
@@ -1415,6 +1461,738 @@ class ClipRecord {
       completedAt: json['completedAt'] != null
           ? DateTime.tryParse(json['completedAt'] as String)
           : null,
+    );
+  }
+}
+
+// ────────────────────────────────────────────────────────────
+// Edge + Cloud Media Library
+// ────────────────────────────────────────────────────────────
+
+enum MediaAssetType { video, audio }
+
+enum MediaJobRuntime { local, cloud }
+
+enum MediaAnalysisStatus { queued, running, completed, failed, cancelled }
+
+enum ClipCandidateSource { local, cloud, user, legacy }
+
+enum ClipExportStatus { pending, cutting, completed, failed, cancelled }
+
+enum MediaVectorTargetType { media, transcript, frame, candidate, export }
+
+enum MediaVectorModality { text, image, audio, multimodal }
+
+enum CloudUploadPolicy { manifestOnly, selectedClips, originalOnConfirm }
+
+enum CloudSyncTaskType {
+  uploadManifest,
+  uploadClip,
+  uploadOriginal,
+  createClipJob,
+  pullResult,
+}
+
+enum CloudSyncStatus {
+  pending,
+  uploading,
+  queued,
+  running,
+  completed,
+  failed,
+  cancelled,
+}
+
+class MediaAsset {
+  MediaAsset({
+    required this.id,
+    required this.sourceTaskId,
+    required this.sourceUrl,
+    required this.title,
+    required this.mediaPath,
+    required this.mediaType,
+    required this.fileSha256,
+    required this.durationMs,
+    required this.fileSizeBytes,
+    this.author,
+    this.thumbnailPath,
+    Map<String, Object?> metadata = const {},
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) : metadata = Map.unmodifiable(metadata),
+       createdAt = createdAt ?? DateTime.now(),
+       updatedAt = updatedAt ?? createdAt ?? DateTime.now();
+
+  final String id;
+  final String sourceTaskId;
+  final String sourceUrl;
+  final String title;
+  final String? author;
+  final String mediaPath;
+  final MediaAssetType mediaType;
+  final String fileSha256;
+  final int durationMs;
+  final int fileSizeBytes;
+  final String? thumbnailPath;
+  final Map<String, Object?> metadata;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  MediaAsset copyWith({
+    String? id,
+    String? sourceTaskId,
+    String? sourceUrl,
+    String? title,
+    Object? author = _unchanged,
+    String? mediaPath,
+    MediaAssetType? mediaType,
+    String? fileSha256,
+    int? durationMs,
+    int? fileSizeBytes,
+    Object? thumbnailPath = _unchanged,
+    Map<String, Object?>? metadata,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return MediaAsset(
+      id: id ?? this.id,
+      sourceTaskId: sourceTaskId ?? this.sourceTaskId,
+      sourceUrl: sourceUrl ?? this.sourceUrl,
+      title: title ?? this.title,
+      author: author == _unchanged ? this.author : author as String?,
+      mediaPath: mediaPath ?? this.mediaPath,
+      mediaType: mediaType ?? this.mediaType,
+      fileSha256: fileSha256 ?? this.fileSha256,
+      durationMs: durationMs ?? this.durationMs,
+      fileSizeBytes: fileSizeBytes ?? this.fileSizeBytes,
+      thumbnailPath: thumbnailPath == _unchanged
+          ? this.thumbnailPath
+          : thumbnailPath as String?,
+      metadata: metadata ?? this.metadata,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'sourceTaskId': sourceTaskId,
+    'sourceUrl': sourceUrl,
+    'title': title,
+    if (author != null) 'author': author,
+    'mediaPath': mediaPath,
+    'mediaType': mediaType.name,
+    'fileSha256': fileSha256,
+    'durationMs': durationMs,
+    'fileSizeBytes': fileSizeBytes,
+    if (thumbnailPath != null) 'thumbnailPath': thumbnailPath,
+    'metadata': metadata,
+    'createdAt': createdAt.toIso8601String(),
+    'updatedAt': updatedAt.toIso8601String(),
+  };
+
+  factory MediaAsset.fromJson(Map<String, Object?> json) {
+    final createdAt = _parseDateTime(json['createdAt']) ?? DateTime.now();
+    return MediaAsset(
+      id: json['id'] as String? ?? '',
+      sourceTaskId: json['sourceTaskId'] as String? ?? '',
+      sourceUrl: json['sourceUrl'] as String? ?? '',
+      title: json['title'] as String? ?? '',
+      author: json['author'] as String?,
+      mediaPath: json['mediaPath'] as String? ?? '',
+      mediaType: _enumByName(
+        MediaAssetType.values,
+        json['mediaType'],
+        MediaAssetType.video,
+      ),
+      fileSha256: json['fileSha256'] as String? ?? '',
+      durationMs: (json['durationMs'] as num?)?.toInt() ?? 0,
+      fileSizeBytes: (json['fileSizeBytes'] as num?)?.toInt() ?? 0,
+      thumbnailPath: json['thumbnailPath'] as String?,
+      metadata: _readObjectMap(json['metadata']),
+      createdAt: createdAt,
+      updatedAt: _parseDateTime(json['updatedAt']) ?? createdAt,
+    );
+  }
+}
+
+class MediaAnalysisJob {
+  MediaAnalysisJob({
+    required this.id,
+    required this.mediaAssetId,
+    required this.runtime,
+    required this.status,
+    required this.progress,
+    List<String> stages = const [],
+    this.errorMessage,
+    this.manifestPath,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) : stages = List.unmodifiable(stages),
+       createdAt = createdAt ?? DateTime.now(),
+       updatedAt = updatedAt ?? createdAt ?? DateTime.now();
+
+  final String id;
+  final String mediaAssetId;
+  final MediaJobRuntime runtime;
+  final MediaAnalysisStatus status;
+  final double progress;
+  final List<String> stages;
+  final String? errorMessage;
+  final String? manifestPath;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  MediaAnalysisJob copyWith({
+    String? id,
+    String? mediaAssetId,
+    MediaJobRuntime? runtime,
+    MediaAnalysisStatus? status,
+    double? progress,
+    List<String>? stages,
+    Object? errorMessage = _unchanged,
+    Object? manifestPath = _unchanged,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return MediaAnalysisJob(
+      id: id ?? this.id,
+      mediaAssetId: mediaAssetId ?? this.mediaAssetId,
+      runtime: runtime ?? this.runtime,
+      status: status ?? this.status,
+      progress: progress ?? this.progress,
+      stages: stages ?? this.stages,
+      errorMessage: errorMessage == _unchanged
+          ? this.errorMessage
+          : errorMessage as String?,
+      manifestPath: manifestPath == _unchanged
+          ? this.manifestPath
+          : manifestPath as String?,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'mediaAssetId': mediaAssetId,
+    'runtime': runtime.name,
+    'status': status.name,
+    'progress': progress,
+    'stages': stages,
+    if (errorMessage != null) 'errorMessage': errorMessage,
+    if (manifestPath != null) 'manifestPath': manifestPath,
+    'createdAt': createdAt.toIso8601String(),
+    'updatedAt': updatedAt.toIso8601String(),
+  };
+
+  factory MediaAnalysisJob.fromJson(Map<String, Object?> json) {
+    final createdAt = _parseDateTime(json['createdAt']) ?? DateTime.now();
+    return MediaAnalysisJob(
+      id: json['id'] as String? ?? '',
+      mediaAssetId: json['mediaAssetId'] as String? ?? '',
+      runtime: _enumByName(
+        MediaJobRuntime.values,
+        json['runtime'],
+        MediaJobRuntime.local,
+      ),
+      status: _enumByName(
+        MediaAnalysisStatus.values,
+        json['status'],
+        MediaAnalysisStatus.queued,
+      ),
+      progress: (json['progress'] as num?)?.toDouble() ?? 0,
+      stages: _readStringList(json['stages']),
+      errorMessage: json['errorMessage'] as String?,
+      manifestPath: json['manifestPath'] as String?,
+      createdAt: createdAt,
+      updatedAt: _parseDateTime(json['updatedAt']) ?? createdAt,
+    );
+  }
+}
+
+class ClipCandidate {
+  ClipCandidate({
+    required this.id,
+    required this.mediaAssetId,
+    required this.startMs,
+    required this.endMs,
+    required this.title,
+    required this.summary,
+    List<String> tags = const [],
+    List<String> keywords = const [],
+    required this.score,
+    Map<String, double> scoreBreakdown = const {},
+    List<String> evidenceIds = const [],
+    required this.reason,
+    this.source = ClipCandidateSource.local,
+    DateTime? createdAt,
+  }) : tags = List.unmodifiable(tags),
+       keywords = List.unmodifiable(keywords),
+       scoreBreakdown = Map.unmodifiable(scoreBreakdown),
+       evidenceIds = List.unmodifiable(evidenceIds),
+       createdAt = createdAt ?? DateTime.now();
+
+  final String id;
+  final String mediaAssetId;
+  final int startMs;
+  final int endMs;
+  final String title;
+  final String summary;
+  final List<String> tags;
+  final List<String> keywords;
+  final double score;
+  final Map<String, double> scoreBreakdown;
+  final List<String> evidenceIds;
+  final String reason;
+  final ClipCandidateSource source;
+  final DateTime createdAt;
+
+  int get durationMs => endMs - startMs;
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'mediaAssetId': mediaAssetId,
+    'startMs': startMs,
+    'endMs': endMs,
+    'title': title,
+    'summary': summary,
+    'tags': tags,
+    'keywords': keywords,
+    'score': score,
+    'scoreBreakdown': scoreBreakdown,
+    'evidenceIds': evidenceIds,
+    'reason': reason,
+    'source': source.name,
+    'createdAt': createdAt.toIso8601String(),
+  };
+
+  factory ClipCandidate.fromJson(Map<String, Object?> json) {
+    final rawBreakdown = _readObjectMap(json['scoreBreakdown']);
+    return ClipCandidate(
+      id: json['id'] as String? ?? '',
+      mediaAssetId: json['mediaAssetId'] as String? ?? '',
+      startMs: (json['startMs'] as num?)?.toInt() ?? 0,
+      endMs: (json['endMs'] as num?)?.toInt() ?? 0,
+      title: json['title'] as String? ?? '',
+      summary: json['summary'] as String? ?? '',
+      tags: _readStringList(json['tags']),
+      keywords: _readStringList(json['keywords']),
+      score: (json['score'] as num?)?.toDouble() ?? 0,
+      scoreBreakdown: rawBreakdown.map(
+        (key, value) => MapEntry(key, (value as num?)?.toDouble() ?? 0),
+      ),
+      evidenceIds: _readStringList(json['evidenceIds']),
+      reason: json['reason'] as String? ?? '',
+      source: _enumByName(
+        ClipCandidateSource.values,
+        json['source'],
+        ClipCandidateSource.local,
+      ),
+      createdAt: _parseDateTime(json['createdAt']),
+    );
+  }
+}
+
+class ClipExportRecord {
+  ClipExportRecord({
+    required this.id,
+    required this.mediaAssetId,
+    this.candidateId,
+    required this.startMs,
+    required this.endMs,
+    required this.outputPath,
+    this.status = ClipExportStatus.pending,
+    this.progress = 0,
+    this.runtime = MediaJobRuntime.local,
+    this.cloudJobId,
+    this.errorMessage,
+    DateTime? createdAt,
+    this.completedAt,
+  }) : createdAt = createdAt ?? DateTime.now();
+
+  final String id;
+  final String mediaAssetId;
+  final String? candidateId;
+  final int startMs;
+  final int endMs;
+  final String outputPath;
+  final ClipExportStatus status;
+  final int progress;
+  final MediaJobRuntime runtime;
+  final String? cloudJobId;
+  final String? errorMessage;
+  final DateTime createdAt;
+  final DateTime? completedAt;
+
+  int get durationMs => endMs - startMs;
+
+  ClipExportRecord copyWith({
+    String? id,
+    String? mediaAssetId,
+    Object? candidateId = _unchanged,
+    int? startMs,
+    int? endMs,
+    String? outputPath,
+    ClipExportStatus? status,
+    int? progress,
+    MediaJobRuntime? runtime,
+    Object? cloudJobId = _unchanged,
+    Object? errorMessage = _unchanged,
+    DateTime? createdAt,
+    Object? completedAt = _unchanged,
+  }) {
+    return ClipExportRecord(
+      id: id ?? this.id,
+      mediaAssetId: mediaAssetId ?? this.mediaAssetId,
+      candidateId: candidateId == _unchanged
+          ? this.candidateId
+          : candidateId as String?,
+      startMs: startMs ?? this.startMs,
+      endMs: endMs ?? this.endMs,
+      outputPath: outputPath ?? this.outputPath,
+      status: status ?? this.status,
+      progress: progress ?? this.progress,
+      runtime: runtime ?? this.runtime,
+      cloudJobId: cloudJobId == _unchanged
+          ? this.cloudJobId
+          : cloudJobId as String?,
+      errorMessage: errorMessage == _unchanged
+          ? this.errorMessage
+          : errorMessage as String?,
+      createdAt: createdAt ?? this.createdAt,
+      completedAt: completedAt == _unchanged
+          ? this.completedAt
+          : completedAt as DateTime?,
+    );
+  }
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'mediaAssetId': mediaAssetId,
+    if (candidateId != null) 'candidateId': candidateId,
+    'startMs': startMs,
+    'endMs': endMs,
+    'outputPath': outputPath,
+    'status': status.name,
+    'progress': progress,
+    'runtime': runtime.name,
+    if (cloudJobId != null) 'cloudJobId': cloudJobId,
+    if (errorMessage != null) 'errorMessage': errorMessage,
+    'createdAt': createdAt.toIso8601String(),
+    if (completedAt != null) 'completedAt': completedAt!.toIso8601String(),
+  };
+
+  factory ClipExportRecord.fromJson(Map<String, Object?> json) {
+    return ClipExportRecord(
+      id: json['id'] as String? ?? '',
+      mediaAssetId: json['mediaAssetId'] as String? ?? '',
+      candidateId: json['candidateId'] as String?,
+      startMs: (json['startMs'] as num?)?.toInt() ?? 0,
+      endMs: (json['endMs'] as num?)?.toInt() ?? 0,
+      outputPath: json['outputPath'] as String? ?? '',
+      status: _enumByName(
+        ClipExportStatus.values,
+        json['status'],
+        ClipExportStatus.pending,
+      ),
+      progress: (json['progress'] as num?)?.toInt() ?? 0,
+      runtime: _enumByName(
+        MediaJobRuntime.values,
+        json['runtime'],
+        MediaJobRuntime.local,
+      ),
+      cloudJobId: json['cloudJobId'] as String?,
+      errorMessage: json['errorMessage'] as String?,
+      createdAt: _parseDateTime(json['createdAt']),
+      completedAt: _parseDateTime(json['completedAt']),
+    );
+  }
+}
+
+class MediaVectorRecord {
+  MediaVectorRecord({
+    required this.id,
+    required this.mediaAssetId,
+    required this.targetType,
+    required this.targetId,
+    this.startMs,
+    this.endMs,
+    required this.modality,
+    required this.model,
+    required this.dimension,
+    List<double> vector = const [],
+    Map<String, Object?> payload = const {},
+    DateTime? createdAt,
+  }) : vector = List.unmodifiable(vector),
+       payload = Map.unmodifiable(payload),
+       createdAt = createdAt ?? DateTime.now();
+
+  final String id;
+  final String mediaAssetId;
+  final MediaVectorTargetType targetType;
+  final String targetId;
+  final int? startMs;
+  final int? endMs;
+  final MediaVectorModality modality;
+  final String model;
+  final int dimension;
+  final List<double> vector;
+  final Map<String, Object?> payload;
+  final DateTime createdAt;
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'mediaAssetId': mediaAssetId,
+    'targetType': targetType.name,
+    'targetId': targetId,
+    if (startMs != null) 'startMs': startMs,
+    if (endMs != null) 'endMs': endMs,
+    'modality': modality.name,
+    'model': model,
+    'dimension': dimension,
+    'vector': vector,
+    'payload': payload,
+    'createdAt': createdAt.toIso8601String(),
+  };
+
+  factory MediaVectorRecord.fromJson(Map<String, Object?> json) {
+    return MediaVectorRecord(
+      id: json['id'] as String? ?? '',
+      mediaAssetId: json['mediaAssetId'] as String? ?? '',
+      targetType: _enumByName(
+        MediaVectorTargetType.values,
+        json['targetType'],
+        MediaVectorTargetType.media,
+      ),
+      targetId: json['targetId'] as String? ?? '',
+      startMs: (json['startMs'] as num?)?.toInt(),
+      endMs: (json['endMs'] as num?)?.toInt(),
+      modality: _enumByName(
+        MediaVectorModality.values,
+        json['modality'],
+        MediaVectorModality.text,
+      ),
+      model: json['model'] as String? ?? '',
+      dimension: (json['dimension'] as num?)?.toInt() ?? 0,
+      vector: _readDoubleList(json['vector']),
+      payload: _readObjectMap(json['payload']),
+      createdAt: _parseDateTime(json['createdAt']),
+    );
+  }
+}
+
+class CloudConnectionConfig {
+  CloudConnectionConfig({
+    required this.id,
+    required this.name,
+    required this.baseUrl,
+    required this.deviceName,
+    this.accessToken,
+    this.enabled = true,
+    this.uploadPolicy = CloudUploadPolicy.originalOnConfirm,
+    this.maxConcurrentSync = 1,
+    this.syncEnabled = false,
+    this.pairedAt,
+  });
+
+  final String id;
+  final String name;
+  final String baseUrl;
+  final String deviceName;
+  final String? accessToken;
+  final bool enabled;
+  final CloudUploadPolicy uploadPolicy;
+  final int maxConcurrentSync;
+  final bool syncEnabled;
+  final DateTime? pairedAt;
+
+  bool get isPaired => accessToken != null && accessToken!.trim().isNotEmpty;
+
+  CloudConnectionConfig normalized() {
+    return CloudConnectionConfig(
+      id: id.trim(),
+      name: name.trim().isEmpty ? 'Personal Cloud' : name.trim(),
+      baseUrl: baseUrl.trim().replaceFirst(RegExp(r'/+$'), ''),
+      deviceName: deviceName.trim(),
+      accessToken: accessToken?.trim().isEmpty == true
+          ? null
+          : accessToken?.trim(),
+      enabled: enabled,
+      uploadPolicy: uploadPolicy,
+      maxConcurrentSync: maxConcurrentSync.clamp(1, 8).toInt(),
+      syncEnabled: syncEnabled,
+      pairedAt: pairedAt,
+    );
+  }
+
+  CloudConnectionConfig copyWith({
+    String? id,
+    String? name,
+    String? baseUrl,
+    String? deviceName,
+    Object? accessToken = _unchanged,
+    bool? enabled,
+    CloudUploadPolicy? uploadPolicy,
+    int? maxConcurrentSync,
+    bool? syncEnabled,
+    Object? pairedAt = _unchanged,
+  }) {
+    return CloudConnectionConfig(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      baseUrl: baseUrl ?? this.baseUrl,
+      deviceName: deviceName ?? this.deviceName,
+      accessToken: accessToken == _unchanged
+          ? this.accessToken
+          : accessToken as String?,
+      enabled: enabled ?? this.enabled,
+      uploadPolicy: uploadPolicy ?? this.uploadPolicy,
+      maxConcurrentSync: maxConcurrentSync ?? this.maxConcurrentSync,
+      syncEnabled: syncEnabled ?? this.syncEnabled,
+      pairedAt: pairedAt == _unchanged ? this.pairedAt : pairedAt as DateTime?,
+    );
+  }
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'name': name,
+    'baseUrl': baseUrl,
+    'deviceName': deviceName,
+    if (accessToken != null) 'accessToken': accessToken,
+    'enabled': enabled,
+    'uploadPolicy': uploadPolicy.name,
+    'maxConcurrentSync': maxConcurrentSync,
+    'syncEnabled': syncEnabled,
+    if (pairedAt != null) 'pairedAt': pairedAt!.toIso8601String(),
+  };
+
+  factory CloudConnectionConfig.fromJson(Map<String, Object?> json) {
+    return CloudConnectionConfig(
+      id: json['id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      baseUrl: json['baseUrl'] as String? ?? '',
+      deviceName: json['deviceName'] as String? ?? '',
+      accessToken: json['accessToken'] as String?,
+      enabled: json['enabled'] as bool? ?? true,
+      uploadPolicy: _enumByName(
+        CloudUploadPolicy.values,
+        json['uploadPolicy'],
+        CloudUploadPolicy.originalOnConfirm,
+      ),
+      maxConcurrentSync: (json['maxConcurrentSync'] as num?)?.toInt() ?? 1,
+      syncEnabled: json['syncEnabled'] as bool? ?? false,
+      pairedAt: _parseDateTime(json['pairedAt']),
+    ).normalized();
+  }
+}
+
+class CloudSyncTask {
+  CloudSyncTask({
+    required this.id,
+    required this.mediaAssetId,
+    required this.type,
+    required this.status,
+    required this.idempotencyKey,
+    this.uploadedBytes = 0,
+    this.totalBytes = 0,
+    this.cloudMediaId,
+    this.cloudJobId,
+    this.errorMessage,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) : createdAt = createdAt ?? DateTime.now(),
+       updatedAt = updatedAt ?? createdAt ?? DateTime.now();
+
+  final String id;
+  final String mediaAssetId;
+  final CloudSyncTaskType type;
+  final CloudSyncStatus status;
+  final String idempotencyKey;
+  final int uploadedBytes;
+  final int totalBytes;
+  final String? cloudMediaId;
+  final String? cloudJobId;
+  final String? errorMessage;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  double get progress => totalBytes <= 0 ? 0 : uploadedBytes / totalBytes;
+
+  CloudSyncTask copyWith({
+    String? id,
+    String? mediaAssetId,
+    CloudSyncTaskType? type,
+    CloudSyncStatus? status,
+    String? idempotencyKey,
+    int? uploadedBytes,
+    int? totalBytes,
+    Object? cloudMediaId = _unchanged,
+    Object? cloudJobId = _unchanged,
+    Object? errorMessage = _unchanged,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return CloudSyncTask(
+      id: id ?? this.id,
+      mediaAssetId: mediaAssetId ?? this.mediaAssetId,
+      type: type ?? this.type,
+      status: status ?? this.status,
+      idempotencyKey: idempotencyKey ?? this.idempotencyKey,
+      uploadedBytes: uploadedBytes ?? this.uploadedBytes,
+      totalBytes: totalBytes ?? this.totalBytes,
+      cloudMediaId: cloudMediaId == _unchanged
+          ? this.cloudMediaId
+          : cloudMediaId as String?,
+      cloudJobId: cloudJobId == _unchanged
+          ? this.cloudJobId
+          : cloudJobId as String?,
+      errorMessage: errorMessage == _unchanged
+          ? this.errorMessage
+          : errorMessage as String?,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'mediaAssetId': mediaAssetId,
+    'type': type.name,
+    'status': status.name,
+    'idempotencyKey': idempotencyKey,
+    'uploadedBytes': uploadedBytes,
+    'totalBytes': totalBytes,
+    if (cloudMediaId != null) 'cloudMediaId': cloudMediaId,
+    if (cloudJobId != null) 'cloudJobId': cloudJobId,
+    if (errorMessage != null) 'errorMessage': errorMessage,
+    'createdAt': createdAt.toIso8601String(),
+    'updatedAt': updatedAt.toIso8601String(),
+  };
+
+  factory CloudSyncTask.fromJson(Map<String, Object?> json) {
+    final createdAt = _parseDateTime(json['createdAt']) ?? DateTime.now();
+    return CloudSyncTask(
+      id: json['id'] as String? ?? '',
+      mediaAssetId: json['mediaAssetId'] as String? ?? '',
+      type: _enumByName(
+        CloudSyncTaskType.values,
+        json['type'],
+        CloudSyncTaskType.uploadManifest,
+      ),
+      status: _enumByName(
+        CloudSyncStatus.values,
+        json['status'],
+        CloudSyncStatus.pending,
+      ),
+      idempotencyKey: json['idempotencyKey'] as String? ?? '',
+      uploadedBytes: (json['uploadedBytes'] as num?)?.toInt() ?? 0,
+      totalBytes: (json['totalBytes'] as num?)?.toInt() ?? 0,
+      cloudMediaId: json['cloudMediaId'] as String?,
+      cloudJobId: json['cloudJobId'] as String?,
+      errorMessage: json['errorMessage'] as String?,
+      createdAt: createdAt,
+      updatedAt: _parseDateTime(json['updatedAt']) ?? createdAt,
     );
   }
 }

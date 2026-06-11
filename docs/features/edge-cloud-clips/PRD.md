@@ -122,6 +122,7 @@ MVP 不做：
 
 ## 8. 下一步
 
-- 完成现有功能盘点，明确旧 `ClipSegment` 和 `AutoClipService` 的迁移边界。
-- 设计本地媒体资产数据库 migration。
-- 确认云端 API 和分块上传协议。
+- 完成云端 result manifest 到本地媒体库的自动导入。
+- 将云端 Worker 从同步触发升级为后台队列，支持运行中取消、重试和日志查看。
+- 把轻量 keyword hash 向量替换为可插拔真实 embedding provider。
+- 补齐 Docker 镜像 FFmpeg 依赖、部署冒烟脚本和个人云端 Web UI。

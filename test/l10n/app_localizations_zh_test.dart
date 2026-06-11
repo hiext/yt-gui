@@ -94,7 +94,6 @@ void main() {
 
     test('all English getters return non-empty strings', () {
       // This exercises ALL the generated code paths in app_localizations_en.dart
-      final type = l10n.runtimeType;
       // Verify key strings
       expect(l10n.appTitle, 'Hiext YT GUI');
       expect(l10n.parseLink, 'Parse Link');

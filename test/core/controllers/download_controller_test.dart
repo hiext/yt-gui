@@ -5,6 +5,7 @@ import 'package:hiext_yt_gui/l10n/app_localizations.dart';
 import 'package:hiext_yt_gui/l10n/app_localizations_current.dart';
 import 'package:hiext_yt_gui/core/models/app_models.dart';
 import 'package:hiext_yt_gui/core/services/download_scheduler.dart';
+import 'package:hiext_yt_gui/core/services/media_asset_indexer_service.dart';
 import 'package:hiext_yt_gui/core/services/post_process_executor.dart';
 import 'package:hiext_yt_gui/core/services/yt_dlp_executor.dart';
 
@@ -76,6 +77,31 @@ class _FakePostProcessExecutor implements PostProcessExecutor {
     PostProcessTaskChanged? onTaskChanged,
   }) async {
     started.add(task.id);
+  }
+}
+
+class _FakeMediaAssetIndexerService implements MediaAssetIndexerService {
+  final List<DownloadTask> indexed = [];
+  Object? failure;
+
+  @override
+  Future<MediaAsset?> indexCompletedDownload(DownloadTask task) async {
+    indexed.add(task);
+    final error = failure;
+    if (error != null) {
+      throw error;
+    }
+    return MediaAsset(
+      id: 'asset-${task.id}',
+      sourceTaskId: task.id,
+      sourceUrl: task.source,
+      title: task.title,
+      mediaPath: task.mediaPath ?? '',
+      mediaType: MediaAssetType.video,
+      fileSha256: 'c' * 64,
+      durationMs: 0,
+      fileSizeBytes: 0,
+    );
   }
 }
 
@@ -326,6 +352,104 @@ void main() {
       expect(postExecutor.started, ['task-1#ai-clip-analysis']);
     },
   );
+
+  test(
+    'completed download indexes a local media asset before post process',
+    () async {
+      final scheduler = DownloadScheduler(settingsProvider: _settings);
+      final postExecutor = _FakePostProcessExecutor();
+      final postController = PostProcessController(
+        executor: postExecutor,
+        settingsProvider: _settings,
+      );
+      final indexer = _FakeMediaAssetIndexerService();
+      final controller = DownloadController(
+        scheduler: scheduler,
+        executor: _FakeExecutor(),
+        settingsProvider: _settings,
+        postProcessController: postController,
+        mediaAssetIndexer: indexer,
+      );
+      addTearDown(controller.dispose);
+      addTearDown(postController.dispose);
+
+      scheduler.enqueue(
+        DownloadTask(
+          id: 'task-asset',
+          title: 'Task Asset',
+          source: 'https://example.com/asset',
+          status: DownloadStatus.ready,
+          progress: 0,
+          variants: const [],
+        ),
+      );
+      scheduler.startNext();
+
+      controller.handleTaskChanged(
+        DownloadTask(
+          id: 'task-asset',
+          title: 'Task Asset',
+          source: 'https://example.com/asset',
+          status: DownloadStatus.completed,
+          progress: 100,
+          variants: const [],
+          mediaPath: '/downloads/task-asset.mp4',
+        ),
+      );
+      await pumpEventQueue(times: 2);
+
+      expect(indexer.indexed.single.id, 'task-asset');
+      expect(indexer.indexed.single.mediaPath, '/downloads/task-asset.mp4');
+      expect(postExecutor.started, ['task-asset#ai-clip-analysis']);
+    },
+  );
+
+  test('media asset indexing failure does not block post process', () async {
+    final scheduler = DownloadScheduler(settingsProvider: _settings);
+    final postExecutor = _FakePostProcessExecutor();
+    final postController = PostProcessController(
+      executor: postExecutor,
+      settingsProvider: _settings,
+    );
+    final indexer = _FakeMediaAssetIndexerService()..failure = StateError('x');
+    final controller = DownloadController(
+      scheduler: scheduler,
+      executor: _FakeExecutor(),
+      settingsProvider: _settings,
+      postProcessController: postController,
+      mediaAssetIndexer: indexer,
+    );
+    addTearDown(controller.dispose);
+    addTearDown(postController.dispose);
+
+    scheduler.enqueue(
+      DownloadTask(
+        id: 'task-index-fail',
+        title: 'Task Index Fail',
+        source: 'https://example.com/index-fail',
+        status: DownloadStatus.ready,
+        progress: 0,
+        variants: const [],
+      ),
+    );
+    scheduler.startNext();
+
+    controller.handleTaskChanged(
+      DownloadTask(
+        id: 'task-index-fail',
+        title: 'Task Index Fail',
+        source: 'https://example.com/index-fail',
+        status: DownloadStatus.completed,
+        progress: 100,
+        variants: const [],
+        mediaPath: '/downloads/task-index-fail.mp4',
+      ),
+    );
+    await pumpEventQueue(times: 2);
+
+    expect(indexer.indexed, hasLength(1));
+    expect(postExecutor.started, ['task-index-fail#ai-clip-analysis']);
+  });
 }
 
 DownloadSettings _settings() {

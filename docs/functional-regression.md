@@ -8,7 +8,8 @@
 - **工具解析**：内置 `yt-dlp` / `ffmpeg`、自定义工具路径、平台二进制清单和缺失文件提示。
 - **Cookie 管理**：浏览器 Cookie 导入、站点配置持久化、过期提示和重新导入。
 - **免责声明**：首次启动提示、帮助页说明、README 和 Release 模板中的发布声明。
-- **AI 切片链路**：下载完成后创建后处理任务、内置候选切片、外部 Python sidecar、云端大模型配置档、结构化切片存储、搜索和时间微调。
+- **AI 切片链路**：下载完成后创建后处理任务和本地媒体资产、内置候选切片、外部 Python sidecar、云端大模型配置档、结构化切片存储、媒体资产库搜索、本地 FFmpeg 导出和时间微调。
+- **Edge + 个人云端切片**：本地 `MediaAsset` 数据层、本地分析/切片 Worker、个人云端配置、设备配对、分析包上传、原片分块上传、云端任务、结果 manifest 和自托管服务。
 - **平台标识与资源**：应用图标、包名、版权信息、品牌资源和平台构建产物。
 
 ## 自动化回归命令
@@ -23,13 +24,13 @@ CI 还会在 GitHub Actions 中执行 Linux 测试，以及 Linux、macOS、Wind
 
 ## 最近一次本地回归
 
-日期：2026-06-05
+日期：2026-06-11
 
-- `git diff --check`：通过。
-- `flutter analyze --no-fatal-infos`：通过。
-- `flutter test`：通过，`83 passed / 1 skipped`。
-- `flutter build macos --debug`：通过，产物为 `build/macos/Build/Products/Debug/hiext_yt_gui.app`。
-- 桌面冒烟：macOS debug 包可启动，首页与设置页可打开，bundle ID 为 `com.hiext.ytgui`。
+- `flutter analyze --no-fatal-infos`：通过，剩余 6 个 info 级 lint 和 1 个 Flutter 插件 Swift Package Manager 未来兼容提示。
+- Edge + 个人云端 focused tests：通过，覆盖媒体资产模型、repository、下载完成索引、本地分析、本地切片、云端 client、Clips 页和 Settings 页。
+- `node --test test/cloud/server.test.mjs`：通过，覆盖个人云端健康检查、配对、分析包、分块上传、SHA256 校验、Worker、result manifest 和切片文件下载。
+- `flutter test`：通过，`282 passed / 1 skipped`。
+- Docker Compose 云端启动冒烟：未完成。`docker compose version` 可用，但当前 Docker daemon 未启动，`docker compose up -d --build` 无法连接 `/Users/harmay/.docker/run/docker.sock`。
 
 ## 功能覆盖矩阵
 
@@ -41,6 +42,10 @@ CI 还会在 GitHub Actions 中执行 Linux 测试，以及 Linux、macOS、Wind
 | 设置持久化 | `test/core/services/settings_repository_test.dart` | 默认值、可选字段清理、多云配置档保存读取 |
 | AI 切片执行 | `test/core/services/ai_clip_analyzer_executor_test.dart` | 内置切片、sidecar manifest、云端请求、模型返回解析 |
 | 切片存储检索 | `test/core/services/clip_analysis_repository_test.dart` | 切片、检测、转写、搜索索引和微调时间 |
+| 媒体资产数据层 | `test/core/models/media_library_models_test.dart`、`test/core/services/media_asset_repository_test.dart` | `MediaAsset`、候选切片、导出记录、轻量向量、云端配置和旧数据兼容 |
+| 本地 Edge Worker | `test/core/services/local_analysis_service_test.dart`、`test/core/services/local_clip_worker_service_test.dart` | ffprobe 元数据、候选片段生成、FFmpeg 导出、失败记录和进度解析 |
+| 个人云端客户端 | `test/core/services/cloud_clip_client_test.dart` | 健康检查、配对、分析包上传、云端任务、分块上传、取消和 manifest 拉取 |
+| 个人云端服务 | `node --test test/cloud/server.test.mjs` | 自托管 API、鉴权、分块上传、SHA256 校验、Worker 执行、结果 manifest 和文件下载 |
 | 页面交互 | `test/features/*_test.dart`、`test/widget_test.dart` | 导航、设置页、下载页、历史页、集成流程 |
 
 ## 手工冒烟清单
@@ -52,7 +57,9 @@ CI 还会在 GitHub Actions 中执行 Linux 测试，以及 Linux、macOS、Wind
 5. 新增一个云端配置档，检查厂商、配置名、Endpoint、模型 ID、API Key 字段可见；不要输入真实生产 Key 做普通冒烟。
 6. 如需验证云端切片，使用测试 Key 或本地 mock endpoint，返回包含 `segments` 数组的 JSON。
 7. 下载一个有合法授权的测试资源，确认下载完成后进入历史记录，并在有媒体路径时创建 AI 切片任务。
-8. 打开「切片」页，确认可查看切片、搜索关键词、查看转写/标签，并可微调开始和结束时间。
+8. 打开「切片」页，确认可查看媒体资产、候选片段、导出记录，搜索标题/标签/转写/摘要/切片原因，并可按导出状态筛选。
+9. 在设置页填写个人云端服务地址、设备名和 Pairing Token，使用本地测试服务完成配对，确认 Access Token 写入且 Pairing Token 不持久化。
+10. 如需验证个人云端切片，使用 `cloud/server.mjs` 或 Docker Compose 启动本地服务，上传分析包和测试原片，确认云端任务执行后可拉取 result manifest。
 
 ## AI 切片验收要点
 

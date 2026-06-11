@@ -167,6 +167,7 @@ class CloudConnectionConfig {
   final bool enabled;
   final String uploadPolicy; // manifestOnly | selectedClips | originalOnConfirm
   final int maxConcurrentSync;
+  final bool syncEnabled;
   final DateTime? pairedAt;
 }
 ```
@@ -175,6 +176,7 @@ class CloudConnectionConfig {
 
 - Token 不写入日志。
 - 导出诊断信息时必须脱敏。
+- Pairing Token 只用于一次性配对，不持久化到 `CloudConnectionConfig`。
 
 ## 8. CloudSyncTask
 
@@ -236,8 +238,18 @@ class CloudSyncTask {
 - 旧 `clip_records` 可映射为 `ClipExportRecord`。
 - 旧数据首版只读展示，后续再提供显式迁移命令。
 
-## 12. 下一步
+## 12. 当前实现状态
 
-- 为每个模型补充 `toJson/fromJson` 字段规范。
-- 设计 SQLite migration 版本号。
-- 确认向量存储是否先采用 JSONL 外部文件。
+- SQLite version 已升级到 5，新增 `media_assets`、`media_analysis_jobs`、`clip_candidates`、`clip_export_records`、`media_vector_records`、`cloud_connection_configs`、`cloud_sync_tasks`。
+- `MediaAssetRepository` 已支持新表保存、读取、搜索，以及旧 `clip_segments` / `clip_records` 的只读兼容映射。
+- `AutoClipService` 已作为旧入口兼容层继续可用，导出结果会尽量镜像为新的 `ClipExportRecord`。
+- `CloudSyncTaskType` 当前实现包含 `uploadManifest`、`uploadClip`、`uploadOriginal`、`createClipJob`、`pullResult`。
+- `CloudConnectionConfig` 当前实现包含 `syncEnabled`，用于 Settings 页控制个人云端自动同步开关。
+- `LocalAnalysisService` 当前写入的 `MediaVectorRecord` 是 `local-keyword-hash-v1` 轻量向量，后续可替换为真实 embedding 模型。
+- `MediaAssetIndexerService` 当前从下载完成任务创建 `MediaAsset`，包括 `fileSha256`、文件大小、音视频类型和下载 variant metadata。
+
+## 13. 下一步
+
+- 补充云端 result manifest 到本地 `ClipExportRecord` 的自动导入规则。
+- 将 `local-keyword-hash-v1` 替换为真实 embedding provider 时，保留 `model`、`dimension` 和 `createdAt` 兼容字段。
+- 为同步冲突补充版本字段，避免云端结果静默覆盖本地人工微调。

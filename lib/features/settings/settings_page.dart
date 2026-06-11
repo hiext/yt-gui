@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -7,13 +8,20 @@ import '../../core/controllers/settings_controller.dart';
 import '../../core/models/app_models.dart';
 import '../../core/services/cookie_service.dart'
     show CookieService, CookieEntry, CookieImportResult;
+import '../../core/services/cloud_clip_client.dart';
 import '../../core/services/log_service.dart';
+import '../../core/services/media_asset_repository.dart';
 import '../../shared/widgets/section_card.dart';
 
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({super.key, required this.controller});
+  const SettingsPage({
+    super.key,
+    required this.controller,
+    this.mediaAssetRepository,
+  });
 
   final SettingsController controller;
+  final MediaAssetRepository? mediaAssetRepository;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -29,13 +37,24 @@ class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _aiCloudEndpointCtrl;
   late final TextEditingController _aiCloudApiKeyCtrl;
   late final TextEditingController _aiCloudModelCtrl;
+  late final TextEditingController _personalCloudUrlCtrl;
+  late final TextEditingController _personalCloudDeviceCtrl;
+  late final TextEditingController _personalCloudPairingTokenCtrl;
+  late final TextEditingController _personalCloudTokenCtrl;
+  late final MediaAssetRepository _mediaAssetRepository;
   AiCloudVendor _newAiCloudVendor = AiCloudVendor.openAI;
   bool _saved = true;
   DateTime? _lastSavedAt;
+  bool _personalCloudSyncEnabled = false;
+  bool _isPairingPersonalCloud = false;
+  CloudUploadPolicy _personalCloudUploadPolicy =
+      CloudUploadPolicy.originalOnConfirm;
 
   @override
   void initState() {
     super.initState();
+    _mediaAssetRepository =
+        widget.mediaAssetRepository ?? MediaAssetRepository();
     final s = widget.controller.settings;
     _saveDirCtrl = TextEditingController(text: s.saveDirectory);
     _qualityCtrl = TextEditingController(text: s.defaultQuality);
@@ -49,7 +68,12 @@ class _SettingsPageState extends State<SettingsPage> {
     );
     _aiCloudApiKeyCtrl = TextEditingController(text: cloudConfig?.apiKey ?? '');
     _aiCloudModelCtrl = TextEditingController(text: cloudConfig?.model ?? '');
+    _personalCloudUrlCtrl = TextEditingController();
+    _personalCloudDeviceCtrl = TextEditingController();
+    _personalCloudPairingTokenCtrl = TextEditingController();
+    _personalCloudTokenCtrl = TextEditingController();
     widget.controller.addListener(_syncFromSettings);
+    unawaited(_loadPersonalCloudConfig());
   }
 
   @override
@@ -64,6 +88,10 @@ class _SettingsPageState extends State<SettingsPage> {
     _aiCloudEndpointCtrl.dispose();
     _aiCloudApiKeyCtrl.dispose();
     _aiCloudModelCtrl.dispose();
+    _personalCloudUrlCtrl.dispose();
+    _personalCloudDeviceCtrl.dispose();
+    _personalCloudPairingTokenCtrl.dispose();
+    _personalCloudTokenCtrl.dispose();
     super.dispose();
   }
 
@@ -82,6 +110,19 @@ class _SettingsPageState extends State<SettingsPage> {
     _markDirty();
   }
 
+  Future<void> _loadPersonalCloudConfig() async {
+    final configs = await _mediaAssetRepository.loadCloudConnectionConfigs();
+    if (!mounted || configs.isEmpty) return;
+    final config = configs.first;
+    setState(() {
+      _personalCloudUploadPolicy = config.uploadPolicy;
+      _personalCloudSyncEnabled = config.syncEnabled;
+      _updateCtrlIfChanged(_personalCloudUrlCtrl, config.baseUrl);
+      _updateCtrlIfChanged(_personalCloudDeviceCtrl, config.deviceName);
+      _updateCtrlIfChanged(_personalCloudTokenCtrl, config.accessToken ?? '');
+    });
+  }
+
   void _updateCtrlIfChanged(TextEditingController ctrl, String value) {
     if (ctrl.text != value) {
       ctrl.text = value;
@@ -89,8 +130,14 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   static const _qualityPresets = [
-    'best', 'bestvideo+bestaudio', 'bestvideo', 'bestaudio',
-    'bv*+ba*', 'bv*+ba/b', 'worstvideo+worstaudio', 'worst',
+    'best',
+    'bestvideo+bestaudio',
+    'bestvideo',
+    'bestaudio',
+    'bv*+ba*',
+    'bv*+ba/b',
+    'worstvideo+worstaudio',
+    'worst',
   ];
 
   String _normalizeQualityValue(String value) {
@@ -104,7 +151,11 @@ class _SettingsPageState extends State<SettingsPage> {
       for (final vendor in AiCloudVendor.values)
         DropdownMenuItem(
           value: vendor,
-          child: Text(_aiCloudVendorLabel(l10n, vendor)),
+          child: Text(
+            _aiCloudVendorLabel(l10n, vendor),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
     ];
   }
@@ -133,568 +184,664 @@ class _SettingsPageState extends State<SettingsPage> {
         final cloudEnabled =
             settings.aiAnalysisProvider == AiAnalysisProvider.cloudEndpoint;
 
-        return ListView(
-          padding: const EdgeInsets.all(24),
-          children: [
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final compact = constraints.maxWidth < 420;
-                if (compact) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.settings,
-                        style: Theme.of(context).textTheme.headlineMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: TextButton.icon(
+        return LayoutBuilder(
+          builder: (context, viewportConstraints) {
+            final pagePadding = viewportConstraints.maxWidth < 420
+                ? 12.0
+                : 24.0;
+            return ListView(
+              padding: EdgeInsets.all(pagePadding),
+              children: [
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final compact = constraints.maxWidth < 420;
+                    if (compact) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.settings,
+                            style: Theme.of(context).textTheme.headlineMedium,
+                          ),
+                          const SizedBox(height: 8),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: TextButton(
+                              onPressed: _resetToDefaults,
+                              child: Text(
+                                l10n.restoreDefaults,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            l10n.settings,
+                            style: Theme.of(context).textTheme.headlineMedium,
+                          ),
+                        ),
+                        TextButton.icon(
                           onPressed: _resetToDefaults,
                           icon: const Icon(Icons.restore_outlined),
                           label: Text(l10n.restoreDefaults),
                         ),
-                      ),
-                    ],
-                  );
-                }
-                return Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        l10n.settings,
-                        style: Theme.of(context).textTheme.headlineMedium,
-                      ),
-                    ),
-                    TextButton.icon(
-                      onPressed: _resetToDefaults,
-                      icon: const Icon(Icons.restore_outlined),
-                      label: Text(l10n.restoreDefaults),
-                    ),
-                  ],
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-            SectionCard(
-              title: l10n.saveAndQuality,
-              subtitle: l10n.saveAndQualityDesc,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextFormField(
-                    key: const Key('save-directory-field'),
-                    controller: _saveDirCtrl,
-                    decoration: InputDecoration(
-                      labelText: l10n.saveDirectory,
-                      border: const OutlineInputBorder(),
-                      suffixIcon: IconButton(
-                        icon: const Icon(Icons.folder_open_outlined),
-                        tooltip: l10n.browseDirectory,
-                        onPressed: _browseDirectory,
-                      ),
-                    ),
-                    onChanged: widget.controller.updateSaveDirectory,
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    key: const Key('default-quality-field'),
-                    initialValue: _normalizeQualityValue(
-                      settings.defaultQuality,
-                    ),
-                    isExpanded: true,
-                    decoration: InputDecoration(
-                      labelText: l10n.defaultQuality,
-                      border: const OutlineInputBorder(),
-                    ),
-                    items: const [
-                      DropdownMenuItem(value: 'best', child: Text('best (推荐)')),
-                      DropdownMenuItem(
-                        value: 'bestvideo+bestaudio',
-                        child: Text('bestvideo+bestaudio'),
-                      ),
-                      DropdownMenuItem(value: 'bestvideo', child: Text('bestvideo')),
-                      DropdownMenuItem(value: 'bestaudio', child: Text('bestaudio')),
-                      DropdownMenuItem(
-                        value: 'bv*+ba*',
-                        child: Text('bv*+ba* (最佳视频+音频)'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'bv*+ba/b',
-                        child: Text('bv*+ba/b'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'worstvideo+worstaudio',
-                        child: Text('worstvideo+worstaudio'),
-                      ),
-                      DropdownMenuItem(value: 'worst', child: Text('worst')),
-                    ],
-                    onChanged: (v) {
-                      if (v != null) {
-                        widget.controller.updateDefaultQuality(v);
-                        _qualityCtrl.text = v;
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: 240,
-                    child: TextFormField(
-                      key: const Key('recommended-variant-count-field'),
-                      initialValue: settings.recommendedVariantCount.toString(),
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: l10n.recommendedVariantCount,
-                        helperText: l10n.recommendedVariantCountHint,
-                        border: const OutlineInputBorder(),
-                      ),
-                      onChanged: (value) {
-                        final count = int.tryParse(value);
-                        if (count != null) {
-                          widget.controller.updateRecommendedVariantCount(
-                            count,
-                          );
-                        }
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            SectionCard(
-              title: l10n.externalTools,
-              subtitle: l10n.externalToolsDesc,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextFormField(
-                    key: const Key('yt-dlp-path-field'),
-                    controller: _ytDlpCtrl,
-                    decoration: InputDecoration(
-                      labelText: l10n.ytDlpPath,
-                      helperText: l10n.ytDlpPathHint,
-                      border: const OutlineInputBorder(),
-                      suffixIcon: IconButton(
-                        icon: const Icon(Icons.folder_open_outlined),
-                        tooltip: l10n.browseFile,
-                        onPressed: () => _browseFile(_ytDlpCtrl),
-                      ),
-                    ),
-                    onChanged: widget.controller.updateYtDlpPath,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    key: const Key('ffmpeg-path-field'),
-                    controller: _ffmpegCtrl,
-                    decoration: InputDecoration(
-                      labelText: l10n.ffmpegPath,
-                      helperText: l10n.ffmpegPathHint,
-                      border: const OutlineInputBorder(),
-                      suffixIcon: IconButton(
-                        icon: const Icon(Icons.folder_open_outlined),
-                        tooltip: l10n.browseFile,
-                        onPressed: () => _browseFile(_ffmpegCtrl),
-                      ),
-                    ),
-                    onChanged: widget.controller.updateFfmpegPath,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            SectionCard(
-              title: l10n.aiClipAnalysis,
-              subtitle: l10n.aiClipAnalysisDesc,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  DropdownButtonFormField<AiAnalysisProvider>(
-                    key: const Key('ai-analysis-provider-field'),
-                    initialValue: settings.aiAnalysisProvider,
-                    isExpanded: true,
-                    decoration: InputDecoration(
-                      labelText: l10n.aiAnalysisProvider,
-                      border: const OutlineInputBorder(),
-                    ),
-                    items: [
-                      DropdownMenuItem(
-                        value: AiAnalysisProvider.builtIn,
-                        child: Text(l10n.aiProviderBuiltIn),
-                      ),
-                      DropdownMenuItem(
-                        value: AiAnalysisProvider.externalCommand,
-                        child: Text(l10n.aiProviderExternalCommand),
-                      ),
-                      DropdownMenuItem(
-                        value: AiAnalysisProvider.cloudEndpoint,
-                        child: Text(l10n.aiProviderCloudEndpoint),
-                      ),
-                    ],
-                    onChanged: (provider) {
-                      if (provider != null) {
-                        widget.controller.updateAiAnalysisProvider(provider);
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<BuiltInClipAnalyzerMode>(
-                    key: const Key('built-in-clip-analyzer-mode-field'),
-                    initialValue: settings.builtInClipAnalyzerMode,
-                    isExpanded: true,
-                    decoration: InputDecoration(
-                      labelText: l10n.builtInClipAnalyzerMode,
-                      border: const OutlineInputBorder(),
-                    ),
-                    items: [
-                      DropdownMenuItem(
-                        value: BuiltInClipAnalyzerMode.balanced,
-                        child: Text(l10n.builtInBalanced),
-                      ),
-                      DropdownMenuItem(
-                        value: BuiltInClipAnalyzerMode.visualFocused,
-                        child: Text(l10n.builtInVisualFocused),
-                      ),
-                      DropdownMenuItem(
-                        value: BuiltInClipAnalyzerMode.audioFocused,
-                        child: Text(l10n.builtInAudioFocused),
-                      ),
-                    ],
-                    onChanged: (mode) {
-                      if (mode != null) {
-                        widget.controller.updateBuiltInClipAnalyzerMode(mode);
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    key: const Key('ai-analyzer-command-field'),
-                    controller: _aiAnalyzerCtrl,
-                    enabled:
-                        settings.aiAnalysisProvider ==
-                        AiAnalysisProvider.externalCommand,
-                    decoration: InputDecoration(
-                      labelText: l10n.aiAnalyzerCommand,
-                      helperText: l10n.aiAnalyzerCommandHint,
-                      border: const OutlineInputBorder(),
-                    ),
-                    onChanged: widget.controller.updateAiAnalyzerCommand,
-                  ),
-                  const SizedBox(height: 16),
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final compact = constraints.maxWidth < 620;
-                      final profileField = DropdownButtonFormField<String>(
-                        key: ValueKey(
-                          'ai-cloud-profile-${settings.selectedAiCloudConfigId}',
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 16),
+                SectionCard(
+                  title: l10n.saveAndQuality,
+                  subtitle: l10n.saveAndQualityDesc,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextFormField(
+                        key: const Key('save-directory-field'),
+                        controller: _saveDirCtrl,
+                        decoration: InputDecoration(
+                          labelText: l10n.saveDirectory,
+                          border: const OutlineInputBorder(),
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.folder_open_outlined),
+                            tooltip: l10n.browseDirectory,
+                            onPressed: _browseDirectory,
+                          ),
                         ),
-                        initialValue: cloudConfig?.id,
+                        onChanged: widget.controller.updateSaveDirectory,
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        key: const Key('default-quality-field'),
+                        initialValue: _normalizeQualityValue(
+                          settings.defaultQuality,
+                        ),
                         isExpanded: true,
                         decoration: InputDecoration(
-                          labelText: l10n.aiCloudProfile,
-                          helperText: l10n.aiCloudProfileHint,
+                          labelText: l10n.defaultQuality,
+                          border: const OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'best',
+                            child: Text(
+                              'best (推荐)',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: 'bestvideo+bestaudio',
+                            child: Text(
+                              'bestvideo+bestaudio',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: 'bestvideo',
+                            child: Text(
+                              'bestvideo',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: 'bestaudio',
+                            child: Text(
+                              'bestaudio',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: 'bv*+ba*',
+                            child: Text(
+                              'bv*+ba*',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: 'bv*+ba/b',
+                            child: Text(
+                              'bv*+ba/b',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: 'worstvideo+worstaudio',
+                            child: Text(
+                              'worstvideo+worstaudio',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: 'worst',
+                            child: Text(
+                              'worst',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                        onChanged: (v) {
+                          if (v != null) {
+                            widget.controller.updateDefaultQuality(v);
+                            _qualityCtrl.text = v;
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: 240,
+                        child: TextFormField(
+                          key: const Key('recommended-variant-count-field'),
+                          initialValue: settings.recommendedVariantCount
+                              .toString(),
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: l10n.recommendedVariantCount,
+                            helperText: l10n.recommendedVariantCountHint,
+                            border: const OutlineInputBorder(),
+                          ),
+                          onChanged: (value) {
+                            final count = int.tryParse(value);
+                            if (count != null) {
+                              widget.controller.updateRecommendedVariantCount(
+                                count,
+                              );
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SectionCard(
+                  title: l10n.externalTools,
+                  subtitle: l10n.externalToolsDesc,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextFormField(
+                        key: const Key('yt-dlp-path-field'),
+                        controller: _ytDlpCtrl,
+                        decoration: InputDecoration(
+                          labelText: l10n.ytDlpPath,
+                          helperText: l10n.ytDlpPathHint,
+                          border: const OutlineInputBorder(),
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.folder_open_outlined),
+                            tooltip: l10n.browseFile,
+                            onPressed: () => _browseFile(_ytDlpCtrl),
+                          ),
+                        ),
+                        onChanged: widget.controller.updateYtDlpPath,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        key: const Key('ffmpeg-path-field'),
+                        controller: _ffmpegCtrl,
+                        decoration: InputDecoration(
+                          labelText: l10n.ffmpegPath,
+                          helperText: l10n.ffmpegPathHint,
+                          border: const OutlineInputBorder(),
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.folder_open_outlined),
+                            tooltip: l10n.browseFile,
+                            onPressed: () => _browseFile(_ffmpegCtrl),
+                          ),
+                        ),
+                        onChanged: widget.controller.updateFfmpegPath,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SectionCard(
+                  title: l10n.aiClipAnalysis,
+                  subtitle: l10n.aiClipAnalysisDesc,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      DropdownButtonFormField<AiAnalysisProvider>(
+                        key: const Key('ai-analysis-provider-field'),
+                        initialValue: settings.aiAnalysisProvider,
+                        isExpanded: true,
+                        decoration: InputDecoration(
+                          labelText: l10n.aiAnalysisProvider,
                           border: const OutlineInputBorder(),
                         ),
                         items: [
-                          for (final config in settings.aiCloudConfigs)
-                            DropdownMenuItem(
-                              value: config.id,
-                              child: Text(config.name),
-                            ),
+                          DropdownMenuItem(
+                            value: AiAnalysisProvider.builtIn,
+                            child: Text(l10n.aiProviderBuiltIn),
+                          ),
+                          DropdownMenuItem(
+                            value: AiAnalysisProvider.externalCommand,
+                            child: Text(l10n.aiProviderExternalCommand),
+                          ),
+                          DropdownMenuItem(
+                            value: AiAnalysisProvider.cloudEndpoint,
+                            child: Text(l10n.aiProviderCloudEndpoint),
+                          ),
                         ],
-                        onChanged: cloudEnabled
-                            ? (id) {
-                                if (id != null) {
-                                  widget.controller.updateSelectedAiCloudConfig(
-                                    id,
-                                  );
-                                }
-                              }
-                            : null,
-                      );
-                      final addVendorField =
-                          DropdownButtonFormField<AiCloudVendor>(
-                            key: const Key('ai-cloud-add-vendor-field'),
-                            initialValue: _newAiCloudVendor,
+                        onChanged: (provider) {
+                          if (provider != null) {
+                            widget.controller.updateAiAnalysisProvider(
+                              provider,
+                            );
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<BuiltInClipAnalyzerMode>(
+                        key: const Key('built-in-clip-analyzer-mode-field'),
+                        initialValue: settings.builtInClipAnalyzerMode,
+                        isExpanded: true,
+                        decoration: InputDecoration(
+                          labelText: l10n.builtInClipAnalyzerMode,
+                          border: const OutlineInputBorder(),
+                        ),
+                        items: [
+                          DropdownMenuItem(
+                            value: BuiltInClipAnalyzerMode.balanced,
+                            child: Text(l10n.builtInBalanced),
+                          ),
+                          DropdownMenuItem(
+                            value: BuiltInClipAnalyzerMode.visualFocused,
+                            child: Text(l10n.builtInVisualFocused),
+                          ),
+                          DropdownMenuItem(
+                            value: BuiltInClipAnalyzerMode.audioFocused,
+                            child: Text(l10n.builtInAudioFocused),
+                          ),
+                        ],
+                        onChanged: (mode) {
+                          if (mode != null) {
+                            widget.controller.updateBuiltInClipAnalyzerMode(
+                              mode,
+                            );
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        key: const Key('ai-analyzer-command-field'),
+                        controller: _aiAnalyzerCtrl,
+                        enabled:
+                            settings.aiAnalysisProvider ==
+                            AiAnalysisProvider.externalCommand,
+                        decoration: InputDecoration(
+                          labelText: l10n.aiAnalyzerCommand,
+                          helperText: l10n.aiAnalyzerCommandHint,
+                          border: const OutlineInputBorder(),
+                        ),
+                        onChanged: widget.controller.updateAiAnalyzerCommand,
+                      ),
+                      const SizedBox(height: 16),
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final compact = constraints.maxWidth < 620;
+                          final profileField = DropdownButtonFormField<String>(
+                            key: ValueKey(
+                              'ai-cloud-profile-${settings.selectedAiCloudConfigId}',
+                            ),
+                            initialValue: cloudConfig?.id,
                             isExpanded: true,
                             decoration: InputDecoration(
-                              labelText: l10n.aiCloudVendor,
+                              labelText: l10n.aiCloudProfile,
+                              helperText: l10n.aiCloudProfileHint,
                               border: const OutlineInputBorder(),
                             ),
-                            items: _aiCloudVendorItems(l10n),
+                            items: [
+                              for (final config in settings.aiCloudConfigs)
+                                DropdownMenuItem(
+                                  value: config.id,
+                                  child: Text(
+                                    config.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                            ],
                             onChanged: cloudEnabled
-                                ? (vendor) {
-                                    if (vendor != null) {
-                                      setState(() {
-                                        _newAiCloudVendor = vendor;
-                                      });
+                                ? (id) {
+                                    if (id != null) {
+                                      widget.controller
+                                          .updateSelectedAiCloudConfig(id);
                                     }
                                   }
                                 : null,
                           );
-                      final addButton = FilledButton.tonalIcon(
-                        onPressed: cloudEnabled
-                            ? () => widget.controller.addAiCloudConfig(
-                                _newAiCloudVendor,
-                              )
-                            : null,
-                        icon: const Icon(Icons.add_outlined),
-                        label: Text(l10n.addAiCloudProfile),
-                      );
+                          final addVendorField =
+                              DropdownButtonFormField<AiCloudVendor>(
+                                key: const Key('ai-cloud-add-vendor-field'),
+                                initialValue: _newAiCloudVendor,
+                                isExpanded: true,
+                                decoration: InputDecoration(
+                                  labelText: l10n.aiCloudVendor,
+                                  border: const OutlineInputBorder(),
+                                ),
+                                items: _aiCloudVendorItems(l10n),
+                                onChanged: cloudEnabled
+                                    ? (vendor) {
+                                        if (vendor != null) {
+                                          setState(() {
+                                            _newAiCloudVendor = vendor;
+                                          });
+                                        }
+                                      }
+                                    : null,
+                              );
+                          final addAction = cloudEnabled
+                              ? () => widget.controller.addAiCloudConfig(
+                                  _newAiCloudVendor,
+                                )
+                              : null;
+                          final addButton = compact
+                              ? FilledButton.tonal(
+                                  onPressed: addAction,
+                                  child: Text(
+                                    l10n.addAiCloudProfile,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                )
+                              : FilledButton.tonalIcon(
+                                  onPressed: addAction,
+                                  icon: const Icon(Icons.add_outlined),
+                                  label: Text(l10n.addAiCloudProfile),
+                                );
 
-                      if (compact) {
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            profileField,
-                            const SizedBox(height: 12),
-                            addVendorField,
-                            const SizedBox(height: 8),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: addButton,
+                          if (compact) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                profileField,
+                                const SizedBox(height: 12),
+                                addVendorField,
+                                const SizedBox(height: 8),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: addButton,
+                                ),
+                              ],
+                            );
+                          }
+
+                          return Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(child: profileField),
+                              const SizedBox(width: 12),
+                              Expanded(child: addVendorField),
+                              const SizedBox(width: 8),
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: addButton,
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                      if (cloudConfig == null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          l10n.aiCloudNoProfiles,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ] else ...[
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<AiCloudVendor>(
+                          key: ValueKey('ai-cloud-vendor-${cloudConfig.id}'),
+                          initialValue: cloudConfig.vendor,
+                          isExpanded: true,
+                          decoration: InputDecoration(
+                            labelText: l10n.aiCloudVendor,
+                            helperText: l10n.aiCloudVendorHint,
+                            border: const OutlineInputBorder(),
+                          ),
+                          items: _aiCloudVendorItems(l10n),
+                          onChanged: cloudEnabled
+                              ? (vendor) {
+                                  if (vendor != null) {
+                                    widget.controller
+                                        .updateSelectedAiCloudVendor(vendor);
+                                  }
+                                }
+                              : null,
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          key: const Key('ai-cloud-name-field'),
+                          controller: _aiCloudNameCtrl,
+                          enabled: cloudEnabled,
+                          decoration: InputDecoration(
+                            labelText: l10n.aiCloudProfileName,
+                            border: const OutlineInputBorder(),
+                          ),
+                          onChanged:
+                              widget.controller.updateSelectedAiCloudName,
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          key: const Key('ai-cloud-endpoint-field'),
+                          controller: _aiCloudEndpointCtrl,
+                          enabled: cloudEnabled,
+                          decoration: InputDecoration(
+                            labelText: l10n.aiCloudEndpoint,
+                            helperText: l10n.aiCloudEndpointHint,
+                            border: const OutlineInputBorder(),
+                          ),
+                          onChanged: widget.controller.updateAiCloudEndpoint,
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          key: const Key('ai-cloud-model-field'),
+                          controller: _aiCloudModelCtrl,
+                          enabled: cloudEnabled,
+                          decoration: InputDecoration(
+                            labelText: l10n.aiCloudModel,
+                            helperText: l10n.aiCloudModelHint,
+                            border: const OutlineInputBorder(),
+                          ),
+                          onChanged: widget.controller.updateAiCloudModel,
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          key: const Key('ai-cloud-api-key-field'),
+                          controller: _aiCloudApiKeyCtrl,
+                          enabled: cloudEnabled,
+                          obscureText: true,
+                          decoration: InputDecoration(
+                            labelText: l10n.aiCloudApiKey,
+                            helperText: l10n.aiCloudApiKeyHint,
+                            border: const OutlineInputBorder(),
+                          ),
+                          onChanged: widget.controller.updateAiCloudApiKey,
+                        ),
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: cloudEnabled
+                                ? () => widget.controller.removeAiCloudConfig(
+                                    cloudConfig.id,
+                                  )
+                                : null,
+                            child: Text(
+                              l10n.deleteAiCloudProfile,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          ],
-                        );
-                      }
-
-                      return Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(child: profileField),
-                          const SizedBox(width: 12),
-                          Expanded(child: addVendorField),
-                          const SizedBox(width: 8),
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: addButton,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SectionCard(
+                  title: 'Personal Cloud / 个人云端',
+                  subtitle:
+                      'Docker self-hosted clipping service for private sync.',
+                  child: _buildPersonalCloudSection(),
+                ),
+                const SizedBox(height: 16),
+                // ── Auto Clip ──
+                SectionCard(
+                  title: l10n.autoClipSection,
+                  subtitle: l10n.autoClipSectionDesc,
+                  child: _buildAutoClipSection(l10n, settings),
+                ),
+                const SizedBox(height: 16),
+                SectionCard(
+                  title: l10n.downloadMode,
+                  subtitle: l10n.downloadModeDesc,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      DropdownButtonFormField<DownloadMode>(
+                        key: const Key('download-mode-field'),
+                        // ignore: deprecated_member_use
+                        value: settings.downloadMode,
+                        isExpanded: true,
+                        decoration: InputDecoration(
+                          labelText: l10n.scheduleMode,
+                          border: const OutlineInputBorder(),
+                        ),
+                        items: [
+                          DropdownMenuItem(
+                            value: DownloadMode.serial,
+                            child: Text(
+                              l10n.serialDownload,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: DownloadMode.queue,
+                            child: Text(
+                              l10n.queueDownload,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          DropdownMenuItem(
+                            value: DownloadMode.concurrent,
+                            child: Text(
+                              l10n.concurrentDownload,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
-                      );
-                    },
-                  ),
-                  if (cloudConfig == null) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      l10n.aiCloudNoProfiles,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ] else ...[
-                    const SizedBox(height: 16),
-                    DropdownButtonFormField<AiCloudVendor>(
-                      key: ValueKey('ai-cloud-vendor-${cloudConfig.id}'),
-                      initialValue: cloudConfig.vendor,
-                      isExpanded: true,
-                      decoration: InputDecoration(
-                        labelText: l10n.aiCloudVendor,
-                        helperText: l10n.aiCloudVendorHint,
-                        border: const OutlineInputBorder(),
+                        onChanged: (mode) {
+                          if (mode != null) {
+                            widget.controller.updateDownloadMode(mode);
+                          }
+                        },
                       ),
-                      items: _aiCloudVendorItems(l10n),
-                      onChanged: cloudEnabled
-                          ? (vendor) {
-                              if (vendor != null) {
-                                widget.controller.updateSelectedAiCloudVendor(
-                                  vendor,
-                                );
-                              }
-                            }
-                          : null,
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      key: const Key('ai-cloud-name-field'),
-                      controller: _aiCloudNameCtrl,
-                      enabled: cloudEnabled,
-                      decoration: InputDecoration(
-                        labelText: l10n.aiCloudProfileName,
-                        border: const OutlineInputBorder(),
-                      ),
-                      onChanged: widget.controller.updateSelectedAiCloudName,
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      key: const Key('ai-cloud-endpoint-field'),
-                      controller: _aiCloudEndpointCtrl,
-                      enabled: cloudEnabled,
-                      decoration: InputDecoration(
-                        labelText: l10n.aiCloudEndpoint,
-                        helperText: l10n.aiCloudEndpointHint,
-                        border: const OutlineInputBorder(),
-                      ),
-                      onChanged: widget.controller.updateAiCloudEndpoint,
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      key: const Key('ai-cloud-model-field'),
-                      controller: _aiCloudModelCtrl,
-                      enabled: cloudEnabled,
-                      decoration: InputDecoration(
-                        labelText: l10n.aiCloudModel,
-                        helperText: l10n.aiCloudModelHint,
-                        border: const OutlineInputBorder(),
-                      ),
-                      onChanged: widget.controller.updateAiCloudModel,
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      key: const Key('ai-cloud-api-key-field'),
-                      controller: _aiCloudApiKeyCtrl,
-                      enabled: cloudEnabled,
-                      obscureText: true,
-                      decoration: InputDecoration(
-                        labelText: l10n.aiCloudApiKey,
-                        helperText: l10n.aiCloudApiKeyHint,
-                        border: const OutlineInputBorder(),
-                      ),
-                      onChanged: widget.controller.updateAiCloudApiKey,
-                    ),
-                    const SizedBox(height: 8),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton.icon(
-                        onPressed: cloudEnabled
-                            ? () => widget.controller.removeAiCloudConfig(
-                                cloudConfig.id,
-                              )
-                            : null,
-                        icon: const Icon(Icons.delete_outline),
-                        label: Text(l10n.deleteAiCloudProfile),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            // ── Auto Clip ──
-            SectionCard(
-              title: l10n.autoClipSection,
-              subtitle: l10n.autoClipSectionDesc,
-              child: _buildAutoClipSection(l10n, settings),
-            ),
-            const SizedBox(height: 16),
-            SectionCard(
-              title: l10n.downloadMode,
-              subtitle: l10n.downloadModeDesc,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  DropdownButtonFormField<DownloadMode>(
-                    key: const Key('download-mode-field'),
-                    // ignore: deprecated_member_use
-                    value: settings.downloadMode,
-                    isExpanded: true,
-                    decoration: InputDecoration(
-                      labelText: l10n.scheduleMode,
-                      border: const OutlineInputBorder(),
-                    ),
-                    items: [
-                      DropdownMenuItem(
-                        value: DownloadMode.serial,
-                        child: Text(
-                          l10n.serialDownload,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: DownloadMode.queue,
-                        child: Text(
-                          l10n.queueDownload,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      DropdownMenuItem(
-                        value: DownloadMode.concurrent,
-                        child: Text(
-                          l10n.concurrentDownload,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                      const SizedBox(height: 16),
+                      _ConcurrentCountSelector(
+                        value: settings.concurrentCount,
+                        enabled:
+                            settings.downloadMode == DownloadMode.concurrent,
+                        onChanged: widget.controller.updateConcurrentCount,
                       ),
                     ],
-                    onChanged: (mode) {
-                      if (mode != null) {
-                        widget.controller.updateDownloadMode(mode);
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SectionCard(
+                  title: l10n.additionalOptions,
+                  subtitle: l10n.additionalOptionsDesc,
+                  child: Column(
+                    children: [
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(l10n.downloadSubtitles),
+                        subtitle: Text(l10n.downloadSubtitlesDesc),
+                        value: settings.downloadSubtitles,
+                        onChanged: widget.controller.updateDownloadSubtitles,
+                      ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(l10n.downloadThumbnail),
+                        subtitle: Text(l10n.downloadThumbnailDesc),
+                        value: settings.downloadThumbnail,
+                        onChanged: widget.controller.updateDownloadThumbnail,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // ── Log Level ──
+                SectionCard(
+                  title: 'Log Level / 日志级别',
+                  subtitle: 'Set the verbosity of debug logging.',
+                  child: DropdownButtonFormField<LogLevel>(
+                    initialValue: settings.logLevel,
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Log Level',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: LogLevel.debug,
+                        child: Text('Debug'),
+                      ),
+                      DropdownMenuItem(
+                        value: LogLevel.info,
+                        child: Text('Info'),
+                      ),
+                      DropdownMenuItem(
+                        value: LogLevel.warning,
+                        child: Text('Warning'),
+                      ),
+                      DropdownMenuItem(
+                        value: LogLevel.error,
+                        child: Text('Error'),
+                      ),
+                    ],
+                    onChanged: (v) {
+                      if (v != null) {
+                        LogService.instance.setLevel(v);
+                        widget.controller.updateSettings(
+                          widget.controller.settings.copyWith(logLevel: v),
+                        );
                       }
                     },
                   ),
-                  const SizedBox(height: 16),
-                  _ConcurrentCountSelector(
-                    value: settings.concurrentCount,
-                    enabled: settings.downloadMode == DownloadMode.concurrent,
-                    onChanged: widget.controller.updateConcurrentCount,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            SectionCard(
-              title: l10n.additionalOptions,
-              subtitle: l10n.additionalOptionsDesc,
-              child: Column(
-                children: [
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(l10n.downloadSubtitles),
-                    subtitle: Text(l10n.downloadSubtitlesDesc),
-                    value: settings.downloadSubtitles,
-                    onChanged: widget.controller.updateDownloadSubtitles,
-                  ),
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(l10n.downloadThumbnail),
-                    subtitle: Text(l10n.downloadThumbnailDesc),
-                    value: settings.downloadThumbnail,
-                    onChanged: widget.controller.updateDownloadThumbnail,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            // ── Log Level ──
-            SectionCard(
-              title: 'Log Level / 日志级别',
-              subtitle: 'Set the verbosity of debug logging.',
-              child: DropdownButtonFormField<LogLevel>(
-                initialValue: settings.logLevel,
-                isExpanded: true,
-                decoration: const InputDecoration(
-                  labelText: 'Log Level',
-                  border: OutlineInputBorder(),
                 ),
-                items: const [
-                  DropdownMenuItem(value: LogLevel.debug, child: Text('Debug')),
-                  DropdownMenuItem(value: LogLevel.info, child: Text('Info')),
-                  DropdownMenuItem(value: LogLevel.warning, child: Text('Warning')),
-                  DropdownMenuItem(value: LogLevel.error, child: Text('Error')),
-                ],
-                onChanged: (v) {
-                  if (v != null) {
-                    LogService.instance.setLevel(v);
-                    widget.controller.updateSettings(
-                      widget.controller.settings.copyWith(logLevel: v),
-                    );
-                  }
-                },
-              ),
-            ),
-            const SizedBox(height: 16),
-            _CookieSection(
-              configs: settings.cookieConfigs,
-              defaultBrowser: settings.defaultCookieBrowser,
-              onImport: (browser, domain) => _importCookies(browser, domain),
-              onRemove: (domain) => _removeCookie(domain),
-              onReimport: (config) => _reimportCookie(config),
-            ),
-            const SizedBox(height: 24),
-            // ── Save status bar ──
-            _buildSaveBar(l10n),
-            const SizedBox(height: 48),
-          ],
+                const SizedBox(height: 16),
+                _CookieSection(
+                  configs: settings.cookieConfigs,
+                  defaultBrowser: settings.defaultCookieBrowser,
+                  onImport: (browser, domain) =>
+                      _importCookies(browser, domain),
+                  onRemove: (domain) => _removeCookie(domain),
+                  onReimport: (config) => _reimportCookie(config),
+                ),
+                const SizedBox(height: 24),
+                // ── Save status bar ──
+                _buildSaveBar(l10n),
+                const SizedBox(height: 48),
+              ],
+            );
+          },
         );
       },
     );
@@ -732,38 +879,66 @@ class _SettingsPageState extends State<SettingsPage> {
           : Theme.of(context).colorScheme.primaryContainer,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(
-          children: [
-            Icon(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 420;
+            final icon = Icon(
               saved ? Icons.check_circle_outline : Icons.info_outline,
               size: 20,
               color: saved
                   ? Theme.of(context).colorScheme.primary
                   : Theme.of(context).colorScheme.onPrimaryContainer,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                _saveStatusText(l10n),
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: saved
-                          ? Theme.of(context).colorScheme.onSurface
-                          : Theme.of(context).colorScheme.onPrimaryContainer,
-                    ),
+            );
+            final status = Text(
+              _saveStatusText(l10n),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: saved
+                    ? Theme.of(context).colorScheme.onSurface
+                    : Theme.of(context).colorScheme.onPrimaryContainer,
               ),
-            ),
-            const SizedBox(width: 12),
-            FilledButton.tonal(
+            );
+            final button = FilledButton.tonal(
               onPressed: saved ? null : _doSave,
               child: Text(l10n.saveSettingsBtn),
-            ),
-          ],
+            );
+
+            if (compact) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      icon,
+                      const SizedBox(width: 10),
+                      Expanded(child: status),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Align(alignment: Alignment.centerRight, child: button),
+                ],
+              );
+            }
+
+            return Row(
+              children: [
+                icon,
+                const SizedBox(width: 10),
+                Expanded(child: status),
+                const SizedBox(width: 12),
+                button,
+              ],
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildAutoClipSection(AppLocalizations l10n, DownloadSettings settings) {
+  Widget _buildAutoClipSection(
+    AppLocalizations l10n,
+    DownloadSettings settings,
+  ) {
     final config = settings.autoClipConfig;
     final enabled = config.enabled;
 
@@ -776,9 +951,7 @@ class _SettingsPageState extends State<SettingsPage> {
           title: Text(l10n.autoClipEnabled),
           value: enabled,
           onChanged: (v) {
-            widget.controller.updateAutoClipConfig(
-              config.copyWith(enabled: v),
-            );
+            widget.controller.updateAutoClipConfig(config.copyWith(enabled: v));
           },
         ),
         const SizedBox(height: 8),
@@ -796,7 +969,9 @@ class _SettingsPageState extends State<SettingsPage> {
           onChanged: enabled
               ? (v) {
                   widget.controller.updateAutoClipConfig(
-                    config.copyWith(minConfidence: double.parse(v.toStringAsFixed(2))),
+                    config.copyWith(
+                      minConfidence: double.parse(v.toStringAsFixed(2)),
+                    ),
                   );
                 }
               : null,
@@ -840,55 +1015,248 @@ class _SettingsPageState extends State<SettingsPage> {
               : null,
         ),
         const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                key: const Key('auto-clip-start-offset'),
-                initialValue: config.startOffsetMs.toString(),
-                enabled: enabled,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: l10n.autoClipStartOffset,
-                  border: const OutlineInputBorder(),
-                  isDense: true,
-                ),
-                onChanged: (v) {
-                  final ms = int.tryParse(v);
-                  if (ms != null) {
-                    widget.controller.updateAutoClipConfig(
-                      config.copyWith(startOffsetMs: ms),
-                    );
-                  }
-                },
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 420;
+            final startField = TextFormField(
+              key: const Key('auto-clip-start-offset'),
+              initialValue: config.startOffsetMs.toString(),
+              enabled: enabled,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: l10n.autoClipStartOffset,
+                border: const OutlineInputBorder(),
+                isDense: true,
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: TextFormField(
-                key: const Key('auto-clip-end-offset'),
-                initialValue: config.endOffsetMs.toString(),
-                enabled: enabled,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: l10n.autoClipEndOffset,
-                  border: const OutlineInputBorder(),
-                  isDense: true,
-                ),
-                onChanged: (v) {
-                  final ms = int.tryParse(v);
-                  if (ms != null) {
-                    widget.controller.updateAutoClipConfig(
-                      config.copyWith(endOffsetMs: ms),
-                    );
-                  }
-                },
+              onChanged: (v) {
+                final ms = int.tryParse(v);
+                if (ms != null) {
+                  widget.controller.updateAutoClipConfig(
+                    config.copyWith(startOffsetMs: ms),
+                  );
+                }
+              },
+            );
+            final endField = TextFormField(
+              key: const Key('auto-clip-end-offset'),
+              initialValue: config.endOffsetMs.toString(),
+              enabled: enabled,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: l10n.autoClipEndOffset,
+                border: const OutlineInputBorder(),
+                isDense: true,
               ),
-            ),
-          ],
+              onChanged: (v) {
+                final ms = int.tryParse(v);
+                if (ms != null) {
+                  widget.controller.updateAutoClipConfig(
+                    config.copyWith(endOffsetMs: ms),
+                  );
+                }
+              },
+            );
+
+            if (compact) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [startField, const SizedBox(height: 12), endField],
+              );
+            }
+
+            return Row(
+              children: [
+                Expanded(child: startField),
+                const SizedBox(width: 12),
+                Expanded(child: endField),
+              ],
+            );
+          },
         ),
       ],
     );
+  }
+
+  Widget _buildPersonalCloudSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextFormField(
+          key: const Key('personal-cloud-url-field'),
+          controller: _personalCloudUrlCtrl,
+          decoration: const InputDecoration(
+            labelText: 'Server URL',
+            helperText: 'Example: https://clips.example.com',
+            border: OutlineInputBorder(),
+          ),
+          onChanged: (_) => _markDirty(),
+        ),
+        const SizedBox(height: 16),
+        TextFormField(
+          key: const Key('personal-cloud-device-field'),
+          controller: _personalCloudDeviceCtrl,
+          decoration: const InputDecoration(
+            labelText: 'Device name',
+            border: OutlineInputBorder(),
+          ),
+          onChanged: (_) => _markDirty(),
+        ),
+        const SizedBox(height: 16),
+        TextFormField(
+          key: const Key('personal-cloud-token-field'),
+          controller: _personalCloudTokenCtrl,
+          obscureText: true,
+          decoration: const InputDecoration(
+            labelText: 'Access token',
+            helperText: 'Stores only the paired device token.',
+            border: OutlineInputBorder(),
+          ),
+          onChanged: (_) => _markDirty(),
+        ),
+        const SizedBox(height: 16),
+        TextFormField(
+          key: const Key('personal-cloud-pairing-token-field'),
+          controller: _personalCloudPairingTokenCtrl,
+          obscureText: true,
+          decoration: const InputDecoration(
+            labelText: 'Pairing token',
+            helperText: 'Used once to get a device token.',
+            border: OutlineInputBorder(),
+          ),
+          onChanged: (_) => _markDirty(),
+        ),
+        const SizedBox(height: 16),
+        DropdownButtonFormField<CloudUploadPolicy>(
+          key: const Key('personal-cloud-upload-policy-field'),
+          initialValue: _personalCloudUploadPolicy,
+          isExpanded: true,
+          decoration: const InputDecoration(
+            labelText: 'Upload policy',
+            border: OutlineInputBorder(),
+          ),
+          items: const [
+            DropdownMenuItem(
+              value: CloudUploadPolicy.manifestOnly,
+              child: Text(
+                'Manifest',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            DropdownMenuItem(
+              value: CloudUploadPolicy.selectedClips,
+              child: Text(
+                'Clips',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            DropdownMenuItem(
+              value: CloudUploadPolicy.originalOnConfirm,
+              child: Text(
+                'Original',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+          onChanged: (value) {
+            if (value == null) return;
+            setState(() => _personalCloudUploadPolicy = value);
+            _markDirty();
+          },
+        ),
+        const SizedBox(height: 8),
+        SwitchListTile(
+          key: const Key('personal-cloud-sync-enabled-field'),
+          contentPadding: EdgeInsets.zero,
+          title: const Text('Enable sync'),
+          subtitle: const Text('Queue manifest and selected clip sync tasks.'),
+          value: _personalCloudSyncEnabled,
+          onChanged: (value) {
+            setState(() => _personalCloudSyncEnabled = value);
+            _markDirty();
+          },
+        ),
+        const SizedBox(height: 12),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 420;
+            final pairButton = OutlinedButton(
+              key: const Key('personal-cloud-pair-button'),
+              onPressed: _isPairingPersonalCloud ? null : _pairPersonalCloud,
+              child: Text(
+                _isPairingPersonalCloud ? 'Pairing...' : 'Pair device',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            );
+            final saveButton = FilledButton(
+              key: const Key('personal-cloud-save-button'),
+              onPressed: _savePersonalCloudConfig,
+              child: const Text(
+                'Save personal cloud',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            );
+            if (compact) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [pairButton, const SizedBox(height: 8), saveButton],
+              );
+            }
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [pairButton, const SizedBox(width: 8), saveButton],
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Future<void> _pairPersonalCloud() async {
+    final baseUrl = _personalCloudUrlCtrl.text.trim();
+    final pairingToken = _personalCloudPairingTokenCtrl.text.trim();
+    if (baseUrl.isEmpty || pairingToken.isEmpty) return;
+    setState(() => _isPairingPersonalCloud = true);
+    try {
+      final result = await CloudClipClient(baseUrl: baseUrl).pairDevice(
+        deviceName: _personalCloudDeviceCtrl.text.trim().isEmpty
+            ? 'desktop'
+            : _personalCloudDeviceCtrl.text,
+        pairingToken: pairingToken,
+      );
+      _personalCloudTokenCtrl.text = result.accessToken;
+      _personalCloudPairingTokenCtrl.clear();
+      await _savePersonalCloudConfig();
+    } finally {
+      if (mounted) {
+        setState(() => _isPairingPersonalCloud = false);
+      }
+    }
+  }
+
+  Future<void> _savePersonalCloudConfig() async {
+    final now = DateTime.now();
+    final config = CloudConnectionConfig(
+      id: 'default-personal-cloud',
+      name: 'Personal Cloud',
+      baseUrl: _personalCloudUrlCtrl.text,
+      deviceName: _personalCloudDeviceCtrl.text,
+      accessToken: _personalCloudTokenCtrl.text,
+      enabled: _personalCloudUrlCtrl.text.trim().isNotEmpty,
+      uploadPolicy: _personalCloudUploadPolicy,
+      syncEnabled: _personalCloudSyncEnabled,
+      pairedAt: _personalCloudTokenCtrl.text.trim().isEmpty ? null : now,
+    ).normalized();
+    await _mediaAssetRepository.saveCloudConnectionConfig(config);
+    if (!mounted) return;
+    setState(() {
+      _saved = true;
+      _lastSavedAt = now;
+    });
   }
 
   void _resetToDefaults() {
@@ -915,8 +1283,7 @@ class _SettingsPageState extends State<SettingsPage> {
     } else {
       // Check bundled release path first
       final exeDir = File(Platform.resolvedExecutable).parent.path;
-      final bundledPath =
-          '$exeDir/data/flutter_assets/assets/bin/linux/yt-dlp';
+      final bundledPath = '$exeDir/data/flutter_assets/assets/bin/linux/yt-dlp';
       if (File(bundledPath).existsSync()) {
         ytDlpPath = bundledPath;
       } else {
@@ -992,7 +1359,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final fileSize = fileExists ? File(cookieFile).lengthSync() : 0;
     LogService.instance.info(
       'Cookie import OK: $domain ($browser) → $cookieFile '
-      '($fileSize bytes, exists=$fileExists)',
+          '($fileSize bytes, exists=$fileExists)',
       'cookie',
     );
 
@@ -1157,11 +1524,46 @@ class _CookieSectionState extends State<_CookieSection> {
                   isDense: true,
                 ),
                 items: const [
-                  DropdownMenuItem(value: 'chrome', child: Text('Chrome')),
-                  DropdownMenuItem(value: 'firefox', child: Text('Firefox')),
-                  DropdownMenuItem(value: 'edge', child: Text('Edge')),
-                  DropdownMenuItem(value: 'brave', child: Text('Brave')),
-                  DropdownMenuItem(value: 'opera', child: Text('Opera')),
+                  DropdownMenuItem(
+                    value: 'chrome',
+                    child: Text(
+                      'Chrome',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'firefox',
+                    child: Text(
+                      'Firefox',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'edge',
+                    child: Text(
+                      'Edge',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'brave',
+                    child: Text(
+                      'Brave',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  DropdownMenuItem(
+                    value: 'opera',
+                    child: Text(
+                      'Opera',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
                 onChanged: (v) {
                   if (v != null) setState(() => _browser = v);
@@ -1177,17 +1579,15 @@ class _CookieSectionState extends State<_CookieSection> {
                 ),
                 onFieldSubmitted: (v) => _doImport(v.trim()),
               );
-              final importButton = FilledButton.tonalIcon(
-                onPressed:
-                    _importing ? null : () => _doImport(_domainCtrl.text.trim()),
-                icon: _importing
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.file_download_outlined, size: 18),
-                label: Text(_importing ? l10n.importing : l10n.importBtn),
+              final importButton = FilledButton.tonal(
+                onPressed: _importing
+                    ? null
+                    : () => _doImport(_domainCtrl.text.trim()),
+                child: Text(
+                  _importing ? l10n.importing : l10n.importBtn,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               );
 
               if (compact) {
@@ -1359,45 +1759,89 @@ class _CookieTileState extends State<_CookieTile> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: Icon(Icons.cookie, color: brColor, size: 20),
-          title: Text(
-            widget.config.domain,
-            style: const TextStyle(fontSize: 14),
-          ),
-          subtitle: Row(
-            children: [
-              Icon(brIcon, size: 13, color: brColor),
-              const SizedBox(width: 4),
-              Text(
-                '${widget.config.browser} · ${l10n.cookiesCount(entries.length)}',
-                style: TextStyle(fontSize: 12, color: brColor),
-              ),
-            ],
-          ),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                icon: Icon(
-                  _expanded ? Icons.expand_less : Icons.expand_more,
-                  size: 18,
-                ),
-                tooltip: l10n.viewDetails,
-                onPressed: () => setState(() => _expanded = !_expanded),
-              ),
-              IconButton(
-                icon: const Icon(Icons.refresh, size: 18),
-                tooltip: l10n.reimport,
-                onPressed: widget.onReimport,
-              ),
-              IconButton(
-                icon: const Icon(Icons.delete_outline, size: 18),
-                tooltip: l10n.delete,
-                onPressed: widget.onRemove,
-              ),
-            ],
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final compact = constraints.maxWidth < 420;
+              final title = Row(
+                children: [
+                  Icon(Icons.cookie, color: brColor, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.config.domain,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                        const SizedBox(height: 2),
+                        Wrap(
+                          spacing: 4,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Icon(brIcon, size: 13, color: brColor),
+                            Text(
+                              '${widget.config.browser} · ${l10n.cookiesCount(entries.length)}',
+                              style: TextStyle(fontSize: 12, color: brColor),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+              final actions = Wrap(
+                alignment: compact ? WrapAlignment.end : WrapAlignment.start,
+                spacing: 0,
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      _expanded ? Icons.expand_less : Icons.expand_more,
+                      size: 18,
+                    ),
+                    tooltip: l10n.viewDetails,
+                    onPressed: () => setState(() => _expanded = !_expanded),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.refresh, size: 18),
+                    tooltip: l10n.reimport,
+                    onPressed: widget.onReimport,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, size: 18),
+                    tooltip: l10n.delete,
+                    onPressed: widget.onRemove,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ],
+              );
+
+              if (compact) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    title,
+                    Align(alignment: Alignment.centerRight, child: actions),
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  Expanded(child: title),
+                  const SizedBox(width: 8),
+                  actions,
+                ],
+              );
+            },
           ),
         ),
         if (_expanded && entries.isNotEmpty) ...[

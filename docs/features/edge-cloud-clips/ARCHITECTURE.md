@@ -133,18 +133,25 @@ User confirms original upload
 ```text
 POST   /api/devices/pair
 GET    /api/health
-POST   /api/media
+POST   /api/media/analysis-package
 GET    /api/media
 GET    /api/media/{mediaId}
 POST   /api/media/{mediaId}/uploads/init
+GET    /api/media/{mediaId}/uploads/{uploadId}
 PUT    /api/media/{mediaId}/uploads/{uploadId}/chunks/{index}
 POST   /api/media/{mediaId}/uploads/{uploadId}/complete
+DELETE /api/media/{mediaId}/uploads/{uploadId}
 POST   /api/clip-jobs
 GET    /api/clip-jobs/{jobId}
+POST   /api/clip-jobs/{jobId}/run
+GET    /api/clip-jobs/{jobId}/result-manifest
+GET    /api/clip-jobs/{jobId}/files/{fileName}
 POST   /api/clip-jobs/{jobId}/cancel
 GET    /api/media/{mediaId}/results
 POST   /api/sync/pull
 ```
+
+当前 MVP 服务端已实现 `health`、`devices/pair`、`media/analysis-package`、`clip-jobs` 创建/查询、原片分块上传初始化、chunk 上传、上传状态查询、上传完成校验、上传取消、Worker 触发、结果 manifest 查询和切片文件下载。Web UI、任务取消队列、真实多 Worker 调度仍是后续阶段。
 
 ## 6. 本地服务分层
 
@@ -168,6 +175,14 @@ Repositories
   -> CloudSyncRepository
 ```
 
+当前代码入口：
+
+- `MediaAssetIndexerService`：下载完成后创建媒体资产。
+- `LocalAnalysisService`：本地 ffprobe 元数据提取、候选切片和轻量向量入库。
+- `LocalClipWorkerService`：本地 FFmpeg 导出候选切片。
+- `CloudClipClient`：桌面端访问个人云端 API。
+- `cloud/server.mjs`：个人云端 API、目录对象存储、chunk upload、Worker 和 result manifest 服务。
+
 ## 7. 错误处理
 
 | 场景 | 行为 |
@@ -181,6 +196,6 @@ Repositories
 
 ## 8. 下一步
 
-- 确认本地数据库表和云端 API schema。
-- 设计分块上传状态机。
-- 确认云端 Worker MVP 使用 SQLite 队列还是文件队列。
+- 将云端 Worker 从同步触发升级为后台队列，支持运行中取消、重试和日志查询。
+- 实现桌面端云端结果自动导入，把 manifest 和切片文件合并回本地媒体库。
+- 补充个人云端 Web UI，用于远程浏览任务、日志、manifest 和切片文件。

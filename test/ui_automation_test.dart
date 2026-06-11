@@ -37,6 +37,7 @@ Future<void> _setupTestDb() async {
           'progress REAL NOT NULL DEFAULT 0, data TEXT NOT NULL)',
         );
         await createClipAnalysisTestSchema(db);
+        await createMediaLibraryTestSchema(db);
       },
     ),
   );
@@ -132,14 +133,14 @@ void main() {
         settings: DownloadSettings.defaults.copyWith(disclaimerAccepted: true),
       );
       final dc = DownloadController(
-        scheduler: DownloadScheduler(
-            settingsProvider: () => sc.settings),
+        scheduler: DownloadScheduler(settingsProvider: () => sc.settings),
         executor: executor,
         settingsProvider: () => sc.settings,
       );
 
       await tester.pumpWidget(
-          _buildTestApp(settingsController: sc, downloadController: dc));
+        _buildTestApp(settingsController: sc, downloadController: dc),
+      );
       await tester.pump();
       final l10n = _l10n(tester);
 
@@ -151,8 +152,10 @@ void main() {
       await tester.pump();
 
       expect(executor.inspectedUrls, isNotEmpty);
-      expect(executor.inspectedUrls.first.toString(),
-          contains('youtube.com/watch?v=test123'));
+      expect(
+        executor.inspectedUrls.first.toString(),
+        contains('youtube.com/watch?v=test123'),
+      );
     });
 
     testWidgets('解析后选择格式并下载', (tester) async {
@@ -164,19 +167,21 @@ void main() {
         ),
       );
       final dc = DownloadController(
-        scheduler: DownloadScheduler(
-            settingsProvider: () => sc.settings),
+        scheduler: DownloadScheduler(settingsProvider: () => sc.settings),
         executor: executor,
         settingsProvider: () => sc.settings,
       );
 
       await tester.pumpWidget(
-          _buildTestApp(settingsController: sc, downloadController: dc));
+        _buildTestApp(settingsController: sc, downloadController: dc),
+      );
       await tester.pump();
       final l10n = _l10n(tester);
 
       await tester.enterText(
-          find.byType(TextField), 'https://example.com/video');
+        find.byType(TextField),
+        'https://example.com/video',
+      );
       await tester.tap(find.text(l10n.parseLink));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
@@ -186,8 +191,11 @@ void main() {
       await tester.pump();
 
       final dlBtn = find.text(l10n.downloadSelectedCount(1));
-      await tester.scrollUntilVisible(dlBtn, 300,
-          scrollable: find.byType(Scrollable).first);
+      await tester.scrollUntilVisible(
+        dlBtn,
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.pump();
       await tester.tap(dlBtn);
       await tester.pump();
@@ -245,9 +253,7 @@ void main() {
   group('免责声明', () {
     testWidgets('未接受时显示弹窗，接受后关闭', (tester) async {
       final sc = SettingsController(
-        settings: DownloadSettings.defaults.copyWith(
-          disclaimerAccepted: false,
-        ),
+        settings: DownloadSettings.defaults.copyWith(disclaimerAccepted: false),
       );
 
       await tester.pumpWidget(_buildTestApp(settingsController: sc));

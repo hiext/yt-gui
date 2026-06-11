@@ -155,3 +155,27 @@ MVP 用管理员密钥 + 设备配对 Token。多用户账号、OAuth 和组织�
 - 本地向量存储先用 SQLite JSONL 还是单独向量库。
 - 原片上传确认交互的最小安全设计。
 - 云端和本地模型版本如何写入 manifest。
+
+## 9. 本轮实现验证结论
+
+### 9.1 本地闭环
+
+- 下载完成入口在 `DownloadController._handleCompletedTask`，当前已追加 `MediaAssetIndexerService`，不阻断既有 `PostProcessController.enqueueClipForDownload`。
+- `MediaAssetRepository` 保留新表读写，同时提供旧 `ClipSegment` 和 `ClipRecord` 的只读兼容映射，避免一次性迁移破坏现有 Clips 页面。
+- `LocalAnalysisService` 已能调用 `ffprobe` 保存结构化媒体元数据，并把旧分析片段或种子片段写成 `ClipCandidate` 与轻量 `MediaVectorRecord`。
+- `LocalClipWorkerService` 已能把 `ClipCandidate` 导出为本地切片文件，并把完成或失败状态写入 `ClipExportRecord`。
+
+### 9.2 云端闭环
+
+- `CloudClipClient` 已定义桌面端到个人云端的最小协议：健康检查、设备配对、分析包上传、创建云端切片任务、查询任务状态、原片分块上传、上传状态查询、上传取消和结果 manifest 拉取。
+- `cloud/server.mjs` 已提供不依赖 npm 包的自托管 API，使用本地目录保存分析包、任务 JSON、分块上传状态、原片对象、切片文件和结果 manifest。
+- `cloud/docker-compose.yml` 可作为 Docker 自托管入口；当前 Worker 由 `POST /api/clip-jobs/{jobId}/run` 触发，上传原片后使用 FFmpeg 执行候选切片导出。
+- 云端服务已支持 SHA256 完成校验、chunk 续传状态和结构化 JSON log，适合后续补上后台队列和 Web UI。
+
+### 9.3 剩余风险
+
+- 当前本地向量是轻量 keyword hash，占位于检索索引，不等同真实 embedding。
+- 本地 FFmpeg 导出已接入 `stderr time=...` 进度解析，但不同 FFmpeg 版本和异常输出格式仍需要更多样本覆盖。
+- 云端 Worker 当前是同步触发执行，不是后台队列；多任务并发、重试、取消正在运行任务和日志 UI 仍需后续阶段实现。
+- Clips 页面已升级为媒体资产库 UI，但远程结果自动导入、本地/云端版本冲突处理和 Web 浏览仍需后续补齐。
+- Docker 镜像当前只包含 Node 运行时，真实云端切片需要镜像内安装 FFmpeg，或部署时挂载可用 `FFMPEG_PATH`。

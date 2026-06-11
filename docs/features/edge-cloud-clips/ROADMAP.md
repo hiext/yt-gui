@@ -30,6 +30,8 @@
 
 ## 3. Round 2: 本地媒体资产 MVP
 
+状态：已落地第一版。
+
 目标：
 
 - 下载完成后生成媒体资产。
@@ -49,6 +51,8 @@
 
 ## 4. Round 3: 本地切片闭环
 
+状态：已落地第一版。
+
 目标：
 
 - 本地候选切片。
@@ -64,8 +68,11 @@
 验收：
 
 - 用户不配置云端也能完成分析、切片、浏览。
+- 当前已通过 `MediaAssetRepository`、`LocalAnalysisService`、`LocalClipWorkerService` 和 Clips 页面测试覆盖。
 
 ## 5. Round 4: 个人云端连接 MVP
+
+状态：已落地第一版。
 
 目标：
 
@@ -85,8 +92,11 @@
 
 - 本地可以连接 mock 或真实开发服务。
 - 云端任务状态可显示在桌面端。
+- Settings 页已支持服务地址、设备名、Pairing Token、访问 Token、上传策略和同步开关。
 
 ## 6. Round 5: Docker 云端 MVP
+
+状态：API、Dockerfile、Compose、目录对象存储和同步触发 Worker 已落地；Web UI 仍未进入第一版。
 
 目标：
 
@@ -100,8 +110,8 @@
 - `cloud/` 或 `server/` 子项目。
 - Dockerfile。
 - `docker-compose.yml`。
-- `.env.example`。
-- 基础 Web UI 或 API 页面。
+- `.env.example` 或等价环境变量文档。
+- 基础 Web UI 或 API 页面后续补齐。
 
 验收：
 
@@ -109,6 +119,8 @@
 - 桌面端可提交云端任务。
 
 ## 7. Round 6: 原片可选上传与云端重切
+
+状态：分块上传、续传状态、取消、SHA256 校验、FFmpeg 切片和 manifest 回传已落地第一版；结果自动导入本地仍待补齐。
 
 目标：
 
@@ -122,14 +134,17 @@
 - chunk upload API。
 - 上传状态机。
 - cloud worker FFmpeg。
-- 本地结果导入。
+- 本地结果导入后续补齐。
 
 验收：
 
 - 用户确认后可上传原片。
 - 云端切片结果能回到本地媒体库。
+- 当前可通过 API 拉取结果 manifest 和切片文件；桌面端自动同步导入作为 Beta 阶段任务。
 
 ## 8. Round 7: 向量检索和素材库增强
+
+状态：已提供轻量 `MediaVectorRecord` 和 keyword hash 占位；真实 embedding 与语义检索未落地。
 
 目标：
 
@@ -149,6 +164,8 @@
 
 ## 9. Round 8: Beta 稳定化
 
+状态：进行中。
+
 目标：
 
 - 完善失败恢复。
@@ -161,6 +178,7 @@
 - 功能回归指南更新。
 - Docker 冒烟脚本。
 - UI 和服务测试。
+- 后台任务队列、任务取消和云端日志 UI。
 
 验收：
 
