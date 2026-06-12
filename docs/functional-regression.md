@@ -30,7 +30,7 @@ CI 还会在 GitHub Actions 中执行 Linux 测试，以及 Linux、macOS、Wind
 - Edge + 个人云端 focused tests：通过，覆盖媒体资产模型、repository、下载完成索引、本地分析、本地切片、云端 client、Clips 页和 Settings 页。
 - `node --test test/cloud/server.test.mjs`：通过，覆盖个人云端健康检查、配对、分析包、分块上传、SHA256 校验、Worker、result manifest 和切片文件下载。
 - `flutter test`：通过，`282 passed / 1 skipped`。
-- Docker Compose 云端启动冒烟：未完成。`docker compose version` 可用，但当前 Docker daemon 未启动，`docker compose up -d --build` 无法连接 `/Users/harmay/.docker/run/docker.sock`。
+- Docker Compose 云端启动冒烟：通过。`docker compose up -d --build` 成功启动 `edge-cloud-clips`，`GET /api/health` 返回 `ok=true`，并通过 HTTP API 验证设备配对、分析包上传、任务创建、Worker 执行、result manifest 拉取和切片文件下载；测试后已执行 `docker compose down`。
 
 ## 功能覆盖矩阵
 
@@ -43,7 +43,7 @@ CI 还会在 GitHub Actions 中执行 Linux 测试，以及 Linux、macOS、Wind
 | AI 切片执行 | `test/core/services/ai_clip_analyzer_executor_test.dart` | 内置切片、sidecar manifest、云端请求、模型返回解析 |
 | 切片存储检索 | `test/core/services/clip_analysis_repository_test.dart` | 切片、检测、转写、搜索索引和微调时间 |
 | 媒体资产数据层 | `test/core/models/media_library_models_test.dart`、`test/core/services/media_asset_repository_test.dart` | `MediaAsset`、候选切片、导出记录、轻量向量、云端配置和旧数据兼容 |
-| 本地 Edge Worker | `test/core/services/local_analysis_service_test.dart`、`test/core/services/local_clip_worker_service_test.dart` | ffprobe 元数据、候选片段生成、FFmpeg 导出、失败记录和进度解析 |
+| 本地 Edge Worker | `test/core/services/local_analysis_service_test.dart`、`test/core/services/local_clip_worker_service_test.dart`、`test/core/services/clip_preview_service_test.dart` | ffprobe 元数据、候选片段生成、FFmpeg 导出、失败记录、进度解析和切片预览图缓存 |
 | 个人云端客户端 | `test/core/services/cloud_clip_client_test.dart` | 健康检查、配对、分析包上传、云端任务、分块上传、取消和 manifest 拉取 |
 | 个人云端服务 | `node --test test/cloud/server.test.mjs` | 自托管 API、鉴权、分块上传、SHA256 校验、Worker 执行、结果 manifest 和文件下载 |
 | 页面交互 | `test/features/*_test.dart`、`test/widget_test.dart` | 导航、设置页、下载页、历史页、集成流程 |
@@ -57,7 +57,7 @@ CI 还会在 GitHub Actions 中执行 Linux 测试，以及 Linux、macOS、Wind
 5. 新增一个云端配置档，检查厂商、配置名、Endpoint、模型 ID、API Key 字段可见；不要输入真实生产 Key 做普通冒烟。
 6. 如需验证云端切片，使用测试 Key 或本地 mock endpoint，返回包含 `segments` 数组的 JSON。
 7. 下载一个有合法授权的测试资源，确认下载完成后进入历史记录，并在有媒体路径时创建 AI 切片任务。
-8. 打开「切片」页，确认可查看媒体资产、候选片段、导出记录，搜索标题/标签/转写/摘要/切片原因，并可按导出状态筛选。
+8. 打开「切片」页，确认可查看媒体资产、候选片段画廊、预览图、时间范围、摘要、切片原因、导出状态和打开片段入口；搜索标题/标签/转写/摘要/切片原因，并可按导出状态筛选。
 9. 在设置页填写个人云端服务地址、设备名和 Pairing Token，使用本地测试服务完成配对，确认 Access Token 写入且 Pairing Token 不持久化。
 10. 如需验证个人云端切片，使用 `cloud/server.mjs` 或 Docker Compose 启动本地服务，上传分析包和测试原片，确认云端任务执行后可拉取 result manifest。
 

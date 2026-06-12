@@ -44,7 +44,7 @@
 - 本地进度：`LocalClipWorkerService` 解析 FFmpeg `stderr time=...`，持续写入导出进度。
 - 旧数据兼容：`MediaAssetRepository` 可把旧 `ClipSegment`、`ClipRecord` 只读映射成新候选和导出记录。
 - 旧入口兼容：`AutoClipService` 保持旧自动切片入口可用，并把结果镜像到新媒体库导出记录。
-- 本地媒体库 UI：Clips 页展示媒体资产、候选切片、导出记录、状态筛选、搜索和本地打开入口。
+- 本地媒体库 UI：Clips 页展示媒体资产、候选切片、导出记录、状态筛选、搜索和本地打开入口；切片结果以预览画廊卡片呈现，包含 FFmpeg 缓存预览图、时间范围、摘要、切片原因、状态和打开片段入口。
 - 个人云端设置：Settings 页支持服务地址、设备名、Pairing Token、访问 Token、同步开关和上传策略。
 - 个人云端 client：`CloudClipClient` 支持健康检查、设备配对、分析包上传、原片分块上传/查询/取消、创建任务、查询任务和拉取结果 manifest。
 - 自托管服务：`cloud/server.mjs`、`cloud/Dockerfile`、`cloud/docker-compose.yml` 支持本地目录对象存储、分块上传、上传取消/续传状态、Worker 执行、结果 manifest 和切片文件下载。

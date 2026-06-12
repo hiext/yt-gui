@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/controllers/post_process_controller.dart';
 import '../../core/models/app_models.dart';
+import '../../core/services/clip_preview_service.dart';
 import '../../core/services/media_asset_repository.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/section_card.dart';
@@ -14,11 +15,13 @@ class ClipLibraryPage extends StatefulWidget {
     super.key,
     required this.controller,
     this.mediaAssetRepository,
+    this.resolveClipPreviewPath,
     this.openLocalPath,
   });
 
   final PostProcessController controller;
   final MediaAssetRepository? mediaAssetRepository;
+  final ClipPreviewPathResolver? resolveClipPreviewPath;
   final Future<void> Function(String path)? openLocalPath;
 
   @override
@@ -28,6 +31,7 @@ class ClipLibraryPage extends StatefulWidget {
 class _ClipLibraryPageState extends State<ClipLibraryPage> {
   final _searchCtrl = TextEditingController();
   late final MediaAssetRepository _mediaAssetRepository;
+  late final ClipPreviewPathResolver _resolveClipPreviewPath;
   List<ClipSegment> _segments = const [];
   List<_MediaAssetView> _assetViews = const [];
   List<_MediaAssetView> _visibleAssetViews = const [];
@@ -40,6 +44,14 @@ class _ClipLibraryPageState extends State<ClipLibraryPage> {
     super.initState();
     _mediaAssetRepository =
         widget.mediaAssetRepository ?? MediaAssetRepository();
+    final previewService = ClipPreviewService();
+    _resolveClipPreviewPath =
+        widget.resolveClipPreviewPath ??
+        (asset, candidate, export) => previewService.resolvePreviewPath(
+          asset: asset,
+          candidate: candidate,
+          export: export,
+        );
     _segments = widget.controller.clipSegments;
     widget.controller.addListener(_syncFromController);
     _loadMediaAssets();
@@ -65,13 +77,16 @@ class _ClipLibraryPageState extends State<ClipLibraryPage> {
     try {
       final assets = await _mediaAssetRepository.loadMediaAssets();
       for (final asset in assets) {
+        final candidates = await _mediaAssetRepository
+            .loadCompatibleClipCandidates(asset.id);
+        final exports = await _mediaAssetRepository
+            .loadCompatibleClipExportRecords(asset.id);
         views.add(
           _MediaAssetView(
             asset: asset,
-            candidates: await _mediaAssetRepository
-                .loadCompatibleClipCandidates(asset.id),
-            exports: await _mediaAssetRepository
-                .loadCompatibleClipExportRecords(asset.id),
+            candidates: candidates,
+            exports: exports,
+            galleryItems: await _buildGalleryItems(asset, candidates, exports),
           ),
         );
       }
@@ -89,6 +104,54 @@ class _ClipLibraryPageState extends State<ClipLibraryPage> {
       );
       _isLoadingAssets = false;
     });
+  }
+
+  Future<List<_ClipGalleryItem>> _buildGalleryItems(
+    MediaAsset asset,
+    List<ClipCandidate> candidates,
+    List<ClipExportRecord> exports,
+  ) async {
+    final exportsByCandidateId = <String, ClipExportRecord>{};
+    for (final record in exports) {
+      final candidateId = record.candidateId;
+      if (candidateId == null) continue;
+      exportsByCandidateId.putIfAbsent(candidateId, () => record);
+    }
+    final usedExportIds = <String>{};
+    final items = <_ClipGalleryItem>[];
+    for (final candidate in candidates) {
+      final export = exportsByCandidateId[candidate.id];
+      if (export != null) usedExportIds.add(export.id);
+      items.add(
+        _ClipGalleryItem(
+          candidate: candidate,
+          export: export,
+          previewPath: await _resolveClipPreviewPath(asset, candidate, export),
+        ),
+      );
+    }
+    for (final export in exports) {
+      if (usedExportIds.contains(export.id)) continue;
+      final candidate = ClipCandidate(
+        id: 'export:${export.id}',
+        mediaAssetId: asset.id,
+        startMs: export.startMs,
+        endMs: export.endMs,
+        title: File(export.outputPath).uri.pathSegments.last,
+        summary: export.outputPath,
+        score: export.status == ClipExportStatus.completed ? 1 : 0,
+        source: ClipCandidateSource.local,
+        reason: export.errorMessage ?? 'exported clip',
+      );
+      items.add(
+        _ClipGalleryItem(
+          candidate: candidate,
+          export: export,
+          previewPath: await _resolveClipPreviewPath(asset, candidate, export),
+        ),
+      );
+    }
+    return items;
   }
 
   Future<void> _runSearch(String query) async {
@@ -328,11 +391,25 @@ class _MediaAssetView {
     required this.asset,
     required this.candidates,
     required this.exports,
+    required this.galleryItems,
   });
 
   final MediaAsset asset;
   final List<ClipCandidate> candidates;
   final List<ClipExportRecord> exports;
+  final List<_ClipGalleryItem> galleryItems;
+}
+
+class _ClipGalleryItem {
+  const _ClipGalleryItem({
+    required this.candidate,
+    required this.export,
+    required this.previewPath,
+  });
+
+  final ClipCandidate candidate;
+  final ClipExportRecord? export;
+  final String? previewPath;
 }
 
 class _MediaAssetCard extends StatelessWidget {
@@ -414,21 +491,37 @@ class _MediaAssetCard extends StatelessWidget {
                 Chip(label: Text(_formatBytes(asset.fileSizeBytes))),
               ],
             ),
-            if (view.candidates.isNotEmpty) ...[
+            if (view.galleryItems.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  const Icon(Icons.view_carousel_outlined, size: 18),
+                  const SizedBox(width: 8),
+                  Text('Clip gallery', style: theme.textTheme.titleSmall),
+                ],
+              ),
               const SizedBox(height: 10),
-              for (final candidate in view.candidates.take(3))
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: _CandidateLine(candidate: candidate),
-                ),
-            ],
-            if (view.exports.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              for (final record in view.exports.take(3))
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: _ExportLine(record: record),
-                ),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final itemWidth = constraints.maxWidth >= 820
+                      ? (constraints.maxWidth - 12) / 2
+                      : constraints.maxWidth;
+                  return Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      for (final item in view.galleryItems)
+                        SizedBox(
+                          width: itemWidth,
+                          child: _ClipGalleryCard(
+                            item: item,
+                            onOpenLocalPath: onOpenLocalPath,
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
             ],
           ],
         ),
@@ -456,57 +549,197 @@ class _MediaAssetCard extends StatelessWidget {
   }
 }
 
-class _CandidateLine extends StatelessWidget {
-  const _CandidateLine({required this.candidate});
+class _ClipGalleryCard extends StatelessWidget {
+  const _ClipGalleryCard({required this.item, required this.onOpenLocalPath});
 
-  final ClipCandidate candidate;
+  final _ClipGalleryItem item;
+  final Future<void> Function(String path) onOpenLocalPath;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Row(
-      children: [
-        const Icon(Icons.auto_awesome_motion_outlined, size: 16),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            candidate.title,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.bodyMedium,
+    final candidate = item.candidate;
+    final export = item.export;
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _ClipPreviewFrame(
+            key: Key('clip-preview-${candidate.id}'),
+            previewPath: item.previewPath,
+            startLabel: _formatTime(candidate.startMs),
+            endLabel: _formatTime(candidate.endMs),
           ),
-        ),
-        Text(
-          '${(candidate.score * 100).toStringAsFixed(0)}%',
-          style: theme.textTheme.bodySmall,
-        ),
-      ],
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        candidate.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleSmall,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _formatDuration(candidate.durationMs),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+                if (candidate.summary.trim().isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    candidate.summary,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                ],
+                if (candidate.reason.trim().isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    candidate.reason,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Chip(
+                      label: Text(
+                        '${(candidate.score * 100).toStringAsFixed(0)}%',
+                      ),
+                    ),
+                    if (export != null) Chip(label: Text(export.status.name)),
+                    for (final tag in candidate.tags.take(3))
+                      Chip(label: Text('#$tag')),
+                    for (final keyword in candidate.keywords.take(3))
+                      Chip(label: Text(keyword)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    OutlinedButton.icon(
+                      key: export == null
+                          ? null
+                          : Key('open-clip-${export.id}'),
+                      onPressed: export == null || export.outputPath.isEmpty
+                          ? null
+                          : () => onOpenLocalPath(export.outputPath),
+                      icon: const Icon(Icons.play_arrow_outlined),
+                      label: const Text('Open clip'),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: export == null || export.outputPath.isEmpty
+                          ? null
+                          : () => onOpenLocalPath(
+                              File(export.outputPath).parent.path,
+                            ),
+                      icon: const Icon(Icons.folder_open_outlined),
+                      label: const Text('Open folder'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _ExportLine extends StatelessWidget {
-  const _ExportLine({required this.record});
+class _ClipPreviewFrame extends StatelessWidget {
+  const _ClipPreviewFrame({
+    super.key,
+    required this.previewPath,
+    required this.startLabel,
+    required this.endLabel,
+  });
 
-  final ClipExportRecord record;
+  final String? previewPath;
+  final String startLabel;
+  final String endLabel;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Row(
-      children: [
-        const Icon(Icons.cut_outlined, size: 16),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            record.outputPath,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.bodySmall,
+    final image = previewPath == null || previewPath!.trim().isEmpty
+        ? null
+        : File(previewPath!);
+    return AspectRatio(
+      aspectRatio: 16 / 9,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (image != null && image.existsSync())
+            Image.file(image, fit: BoxFit.cover)
+          else
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest,
+              ),
+              child: Icon(
+                Icons.movie_filter_outlined,
+                size: 42,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          Positioned(
+            left: 8,
+            bottom: 8,
+            child: _PreviewPill(label: '$startLabel - $endLabel'),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PreviewPill extends StatelessWidget {
+  const _PreviewPill({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.68),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Text(
+          label,
+          style: Theme.of(
+            context,
+          ).textTheme.labelSmall?.copyWith(color: Colors.white),
         ),
-        Text(record.status.name, style: theme.textTheme.bodySmall),
-      ],
+      ),
     );
   }
 }
@@ -616,11 +849,24 @@ class _ClipSegmentCard extends StatelessWidget {
       ),
     );
   }
+}
 
-  String _formatTime(int ms) {
-    final totalSeconds = ms ~/ 1000;
-    final minutes = totalSeconds ~/ 60;
-    final seconds = totalSeconds % 60;
-    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+String _formatTime(int ms) {
+  final totalSeconds = ms ~/ 1000;
+  final hours = totalSeconds ~/ 3600;
+  final minutes = (totalSeconds % 3600) ~/ 60;
+  final seconds = totalSeconds % 60;
+  if (hours > 0) {
+    return '$hours:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
+  return '$minutes:${seconds.toString().padLeft(2, '0')}';
+}
+
+String _formatDuration(int ms) {
+  if (ms <= 0) return '0s';
+  final seconds = (ms / 1000).round();
+  if (seconds < 60) return '${seconds}s';
+  final minutes = seconds ~/ 60;
+  final rest = seconds % 60;
+  return '$minutes:${rest.toString().padLeft(2, '0')}';
 }

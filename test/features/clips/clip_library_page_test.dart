@@ -102,6 +102,92 @@ void main() {
     expect(find.textContaining('2:00'), findsOneWidget);
   });
 
+  testWidgets('renders clip candidates as visual preview gallery cards', (
+    tester,
+  ) async {
+    final controller = PostProcessController(
+      executor: _FakePostProcessExecutor(),
+      settingsProvider: _settings,
+    );
+    addTearDown(controller.dispose);
+    final opened = <String>[];
+    final asset = MediaAsset(
+      id: 'asset-gallery',
+      sourceTaskId: 'download-gallery',
+      sourceUrl: 'https://example.com/gallery',
+      title: 'Gallery Video',
+      mediaPath: '/downloads/gallery.mp4',
+      mediaType: MediaAssetType.video,
+      fileSha256: 'd' * 64,
+      durationMs: 180000,
+      fileSizeBytes: 8192,
+      thumbnailPath: '/downloads/gallery.webp',
+    );
+    final candidate = ClipCandidate(
+      id: 'candidate-gallery',
+      mediaAssetId: asset.id,
+      startMs: 62000,
+      endMs: 76000,
+      title: 'Show the result',
+      summary: 'The speaker reveals the finished product on screen.',
+      tags: const ['result', 'screen'],
+      keywords: const ['finished product', 'demo'],
+      score: 0.87,
+      reason: 'visual reveal with matching transcript',
+    );
+    final export = ClipExportRecord(
+      id: 'export-gallery',
+      mediaAssetId: asset.id,
+      candidateId: candidate.id,
+      startMs: candidate.startMs,
+      endMs: candidate.endMs,
+      outputPath: '/downloads/.clips/result.mp4',
+      status: ClipExportStatus.completed,
+      progress: 100,
+    );
+
+    await tester.pumpWidget(
+      _buildApp(
+        ClipLibraryPage(
+          controller: controller,
+          mediaAssetRepository: _FakeMediaAssetRepository(
+            assets: [asset],
+            candidates: {
+              asset.id: [candidate],
+            },
+            exports: {
+              asset.id: [export],
+            },
+          ),
+          openLocalPath: (path) async => opened.add(path),
+          resolveClipPreviewPath: (asset, candidate, export) async =>
+              '/downloads/.clips/previews/candidate-gallery.jpg',
+        ),
+        locale: const Locale('en'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Clip gallery'), findsOneWidget);
+    expect(
+      find.byKey(const Key('clip-preview-candidate-gallery')),
+      findsOneWidget,
+    );
+    expect(find.text('Show the result'), findsOneWidget);
+    expect(find.text('1:02 - 1:16'), findsOneWidget);
+    expect(find.text('14s'), findsOneWidget);
+    expect(find.textContaining('visual reveal'), findsOneWidget);
+    expect(find.text('completed'), findsOneWidget);
+
+    final openClipButton = find.byKey(const Key('open-clip-export-gallery'));
+    await tester.ensureVisible(openClipButton);
+    await tester.pumpAndSettle();
+    await tester.tap(openClipButton);
+    await tester.pumpAndSettle();
+
+    expect(opened, ['/downloads/.clips/result.mp4']);
+  });
+
   testWidgets('filters media assets by candidate text and export status', (
     tester,
   ) async {

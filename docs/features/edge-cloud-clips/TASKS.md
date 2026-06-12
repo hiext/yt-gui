@@ -81,6 +81,13 @@
 - [x] 运行 `flutter analyze --no-fatal-infos`。
 - [x] 运行相关 focused tests。
 - [x] 运行 `flutter test`。
-- [ ] 验证 Docker Compose 云端启动冒烟。
+- [x] 验证 Docker Compose 云端启动冒烟。
 
-备注：Docker Compose 已确认本机 CLI 可用，但当前 Docker daemon 未启动，`docker compose up -d --build` 无法连接 `/Users/harmay/.docker/run/docker.sock`，因此暂不勾选启动冒烟。
+备注：Docker Compose 冒烟已通过。已执行 `docker compose up -d --build`，`GET /api/health` 返回 `ok=true`，设备配对、分析包上传、云端任务创建、Worker 触发、result manifest 拉取和切片文件下载均成功；测试后已执行 `docker compose down` 停止服务。
+
+## Phase 9: 切片结果表达优化
+
+- [x] 将 Clips 页候选切片和导出结果从文字行升级为片段画廊卡片。
+- [x] 为视频切片增加 FFmpeg 预览图生成和本地缓存。
+- [x] 片段卡片展示预览画面、时间范围、时长、摘要、切片原因、状态、标签和打开片段入口。
+- [x] 添加 Clips 页画廊 Widget 测试和 `ClipPreviewService` focused test。
