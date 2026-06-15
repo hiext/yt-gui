@@ -1422,7 +1422,7 @@ class ClipRecord {
     'id': id,
     'sourceTaskId': sourceTaskId,
     'sourcePath': sourcePath,
-    if (outputPath != null) 'outputPath': outputPath!,
+    'outputPath': ?outputPath,
     'title': title,
     'confidence': confidence,
     'startMs': startMs,
@@ -1430,9 +1430,9 @@ class ClipRecord {
     'durationMs': durationMs,
     'status': status.name,
     'progress': progress,
-    if (errorMessage != null) 'errorMessage': errorMessage!,
+    'errorMessage': ?errorMessage,
     'createdAt': createdAt.toIso8601String(),
-    if (completedAt != null) 'completedAt': completedAt!.toIso8601String(),
+    'completedAt': ?completedAt?.toIso8601String(),
   };
 
   factory ClipRecord.fromJson(Map<String, Object?> json) {

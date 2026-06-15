@@ -4,6 +4,7 @@ import 'package:hiext_yt_gui/core/controllers/post_process_controller.dart';
 import 'package:hiext_yt_gui/l10n/app_localizations.dart';
 import 'package:hiext_yt_gui/l10n/app_localizations_current.dart';
 import 'package:hiext_yt_gui/core/models/app_models.dart';
+import 'package:hiext_yt_gui/core/services/auto_clip_orchestrator.dart';
 import 'package:hiext_yt_gui/core/services/download_scheduler.dart';
 import 'package:hiext_yt_gui/core/services/media_asset_indexer_service.dart';
 import 'package:hiext_yt_gui/core/services/post_process_executor.dart';
@@ -77,6 +78,21 @@ class _FakePostProcessExecutor implements PostProcessExecutor {
     PostProcessTaskChanged? onTaskChanged,
   }) async {
     started.add(task.id);
+  }
+}
+
+class _FakeAutoClipOrchestrator extends AutoClipOrchestrator {
+  final List<DownloadTask> completed = [];
+
+  @override
+  Future<AutoClipOrchestrationResult> onDownloadCompleted(
+    DownloadTask task, {
+    required DownloadSettings settings,
+  }) async {
+    completed.add(task);
+    return const AutoClipOrchestrationResult(
+      status: AutoClipOrchestrationStatus.completed,
+    );
   }
 }
 
@@ -352,6 +368,88 @@ void main() {
       expect(postExecutor.started, ['task-1#ai-clip-analysis']);
     },
   );
+
+  test(
+    'completed download can use the canonical auto clip orchestrator',
+    () async {
+      final scheduler = DownloadScheduler(settingsProvider: _settings);
+      final orchestrator = _FakeAutoClipOrchestrator();
+      final controller = DownloadController(
+        scheduler: scheduler,
+        executor: _FakeExecutor(),
+        settingsProvider: _settings,
+        autoClipOrchestrator: orchestrator,
+      );
+      addTearDown(controller.dispose);
+
+      scheduler.enqueue(
+        DownloadTask(
+          id: 'task-auto-clip',
+          title: 'Task Auto Clip',
+          source: 'https://example.com/auto-clip',
+          status: DownloadStatus.ready,
+          progress: 0,
+          variants: const [],
+        ),
+      );
+      scheduler.startNext();
+
+      controller.handleTaskChanged(
+        DownloadTask(
+          id: 'task-auto-clip',
+          title: 'Task Auto Clip',
+          source: 'https://example.com/auto-clip',
+          status: DownloadStatus.completed,
+          progress: 100,
+          variants: const [],
+          mediaPath: '/downloads/task-auto-clip.mp4',
+        ),
+      );
+      await pumpEventQueue(times: 2);
+
+      expect(orchestrator.completed.single.id, 'task-auto-clip');
+      expect(controller.completedTasks.single.mediaPath, '/downloads/task-auto-clip.mp4');
+    },
+  );
+
+  test('duplicate completed callbacks trigger auto clip only once', () async {
+    final scheduler = DownloadScheduler(settingsProvider: _settings);
+    final orchestrator = _FakeAutoClipOrchestrator();
+    final controller = DownloadController(
+      scheduler: scheduler,
+      executor: _FakeExecutor(),
+      settingsProvider: _settings,
+      autoClipOrchestrator: orchestrator,
+    );
+    addTearDown(controller.dispose);
+
+    scheduler.enqueue(
+      DownloadTask(
+        id: 'task-duplicate',
+        title: 'Task Duplicate',
+        source: 'https://example.com/duplicate',
+        status: DownloadStatus.ready,
+        progress: 0,
+        variants: const [],
+      ),
+    );
+    scheduler.startNext();
+    final completed = DownloadTask(
+      id: 'task-duplicate',
+      title: 'Task Duplicate',
+      source: 'https://example.com/duplicate',
+      status: DownloadStatus.completed,
+      progress: 100,
+      variants: const [],
+      mediaPath: '/downloads/task-duplicate.mp4',
+    );
+
+    controller.handleTaskChanged(completed);
+    controller.handleTaskChanged(completed);
+    await pumpEventQueue(times: 2);
+
+    expect(orchestrator.completed, hasLength(1));
+  });
 
   test(
     'completed download indexes a local media asset before post process',

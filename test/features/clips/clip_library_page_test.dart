@@ -100,7 +100,7 @@ void main() {
 
     expect(find.text('Launch Video'), findsOneWidget);
     expect(find.text('Launch hook'), findsOneWidget);
-    expect(find.textContaining('completed'), findsOneWidget);
+    expect(find.textContaining('local · completed'), findsOneWidget);
     expect(find.textContaining('2:00'), findsOneWidget);
   });
 

@@ -12,7 +12,10 @@ const DEFAULT_DATA_DIR = process.env.DATA_DIR ?? path.join(process.cwd(), 'data'
 export function createApp(options = {}) {
   const dataDir = options.dataDir ?? DEFAULT_DATA_DIR;
   const pairingToken = options.pairingToken ?? process.env.PAIRING_TOKEN ?? 'change-me';
-  const accessToken = options.accessToken ?? process.env.ACCESS_TOKEN ?? '';
+  const accessToken = effectiveAccessToken(
+    options.accessToken ?? process.env.ACCESS_TOKEN,
+    pairingToken,
+  );
   const clipRunner = options.clipRunner ?? defaultClipRunner;
 
   return async function handleRequest(req, res) {
@@ -319,8 +322,14 @@ async function route({ req, res, dataDir, pairingToken, accessToken, clipRunner 
   sendJson(res, 404, { error: 'not found' });
 }
 
+function effectiveAccessToken(configuredToken, pairingToken) {
+  if (configuredToken && String(configuredToken).trim()) {
+    return String(configuredToken).trim();
+  }
+  return `local_${hashText(`access:${pairingToken}`).slice(0, 32)}`;
+}
+
 function authorized(req, accessToken) {
-  if (!accessToken) return true;
   const header = req.headers.authorization ?? '';
   return header === `Bearer ${accessToken}`;
 }

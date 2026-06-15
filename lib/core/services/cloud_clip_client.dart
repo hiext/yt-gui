@@ -174,6 +174,14 @@ class CloudClipClient {
     );
   }
 
+  Future<CloudClipJobStatus> runClipJob(String cloudJobId) async {
+    final json = await _request('POST', '/api/clip-jobs/$cloudJobId/run');
+    return CloudClipJobStatus(
+      status: _syncStatus(json['status']),
+      progress: (json['progress'] as num?)?.toDouble() ?? 0,
+    );
+  }
+
   Future<CloudUploadInitResult> initOriginalUpload({
     required String cloudMediaId,
     required String fileName,
@@ -310,22 +318,36 @@ class CloudClipClient {
       }
       final response = await request.close();
       final responseBody = await response.transform(utf8.decoder).join();
-      final decoded = responseBody.trim().isEmpty
-          ? <String, Object?>{}
-          : jsonDecode(responseBody);
+      final decoded = _tryDecodeJsonObject(responseBody);
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw CloudClipClientException(
-          'HTTP ${response.statusCode}: ${decoded is Map ? decoded['error'] ?? responseBody : responseBody}',
-        );
+        final error = decoded?['error'] ?? _bodySummary(responseBody);
+        throw CloudClipClientException('HTTP ${response.statusCode}: $error');
       }
-      if (decoded is Map<String, Object?>) return decoded;
-      if (decoded is Map) return Map<String, Object?>.from(decoded);
+      if (decoded != null) return decoded;
       throw const CloudClipClientException(
         'Cloud response must be a JSON object',
       );
     } finally {
       client.close(force: true);
     }
+  }
+
+  Map<String, Object?>? _tryDecodeJsonObject(String responseBody) {
+    if (responseBody.trim().isEmpty) return <String, Object?>{};
+    try {
+      final decoded = jsonDecode(responseBody);
+      if (decoded is Map<String, Object?>) return decoded;
+      if (decoded is Map) return Map<String, Object?>.from(decoded);
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String _bodySummary(String responseBody) {
+    final trimmed = responseBody.trim();
+    if (trimmed.isEmpty) return 'empty response body';
+    return trimmed.length <= 200 ? trimmed : '${trimmed.substring(0, 200)}...';
   }
 
   CloudSyncStatus _syncStatus(Object? value) {

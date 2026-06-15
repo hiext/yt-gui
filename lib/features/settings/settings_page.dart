@@ -1151,8 +1151,9 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
             DropdownMenuItem(
               value: CloudUploadPolicy.selectedClips,
+              enabled: false,
               child: Text(
-                'Clips',
+                'Clips (coming soon)',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),

@@ -210,6 +210,47 @@ test('personal cloud server handles health, pairing, media package and jobs', as
   }
 });
 
+test('personal cloud derives an access token when none is configured', async () => {
+  const dataDir = await mkdtemp(path.join(tmpdir(), 'edge-cloud-clips-auth-'));
+  const server = createServer(
+    createApp({
+      dataDir,
+      pairingToken: 'pair-me',
+    }),
+  );
+  await listen(server);
+
+  try {
+    const baseUrl = `http://127.0.0.1:${server.address().port}`;
+    const pair = await requestJson(baseUrl, 'POST', '/api/devices/pair', {
+      deviceName: 'mac',
+      pairingToken: 'pair-me',
+    });
+    assert.equal(pair.status, 200);
+    assert.match(pair.body.accessToken, /^local_/);
+
+    const unauthorized = await requestJson(
+      baseUrl,
+      'POST',
+      '/api/media/analysis-package',
+      { mediaAsset: { id: 'asset-1' } },
+    );
+    assert.equal(unauthorized.status, 401);
+
+    const authorized = await requestJson(
+      baseUrl,
+      'POST',
+      '/api/media/analysis-package',
+      { mediaAsset: { id: 'asset-1' } },
+      pair.body.accessToken,
+    );
+    assert.equal(authorized.status, 200);
+  } finally {
+    await close(server);
+    await rm(dataDir, { recursive: true, force: true });
+  }
+});
+
 async function requestJson(baseUrl, method, pathName, body, token) {
   const response = await fetch(`${baseUrl}${pathName}`, {
     method,

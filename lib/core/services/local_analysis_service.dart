@@ -27,11 +27,10 @@ class LocalAnalysisService {
     MediaAssetRepository? repository,
     EmbeddedToolResolver? toolResolver,
     ProcessRunner? processRunner,
-    FfprobePathResolver? ffprobePathResolver,
+    this._ffprobePathResolver,
   }) : _repository = repository ?? MediaAssetRepository(),
        _toolResolver = toolResolver ?? const EmbeddedToolResolver(),
-       _processRunner = processRunner ?? _defaultProcessRunner,
-       _ffprobePathResolver = ffprobePathResolver;
+       _processRunner = processRunner ?? _defaultProcessRunner;
 
   final MediaAssetRepository _repository;
   final EmbeddedToolResolver _toolResolver;

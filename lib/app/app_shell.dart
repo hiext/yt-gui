@@ -7,6 +7,7 @@ import '../core/controllers/post_process_controller.dart';
 import '../core/controllers/settings_controller.dart';
 import '../core/services/ai_clip_analyzer_executor.dart';
 import '../core/services/auto_clip_service.dart';
+import '../core/services/auto_clip_orchestrator.dart';
 import '../core/services/cookie_service.dart';
 import '../core/services/download_scheduler.dart';
 import '../core/services/post_process_repository.dart';
@@ -78,6 +79,7 @@ class _AppShellState extends State<AppShell> {
           settingsProvider: () => _settingsController.settings,
           taskRepository: TaskRepository(),
           postProcessController: _postProcessController,
+          autoClipOrchestrator: AutoClipOrchestrator(),
         );
     unawaited(_postProcessController.loadPendingTasks());
     unawaited(_downloadController.loadPendingTasks());

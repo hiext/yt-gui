@@ -12,13 +12,13 @@ class PostProcessController extends ChangeNotifier {
     required this.executor,
     required this.settingsProvider,
     this.repository,
-    AutoClipService? autoClipService,
-  }) : _autoClipService = autoClipService;
+    this.autoClipService,
+  });
 
   final PostProcessExecutor executor;
   final DownloadSettings Function() settingsProvider;
   final PostProcessRepository? repository;
-  AutoClipService? _autoClipService;
+  final AutoClipService? autoClipService;
 
   final List<PostProcessTask> _queued = [];
   final List<PostProcessTask> _running = [];
@@ -322,8 +322,12 @@ class PostProcessController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void notifyClipLibraryChanged() {
+    notifyListeners();
+  }
+
   void _startAutoCutIfEnabled(PostProcessTask task) {
-    final service = _autoClipService;
+    final service = autoClipService;
     if (service == null) return;
     if (task.clipSegments.isEmpty) return;
 

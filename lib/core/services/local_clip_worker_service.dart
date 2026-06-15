@@ -20,12 +20,11 @@ class LocalClipWorkerService {
     MediaAssetRepository? repository,
     EmbeddedToolResolver? toolResolver,
     ProcessRunner? processRunner,
-    FfmpegPathResolver? ffmpegPathResolver,
+    this._ffmpegPathResolver,
     EmbeddedToolExecutableResolver? executableResolver,
   }) : _repository = repository ?? MediaAssetRepository(),
        _toolResolver = toolResolver ?? const EmbeddedToolResolver(),
        _processRunner = processRunner ?? _defaultProcessRunner,
-       _ffmpegPathResolver = ffmpegPathResolver,
        _executableResolver =
            executableResolver ?? EmbeddedToolExecutableResolver();
 
@@ -35,6 +34,7 @@ class LocalClipWorkerService {
   final FfmpegPathResolver? _ffmpegPathResolver;
   final EmbeddedToolExecutableResolver _executableResolver;
   final Map<String, Process> _processes = {};
+  final Set<String> _intentionalStops = {};
 
   Future<ClipExportRecord> exportCandidate({
     required MediaAsset asset,
@@ -96,6 +96,16 @@ class LocalClipWorkerService {
       await Future.wait([stdoutDone, stderrDone]);
       _processes.remove(recordId);
 
+      if (_intentionalStops.remove(recordId)) {
+        final cancelled = pending.copyWith(
+          status: ClipExportStatus.cancelled,
+          progress: lastProgress,
+          completedAt: DateTime.now(),
+        );
+        await _repository.saveClipExportRecord(cancelled);
+        return cancelled;
+      }
+
       if (exitCode == 0) {
         final completed = pending.copyWith(
           status: ClipExportStatus.completed,
@@ -128,8 +138,10 @@ class LocalClipWorkerService {
   }
 
   Future<void> cancel(String recordId) async {
-    final process = _processes.remove(recordId);
-    process?.kill(ProcessSignal.sigterm);
+    final process = _processes[recordId];
+    if (process == null) return;
+    _intentionalStops.add(recordId);
+    process.kill(ProcessSignal.sigterm);
   }
 
   Future<String> _resolveFfmpegPath(DownloadSettings settings) {

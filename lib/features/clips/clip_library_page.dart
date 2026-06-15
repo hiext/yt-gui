@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:io';
 
@@ -98,9 +99,13 @@ class _ClipLibraryPageState extends State<ClipLibraryPage> {
     } else {
       _runSearch(_searchCtrl.text);
     }
+    unawaited(_loadMediaAssets(showLoading: false));
   }
 
-  Future<void> _loadMediaAssets() async {
+  Future<void> _loadMediaAssets({bool showLoading = true}) async {
+    if (showLoading && mounted) {
+      setState(() => _isLoadingAssets = true);
+    }
     final views = <_MediaAssetView>[];
     try {
       final assets = await _mediaAssetRepository.loadMediaAssets();
@@ -1042,144 +1047,46 @@ class _ClipPreviewFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final image = previewPath == null || previewPath!.trim().isEmpty
-        ? null
-        : File(previewPath!);
-    return AspectRatio(
-      aspectRatio: 16 / 9,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          if (image != null && image.existsSync())
-            Image.file(image, fit: BoxFit.cover)
-          else
-            DecoratedBox(
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest,
-              ),
-              child: Icon(
-                Icons.movie_filter_outlined,
-                size: 42,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          Positioned(
-            left: 8,
-            bottom: 8,
-            child: _PreviewPill(label: '$startLabel - $endLabel'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PreviewPill extends StatelessWidget {
-  const _PreviewPill({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.68),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        child: Text(
-          label,
-          style: Theme.of(
-            context,
-          ).textTheme.labelSmall?.copyWith(color: Colors.white),
+    final status = [
+      record.runtime.name,
+      record.status.name,
+      if (record.progress > 0 && record.status != ClipExportStatus.completed)
+        '${record.progress}%',
+    ].join(' · ');
+    return Row(
+      children: [
+        Icon(
+          record.runtime == MediaJobRuntime.cloud
+              ? Icons.cloud_done_outlined
+              : Icons.cut_outlined,
+          size: 16,
         ),
-      ),
-    );
-  }
-}
-
-class _LegacySegmentGroupCard extends StatelessWidget {
-  const _LegacySegmentGroupCard({
-    required this.group,
-    required this.cuttingSegmentIds,
-    required this.onAdjust,
-    required this.onOpenLocalPath,
-    required this.onCutAndOpen,
-    required this.onDelete,
-  });
-
-  final _LegacySegmentGroup group;
-  final Set<String> cuttingSegmentIds;
-  final Future<void> Function(
-    ClipSegment segment, {
-    int startDeltaMs,
-    int endDeltaMs,
-  })
-  onAdjust;
-  final Future<void> Function(String path) onOpenLocalPath;
-  final Future<void> Function(ClipSegment segment) onCutAndOpen;
-  final Future<void> Function(ClipSegment segment) onDelete;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final first = group.segments.first;
-    return Card(
-      key: Key('clip-source-group-${group.sourceTaskId}'),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.folder_copy_outlined, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    group.sourceTaskId,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleMedium,
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                record.outputPath,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall,
+              ),
+              if (record.errorMessage != null)
+                Text(
+                  record.errorMessage!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.error,
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              first.sourcePath,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                Chip(label: Text('${group.segments.length} clips')),
-                Chip(label: Text('${group.exportedCount} exported')),
-                Chip(label: Text('${group.needsExportCount} needs export')),
-              ],
-            ),
-            const SizedBox(height: 10),
-            for (final segment in group.segments) ...[
-              _ClipSegmentCard(
-                segment: segment,
-                onAdjust: onAdjust,
-                onOpenLocalPath: onOpenLocalPath,
-                onCutAndOpen: onCutAndOpen,
-                onDelete: onDelete,
-                isCutting: cuttingSegmentIds.contains(segment.id),
-              ),
-              if (segment != group.segments.last) const SizedBox(height: 10),
             ],
-          ],
+          ),
         ),
-      ),
+        const SizedBox(width: 8),
+        Text(status, style: theme.textTheme.bodySmall),
+      ],
     );
   }
 }

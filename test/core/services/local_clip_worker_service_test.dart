@@ -110,6 +110,42 @@ void main() {
     expect(persisted.single.status, ClipExportStatus.failed);
   });
 
+  test('stores cancelled export record when cancelled intentionally', () async {
+    final process = _FakeProcess(exitCodeValue: 143, autoClose: false);
+    final service = LocalClipWorkerService(
+      repository: repository,
+      processRunner: (_, _) async => process,
+      ffmpegPathResolver: (_) => '/tools/ffmpeg',
+    );
+    final asset = _asset();
+    await repository.saveMediaAsset(asset);
+    final candidate = ClipCandidate(
+      id: 'candidate-cancel',
+      mediaAssetId: asset.id,
+      startMs: 0,
+      endMs: 3000,
+      title: 'Cancel',
+      summary: 'Cancel',
+      score: 0.8,
+      reason: 'test',
+    );
+
+    final exportFuture = service.exportCandidate(
+      asset: asset,
+      candidate: candidate,
+      settings: _settings(tempDir.path),
+    );
+    await pumpEventQueue();
+
+    await service.cancel('${asset.id}#export:${candidate.id}');
+    await process.close();
+    final record = await exportFuture;
+
+    expect(record.status, ClipExportStatus.cancelled);
+    final persisted = await repository.loadClipExportRecords(asset.id);
+    expect(persisted.single.status, ClipExportStatus.cancelled);
+  });
+
   test(
     'parses ffmpeg stderr progress and stores intermediate record',
     () async {

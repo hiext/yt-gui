@@ -33,6 +33,10 @@ void main() {
             request.response.write(jsonEncode({'cloudMediaId': 'media-1'}));
           case 'POST /api/clip-jobs':
             request.response.write(jsonEncode({'cloudJobId': 'job-1'}));
+          case 'POST /api/clip-jobs/job-1/run':
+            request.response.write(
+              jsonEncode({'status': 'completed', 'progress': 1.0}),
+            );
           case 'GET /api/clip-jobs/job-1':
             request.response.write(
               jsonEncode({'status': 'completed', 'progress': 1.0}),
@@ -77,6 +81,10 @@ void main() {
                 'uploadedChunks': [0],
               }),
             );
+          case 'GET /api/clip-jobs/plain-error':
+            request.response.statusCode = HttpStatus.badGateway;
+            request.response.headers.contentType = ContentType.text;
+            request.response.write('upstream unavailable');
           case 'GET /api/clip-jobs/job-1/result-manifest':
             request.response.write(
               jsonEncode({
@@ -158,15 +166,36 @@ void main() {
       candidateIds: const ['candidate-1'],
       uploadOriginal: false,
     );
+    final run = await client.runClipJob(job.cloudJobId);
     final status = await client.fetchClipJobStatus(job.cloudJobId);
 
     expect(media.cloudMediaId, 'media-1');
     expect(job.cloudJobId, 'job-1');
+    expect(run.status, CloudSyncStatus.completed);
+    expect(run.progress, 1);
     expect(status.status, CloudSyncStatus.completed);
     expect(status.progress, 1);
     expect(requests[0].path, '/api/media/analysis-package');
     expect(jsonDecode(requests[0].body)['uploadPolicy'], 'manifestOnly');
     expect(jsonDecode(requests[1].body)['candidateIds'], ['candidate-1']);
+  });
+
+  test('wraps non-json error responses with status code', () async {
+    final client = CloudClipClient(
+      baseUrl: _baseUrl(server),
+      accessToken: 'token-1',
+    );
+
+    await expectLater(
+      client.fetchClipJobStatus('plain-error'),
+      throwsA(
+        isA<CloudClipClientException>().having(
+          (error) => error.message,
+          'message',
+          contains('HTTP 502: upstream unavailable'),
+        ),
+      ),
+    );
   });
 
   test('supports chunk upload and result manifest retrieval', () async {
