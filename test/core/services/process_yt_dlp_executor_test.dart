@@ -108,10 +108,7 @@ void main() {
 
     await inspectFuture;
 
-    expect(
-      logs,
-      contains('[debug] Extracting URL: https://example.com/video'),
-    );
+    expect(logs, contains('[debug] Extracting URL: https://example.com/video'));
     expect(
       logs,
       isNot(
@@ -156,6 +153,7 @@ void main() {
           platformOverride: EmbeddedToolPlatform.windows,
           environment: {'PATH': tempDir.path},
         ),
+        loadAsset: (_) => throw Exception('missing bundled asset'),
         processRunner: (path, _) async {
           executable = path;
           return process;
@@ -208,10 +206,7 @@ void main() {
       Uri.parse('https://example.com/video'),
     );
 
-    expect(
-      args,
-      ['--dump-json', '--no-playlist', 'https://example.com/video'],
-    );
+    expect(args, ['--dump-json', '--no-playlist', 'https://example.com/video']);
   });
 
   test('builds resumable download arguments', () {

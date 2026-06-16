@@ -6,9 +6,19 @@ import 'package:flutter/material.dart';
 import '../../core/controllers/post_process_controller.dart';
 import '../../core/models/app_models.dart';
 import '../../core/services/clip_preview_service.dart';
+import '../../core/services/local_clip_worker_service.dart';
 import '../../core/services/media_asset_repository.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/section_card.dart';
+
+typedef ClipActionCallback =
+    Future<void> Function(
+      MediaAsset asset,
+      ClipCandidate candidate,
+      ClipExportRecord? export,
+    );
+typedef ClipDeleteCallback = Future<void> Function(ClipCandidate candidate);
+typedef AssetActionCallback = Future<void> Function(MediaAsset asset);
 
 class ClipLibraryPage extends StatefulWidget {
   const ClipLibraryPage({
@@ -16,12 +26,22 @@ class ClipLibraryPage extends StatefulWidget {
     required this.controller,
     this.mediaAssetRepository,
     this.resolveClipPreviewPath,
+    this.localClipWorkerService,
+    this.previewClip,
+    this.regenerateClip,
+    this.deleteClipCandidate,
+    this.clearClipResults,
     this.openLocalPath,
   });
 
   final PostProcessController controller;
   final MediaAssetRepository? mediaAssetRepository;
   final ClipPreviewPathResolver? resolveClipPreviewPath;
+  final LocalClipWorkerService? localClipWorkerService;
+  final ClipActionCallback? previewClip;
+  final ClipActionCallback? regenerateClip;
+  final ClipDeleteCallback? deleteClipCandidate;
+  final AssetActionCallback? clearClipResults;
   final Future<void> Function(String path)? openLocalPath;
 
   @override
@@ -32,18 +52,23 @@ class _ClipLibraryPageState extends State<ClipLibraryPage> {
   final _searchCtrl = TextEditingController();
   late final MediaAssetRepository _mediaAssetRepository;
   late final ClipPreviewPathResolver _resolveClipPreviewPath;
+  late final LocalClipWorkerService _localClipWorkerService;
   List<ClipSegment> _segments = const [];
   List<_MediaAssetView> _assetViews = const [];
   List<_MediaAssetView> _visibleAssetViews = const [];
   var _isSearching = false;
   var _isLoadingAssets = true;
   ClipExportStatus? _exportStatusFilter;
+  _ClipQualityFilter _qualityFilter = _ClipQualityFilter.all;
 
   @override
   void initState() {
     super.initState();
     _mediaAssetRepository =
         widget.mediaAssetRepository ?? MediaAssetRepository();
+    _localClipWorkerService =
+        widget.localClipWorkerService ??
+        LocalClipWorkerService(repository: _mediaAssetRepository);
     final previewService = ClipPreviewService();
     _resolveClipPreviewPath =
         widget.resolveClipPreviewPath ??
@@ -101,6 +126,7 @@ class _ClipLibraryPageState extends State<ClipLibraryPage> {
         views,
         _searchCtrl.text,
         _exportStatusFilter,
+        _qualityFilter,
       );
       _isLoadingAssets = false;
     });
@@ -164,6 +190,7 @@ class _ClipLibraryPageState extends State<ClipLibraryPage> {
         _assetViews,
         query,
         _exportStatusFilter,
+        _qualityFilter,
       );
       _isSearching = false;
     });
@@ -176,6 +203,19 @@ class _ClipLibraryPageState extends State<ClipLibraryPage> {
         _assetViews,
         _searchCtrl.text,
         _exportStatusFilter,
+        _qualityFilter,
+      );
+    });
+  }
+
+  void _setQualityFilter(_ClipQualityFilter? filter) {
+    setState(() {
+      _qualityFilter = filter ?? _ClipQualityFilter.all;
+      _visibleAssetViews = _filterAssetViews(
+        _assetViews,
+        _searchCtrl.text,
+        _exportStatusFilter,
+        _qualityFilter,
       );
     });
   }
@@ -241,42 +281,79 @@ class _ClipLibraryPageState extends State<ClipLibraryPage> {
                 ],
               ),
               const SizedBox(height: 12),
-              SizedBox(
-                width: 260,
-                child: DropdownButtonFormField<ClipExportStatus?>(
-                  key: const Key('clip-export-status-filter'),
-                  initialValue: _exportStatusFilter,
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Export status',
-                    border: OutlineInputBorder(),
-                    isDense: true,
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  SizedBox(
+                    width: 260,
+                    child: DropdownButtonFormField<ClipExportStatus?>(
+                      key: const Key('clip-export-status-filter'),
+                      initialValue: _exportStatusFilter,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Export status',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: null,
+                          child: Text('All exports'),
+                        ),
+                        DropdownMenuItem(
+                          value: ClipExportStatus.pending,
+                          child: Text('pending'),
+                        ),
+                        DropdownMenuItem(
+                          value: ClipExportStatus.cutting,
+                          child: Text('cutting'),
+                        ),
+                        DropdownMenuItem(
+                          value: ClipExportStatus.completed,
+                          child: Text('completed'),
+                        ),
+                        DropdownMenuItem(
+                          value: ClipExportStatus.failed,
+                          child: Text('failed'),
+                        ),
+                        DropdownMenuItem(
+                          value: ClipExportStatus.cancelled,
+                          child: Text('cancelled'),
+                        ),
+                      ],
+                      onChanged: _setExportStatusFilter,
+                    ),
                   ),
-                  items: const [
-                    DropdownMenuItem(value: null, child: Text('All exports')),
-                    DropdownMenuItem(
-                      value: ClipExportStatus.pending,
-                      child: Text('pending'),
+                  SizedBox(
+                    width: 220,
+                    child: DropdownButtonFormField<_ClipQualityFilter>(
+                      key: const Key('clip-quality-filter'),
+                      initialValue: _qualityFilter,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Clip quality',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: _ClipQualityFilter.all,
+                          child: Text('All quality'),
+                        ),
+                        DropdownMenuItem(
+                          value: _ClipQualityFilter.highScore,
+                          child: Text('High score'),
+                        ),
+                        DropdownMenuItem(
+                          value: _ClipQualityFilter.needsReview,
+                          child: Text('Needs review'),
+                        ),
+                      ],
+                      onChanged: _setQualityFilter,
                     ),
-                    DropdownMenuItem(
-                      value: ClipExportStatus.cutting,
-                      child: Text('cutting'),
-                    ),
-                    DropdownMenuItem(
-                      value: ClipExportStatus.completed,
-                      child: Text('completed'),
-                    ),
-                    DropdownMenuItem(
-                      value: ClipExportStatus.failed,
-                      child: Text('failed'),
-                    ),
-                    DropdownMenuItem(
-                      value: ClipExportStatus.cancelled,
-                      child: Text('cancelled'),
-                    ),
-                  ],
-                  onChanged: _setExportStatusFilter,
-                ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -291,7 +368,14 @@ class _ClipLibraryPageState extends State<ClipLibraryPage> {
           )
         else if (_visibleAssetViews.isNotEmpty) ...[
           for (final view in _visibleAssetViews) ...[
-            _MediaAssetCard(view: view, onOpenLocalPath: _openLocalPath),
+            _MediaAssetCard(
+              view: view,
+              onOpenLocalPath: _openLocalPath,
+              onPreviewClip: _previewClip,
+              onRegenerateClip: _regenerateClip,
+              onDeleteClip: _deleteClipCandidate,
+              onClearResults: _clearClipResults,
+            ),
             const SizedBox(height: 12),
           ],
         ],
@@ -328,6 +412,56 @@ class _ClipLibraryPageState extends State<ClipLibraryPage> {
     }
   }
 
+  Future<void> _previewClip(
+    MediaAsset asset,
+    ClipCandidate candidate,
+    ClipExportRecord? export,
+  ) async {
+    if (widget.previewClip != null) {
+      await widget.previewClip!(asset, candidate, export);
+      return;
+    }
+    final path = export?.outputPath.trim();
+    if (path != null && path.isNotEmpty) {
+      await _openLocalPath(path);
+    }
+  }
+
+  Future<void> _regenerateClip(
+    MediaAsset asset,
+    ClipCandidate candidate,
+    ClipExportRecord? export,
+  ) async {
+    if (widget.regenerateClip != null) {
+      await widget.regenerateClip!(asset, candidate, export);
+    } else {
+      await _localClipWorkerService.exportCandidate(
+        asset: asset,
+        candidate: candidate,
+        settings: widget.controller.settingsProvider(),
+      );
+    }
+    await _loadMediaAssets();
+  }
+
+  Future<void> _deleteClipCandidate(ClipCandidate candidate) async {
+    if (widget.deleteClipCandidate != null) {
+      await widget.deleteClipCandidate!(candidate);
+    } else {
+      await _mediaAssetRepository.deleteClipCandidate(candidate.id);
+    }
+    await _loadMediaAssets();
+  }
+
+  Future<void> _clearClipResults(MediaAsset asset) async {
+    if (widget.clearClipResults != null) {
+      await widget.clearClipResults!(asset);
+    } else {
+      await _mediaAssetRepository.clearClipResultsForAsset(asset.id);
+    }
+    await _loadMediaAssets();
+  }
+
   Future<void> _adjustSegment(
     ClipSegment segment, {
     int startDeltaMs = 0,
@@ -348,11 +482,13 @@ List<_MediaAssetView> _filterAssetViews(
   List<_MediaAssetView> views,
   String query,
   ClipExportStatus? exportStatus,
+  _ClipQualityFilter qualityFilter,
 ) {
   final needle = query.trim().toLowerCase();
   return [
     for (final view in views)
-      if (_viewMatches(view, needle, exportStatus)) view,
+      if (_viewMatches(view, needle, exportStatus, qualityFilter))
+        _filterGalleryItems(view, qualityFilter),
   ];
 }
 
@@ -360,11 +496,13 @@ bool _viewMatches(
   _MediaAssetView view,
   String needle,
   ClipExportStatus? exportStatus,
+  _ClipQualityFilter qualityFilter,
 ) {
   final statusMatches =
       exportStatus == null ||
       view.exports.any((record) => record.status == exportStatus);
   if (!statusMatches) return false;
+  if (!_qualityMatches(view, qualityFilter)) return false;
   if (needle.isEmpty) return true;
   return [
     view.asset.title,
@@ -385,6 +523,40 @@ bool _viewMatches(
     ],
   ].any((value) => value.toLowerCase().contains(needle));
 }
+
+bool _qualityMatches(_MediaAssetView view, _ClipQualityFilter filter) {
+  return switch (filter) {
+    _ClipQualityFilter.all => true,
+    _ClipQualityFilter.highScore => view.galleryItems.any(
+      (item) => item.candidate.score >= 0.75,
+    ),
+    _ClipQualityFilter.needsReview => view.galleryItems.any(
+      (item) => item.candidate.score < 0.6,
+    ),
+  };
+}
+
+_MediaAssetView _filterGalleryItems(
+  _MediaAssetView view,
+  _ClipQualityFilter filter,
+) {
+  if (filter == _ClipQualityFilter.all) return view;
+  final items = view.galleryItems.where((item) {
+    return switch (filter) {
+      _ClipQualityFilter.all => true,
+      _ClipQualityFilter.highScore => item.candidate.score >= 0.75,
+      _ClipQualityFilter.needsReview => item.candidate.score < 0.6,
+    };
+  }).toList();
+  return _MediaAssetView(
+    asset: view.asset,
+    candidates: view.candidates,
+    exports: view.exports,
+    galleryItems: items,
+  );
+}
+
+enum _ClipQualityFilter { all, highScore, needsReview }
 
 class _MediaAssetView {
   const _MediaAssetView({
@@ -413,10 +585,21 @@ class _ClipGalleryItem {
 }
 
 class _MediaAssetCard extends StatelessWidget {
-  const _MediaAssetCard({required this.view, required this.onOpenLocalPath});
+  const _MediaAssetCard({
+    required this.view,
+    required this.onOpenLocalPath,
+    required this.onPreviewClip,
+    required this.onRegenerateClip,
+    required this.onDeleteClip,
+    required this.onClearResults,
+  });
 
   final _MediaAssetView view;
   final Future<void> Function(String path) onOpenLocalPath;
+  final ClipActionCallback onPreviewClip;
+  final ClipActionCallback onRegenerateClip;
+  final ClipDeleteCallback onDeleteClip;
+  final AssetActionCallback onClearResults;
 
   @override
   Widget build(BuildContext context) {
@@ -479,6 +662,14 @@ class _MediaAssetCard extends StatelessWidget {
                         ),
                   child: const Text('Open output'),
                 ),
+                OutlinedButton.icon(
+                  key: Key('clear-results-${asset.id}'),
+                  onPressed: view.galleryItems.isEmpty
+                      ? null
+                      : () => onClearResults(asset),
+                  icon: const Icon(Icons.cleaning_services_outlined),
+                  label: const Text('Clear results'),
+                ),
               ],
             ),
             const SizedBox(height: 10),
@@ -514,8 +705,12 @@ class _MediaAssetCard extends StatelessWidget {
                         SizedBox(
                           width: itemWidth,
                           child: _ClipGalleryCard(
+                            asset: asset,
                             item: item,
                             onOpenLocalPath: onOpenLocalPath,
+                            onPreviewClip: onPreviewClip,
+                            onRegenerateClip: onRegenerateClip,
+                            onDeleteClip: onDeleteClip,
                           ),
                         ),
                     ],
@@ -550,10 +745,21 @@ class _MediaAssetCard extends StatelessWidget {
 }
 
 class _ClipGalleryCard extends StatelessWidget {
-  const _ClipGalleryCard({required this.item, required this.onOpenLocalPath});
+  const _ClipGalleryCard({
+    required this.asset,
+    required this.item,
+    required this.onOpenLocalPath,
+    required this.onPreviewClip,
+    required this.onRegenerateClip,
+    required this.onDeleteClip,
+  });
 
+  final MediaAsset asset;
   final _ClipGalleryItem item;
   final Future<void> Function(String path) onOpenLocalPath;
+  final ClipActionCallback onPreviewClip;
+  final ClipActionCallback onRegenerateClip;
+  final ClipDeleteCallback onDeleteClip;
 
   @override
   Widget build(BuildContext context) {
@@ -643,6 +849,19 @@ class _ClipGalleryCard extends StatelessWidget {
                   runSpacing: 8,
                   children: [
                     OutlinedButton.icon(
+                      key: Key('preview-clip-${candidate.id}'),
+                      onPressed: () => onPreviewClip(asset, candidate, export),
+                      icon: const Icon(Icons.visibility_outlined),
+                      label: const Text('Preview'),
+                    ),
+                    OutlinedButton.icon(
+                      key: Key('regenerate-clip-${candidate.id}'),
+                      onPressed: () =>
+                          onRegenerateClip(asset, candidate, export),
+                      icon: const Icon(Icons.refresh_outlined),
+                      label: const Text('Regenerate'),
+                    ),
+                    OutlinedButton.icon(
                       key: export == null
                           ? null
                           : Key('open-clip-${export.id}'),
@@ -660,6 +879,12 @@ class _ClipGalleryCard extends StatelessWidget {
                             ),
                       icon: const Icon(Icons.folder_open_outlined),
                       label: const Text('Open folder'),
+                    ),
+                    OutlinedButton.icon(
+                      key: Key('delete-clip-${candidate.id}'),
+                      onPressed: () => onDeleteClip(candidate),
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text('Delete'),
                     ),
                   ],
                 ),

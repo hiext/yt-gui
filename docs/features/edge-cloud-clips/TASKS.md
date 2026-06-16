@@ -91,3 +91,19 @@
 - [x] 为视频切片增加 FFmpeg 预览图生成和本地缓存。
 - [x] 片段卡片展示预览画面、时间范围、时长、摘要、切片原因、状态、标签和打开片段入口。
 - [x] 添加 Clips 页画廊 Widget 测试和 `ClipPreviewService` focused test。
+
+## Phase 10: 切片库管理能力
+
+- [x] 为 `MediaAssetRepository` 增加候选切片删除、导出记录删除和媒体资产结果清空。
+- [x] Clips 页切片卡片增加预览、重新生成和删除动作。
+- [x] Clips 页媒体资产卡片增加清空结果动作。
+- [x] Clips 页增加质量/整理筛选，支持高分候选和待复核候选视图。
+- [x] 添加 repository focused tests 和 Clips 页 Widget 测试。
+
+## Phase 11: 测试用例与适用文档补齐
+
+- [x] 补齐 `deleteClipExportRecord` 独立删除测试，确认导出记录删除不误删候选切片。
+- [x] 补齐 Clips 页默认预览测试，确认未注入 `previewClip` 时打开已导出片段。
+- [x] 补齐 Clips 页默认删除和默认清空测试，确认仓储状态变化后页面重新加载。
+- [x] 补齐 Clips 页待复核质量筛选测试，覆盖 `Needs review` 分组/整理路径。
+- [x] 新增 `TEST-COVERAGE.md`，记录测试适用场景、覆盖边界和推荐回归命令。

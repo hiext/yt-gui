@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiext_yt_gui/core/controllers/post_process_controller.dart';
 import 'package:hiext_yt_gui/core/models/app_models.dart';
+import 'package:hiext_yt_gui/core/services/local_clip_worker_service.dart';
 import 'package:hiext_yt_gui/core/services/media_asset_repository.dart';
 import 'package:hiext_yt_gui/core/services/post_process_executor.dart';
 import 'package:hiext_yt_gui/features/clips/clip_library_page.dart';
@@ -348,6 +349,380 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(opened, ['/downloads/video.mp4', '/downloads/.clips']);
+  });
+
+  testWidgets('manages clip card preview regenerate and delete actions', (
+    tester,
+  ) async {
+    final controller = PostProcessController(
+      executor: _FakePostProcessExecutor(),
+      settingsProvider: _settings,
+    );
+    addTearDown(controller.dispose);
+    final previewed = <String>[];
+    final regenerated = <String>[];
+    final deleted = <String>[];
+    final asset = _asset(
+      id: 'asset-manage',
+      title: 'Managed Video',
+      mediaPath: '/downloads/managed.mp4',
+    );
+    final candidate = _candidate(
+      id: 'candidate-manage',
+      mediaAssetId: asset.id,
+      title: 'Managed clip',
+      score: 0.72,
+    );
+    final export = ClipExportRecord(
+      id: 'export-manage',
+      mediaAssetId: asset.id,
+      candidateId: candidate.id,
+      startMs: candidate.startMs,
+      endMs: candidate.endMs,
+      outputPath: '/downloads/.clips/managed.mp4',
+      status: ClipExportStatus.completed,
+      progress: 100,
+    );
+
+    await tester.pumpWidget(
+      _buildApp(
+        ClipLibraryPage(
+          controller: controller,
+          mediaAssetRepository: _FakeMediaAssetRepository(
+            assets: [asset],
+            candidates: {
+              asset.id: [candidate],
+            },
+            exports: {
+              asset.id: [export],
+            },
+          ),
+          previewClip: (asset, candidate, export) async =>
+              previewed.add('${asset.id}/${candidate.id}/${export?.id}'),
+          regenerateClip: (asset, candidate, export) async =>
+              regenerated.add('${asset.id}/${candidate.id}/${export?.id}'),
+          deleteClipCandidate: (candidate) async => deleted.add(candidate.id),
+        ),
+        locale: const Locale('en'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final previewButton = find.byKey(
+      const Key('preview-clip-candidate-manage'),
+    );
+    await tester.ensureVisible(previewButton);
+    await tester.pumpAndSettle();
+    await tester.tap(previewButton);
+    await tester.pumpAndSettle();
+    final regenerateButton = find.byKey(
+      const Key('regenerate-clip-candidate-manage'),
+    );
+    await tester.ensureVisible(regenerateButton);
+    await tester.pumpAndSettle();
+    await tester.tap(regenerateButton);
+    await tester.pumpAndSettle();
+    final deleteButton = find.byKey(const Key('delete-clip-candidate-manage'));
+    await tester.ensureVisible(deleteButton);
+    await tester.pumpAndSettle();
+    await tester.tap(deleteButton);
+    await tester.pumpAndSettle();
+
+    expect(previewed, ['asset-manage/candidate-manage/export-manage']);
+    expect(regenerated, ['asset-manage/candidate-manage/export-manage']);
+    expect(deleted, ['candidate-manage']);
+  });
+
+  testWidgets('regenerates a clip with the local worker by default', (
+    tester,
+  ) async {
+    final controller = PostProcessController(
+      executor: _FakePostProcessExecutor(),
+      settingsProvider: _settings,
+    );
+    addTearDown(controller.dispose);
+    final worker = _FakeLocalClipWorkerService();
+    final asset = _asset(
+      id: 'asset-worker',
+      title: 'Worker Video',
+      mediaPath: '/downloads/worker.mp4',
+    );
+    final candidate = _candidate(
+      id: 'candidate-worker',
+      mediaAssetId: asset.id,
+      title: 'Worker clip',
+      score: 0.82,
+    );
+
+    await tester.pumpWidget(
+      _buildApp(
+        ClipLibraryPage(
+          controller: controller,
+          mediaAssetRepository: _FakeMediaAssetRepository(
+            assets: [asset],
+            candidates: {
+              asset.id: [candidate],
+            },
+          ),
+          localClipWorkerService: worker,
+        ),
+        locale: const Locale('en'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final regenerateButton = find.byKey(
+      const Key('regenerate-clip-candidate-worker'),
+    );
+    await tester.ensureVisible(regenerateButton);
+    await tester.pumpAndSettle();
+    await tester.tap(regenerateButton);
+    await tester.pumpAndSettle();
+
+    expect(worker.exported, ['asset-worker/candidate-worker']);
+  });
+
+  testWidgets('previews exported clip through open local path by default', (
+    tester,
+  ) async {
+    final controller = PostProcessController(
+      executor: _FakePostProcessExecutor(),
+      settingsProvider: _settings,
+    );
+    addTearDown(controller.dispose);
+    final opened = <String>[];
+    final asset = _asset(
+      id: 'asset-preview-default',
+      title: 'Preview Default Video',
+      mediaPath: '/downloads/preview-default.mp4',
+    );
+    final candidate = _candidate(
+      id: 'candidate-preview-default',
+      mediaAssetId: asset.id,
+      title: 'Preview default clip',
+      score: 0.82,
+    );
+    final export = ClipExportRecord(
+      id: 'export-preview-default',
+      mediaAssetId: asset.id,
+      candidateId: candidate.id,
+      startMs: candidate.startMs,
+      endMs: candidate.endMs,
+      outputPath: '/downloads/.clips/preview-default.mp4',
+      status: ClipExportStatus.completed,
+      progress: 100,
+    );
+
+    await tester.pumpWidget(
+      _buildApp(
+        ClipLibraryPage(
+          controller: controller,
+          mediaAssetRepository: _FakeMediaAssetRepository(
+            assets: [asset],
+            candidates: {
+              asset.id: [candidate],
+            },
+            exports: {
+              asset.id: [export],
+            },
+          ),
+          openLocalPath: (path) async => opened.add(path),
+        ),
+        locale: const Locale('en'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final previewButton = find.byKey(
+      const Key('preview-clip-candidate-preview-default'),
+    );
+    await tester.ensureVisible(previewButton);
+    await tester.pumpAndSettle();
+    await tester.tap(previewButton);
+    await tester.pumpAndSettle();
+
+    expect(opened, ['/downloads/.clips/preview-default.mp4']);
+  });
+
+  testWidgets('default delete and clear actions update repository and reload', (
+    tester,
+  ) async {
+    final controller = PostProcessController(
+      executor: _FakePostProcessExecutor(),
+      settingsProvider: _settings,
+    );
+    addTearDown(controller.dispose);
+    final asset = _asset(
+      id: 'asset-default-delete',
+      title: 'Default Delete Video',
+      mediaPath: '/downloads/default-delete.mp4',
+    );
+    final firstCandidate = _candidate(
+      id: 'candidate-delete-default',
+      mediaAssetId: asset.id,
+      title: 'Delete default clip',
+      score: 0.82,
+    );
+    final secondCandidate = _candidate(
+      id: 'candidate-clear-default',
+      mediaAssetId: asset.id,
+      title: 'Clear default clip',
+      score: 0.76,
+    );
+    final repository = _FakeMediaAssetRepository(
+      assets: [asset],
+      candidates: {
+        asset.id: [firstCandidate, secondCandidate],
+      },
+    );
+
+    await tester.pumpWidget(
+      _buildApp(
+        ClipLibraryPage(
+          controller: controller,
+          mediaAssetRepository: repository,
+        ),
+        locale: const Locale('en'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final deleteButton = find.byKey(
+      const Key('delete-clip-candidate-delete-default'),
+    );
+    await tester.ensureVisible(deleteButton);
+    await tester.pumpAndSettle();
+    await tester.tap(deleteButton);
+    await tester.pumpAndSettle();
+
+    expect(repository.deletedCandidates, ['candidate-delete-default']);
+    expect(find.text('Delete default clip'), findsNothing);
+    expect(find.text('Clear default clip'), findsOneWidget);
+
+    final clearButton = find.byKey(
+      const Key('clear-results-asset-default-delete'),
+    );
+    await tester.ensureVisible(clearButton);
+    await tester.pumpAndSettle();
+    await tester.tap(clearButton);
+    await tester.pumpAndSettle();
+
+    expect(repository.clearedAssets, ['asset-default-delete']);
+    expect(find.text('Clear default clip'), findsNothing);
+  });
+
+  testWidgets('clears asset clip results and filters by clip quality', (
+    tester,
+  ) async {
+    final controller = PostProcessController(
+      executor: _FakePostProcessExecutor(),
+      settingsProvider: _settings,
+    );
+    addTearDown(controller.dispose);
+    final cleared = <String>[];
+    final asset = _asset(
+      id: 'asset-organize',
+      title: 'Organized Video',
+      mediaPath: '/downloads/organized.mp4',
+    );
+
+    await tester.pumpWidget(
+      _buildApp(
+        ClipLibraryPage(
+          controller: controller,
+          mediaAssetRepository: _FakeMediaAssetRepository(
+            assets: [asset],
+            candidates: {
+              asset.id: [
+                _candidate(
+                  id: 'candidate-high',
+                  mediaAssetId: asset.id,
+                  title: 'High quality clip',
+                  score: 0.9,
+                ),
+                _candidate(
+                  id: 'candidate-review',
+                  mediaAssetId: asset.id,
+                  title: 'Needs review clip',
+                  score: 0.48,
+                ),
+              ],
+            },
+          ),
+          clearClipResults: (asset) async => cleared.add(asset.id),
+        ),
+        locale: const Locale('en'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('High quality clip'), findsOneWidget);
+    expect(find.text('Needs review clip'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('clip-quality-filter')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('High score').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('High quality clip'), findsOneWidget);
+    expect(find.text('Needs review clip'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('clear-results-asset-organize')));
+    await tester.pumpAndSettle();
+
+    expect(cleared, ['asset-organize']);
+  });
+
+  testWidgets('filters media assets to needs review clip quality', (
+    tester,
+  ) async {
+    final controller = PostProcessController(
+      executor: _FakePostProcessExecutor(),
+      settingsProvider: _settings,
+    );
+    addTearDown(controller.dispose);
+    final asset = _asset(
+      id: 'asset-review-filter',
+      title: 'Review Filter Video',
+      mediaPath: '/downloads/review-filter.mp4',
+    );
+
+    await tester.pumpWidget(
+      _buildApp(
+        ClipLibraryPage(
+          controller: controller,
+          mediaAssetRepository: _FakeMediaAssetRepository(
+            assets: [asset],
+            candidates: {
+              asset.id: [
+                _candidate(
+                  id: 'candidate-high-filter',
+                  mediaAssetId: asset.id,
+                  title: 'Strong clip',
+                  score: 0.9,
+                ),
+                _candidate(
+                  id: 'candidate-low-filter',
+                  mediaAssetId: asset.id,
+                  title: 'Needs review only',
+                  score: 0.42,
+                ),
+              ],
+            },
+          ),
+        ),
+        locale: const Locale('en'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('clip-quality-filter')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Needs review').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Strong clip'), findsNothing);
+    expect(find.text('Needs review only'), findsOneWidget);
   });
 
   testWidgets('displays zero-count chips', (tester) async {
@@ -726,6 +1101,44 @@ DownloadSettings _settings() {
   );
 }
 
+MediaAsset _asset({
+  required String id,
+  required String title,
+  required String mediaPath,
+}) {
+  return MediaAsset(
+    id: id,
+    sourceTaskId: 'download-$id',
+    sourceUrl: 'https://example.com/$id',
+    title: title,
+    mediaPath: mediaPath,
+    mediaType: MediaAssetType.video,
+    fileSha256: 'e' * 64,
+    durationMs: 120000,
+    fileSizeBytes: 4096,
+  );
+}
+
+ClipCandidate _candidate({
+  required String id,
+  required String mediaAssetId,
+  required String title,
+  required double score,
+}) {
+  return ClipCandidate(
+    id: id,
+    mediaAssetId: mediaAssetId,
+    startMs: 1000,
+    endMs: 9000,
+    title: title,
+    summary: '$title summary',
+    tags: const ['managed'],
+    keywords: const ['clip'],
+    score: score,
+    reason: 'test candidate',
+  );
+}
+
 class _FakePostProcessExecutor implements PostProcessExecutor {
   _FakePostProcessExecutor({
     this.completeImmediately = false,
@@ -800,16 +1213,50 @@ class _FakePostProcessExecutor implements PostProcessExecutor {
   }
 }
 
+class _FakeLocalClipWorkerService extends LocalClipWorkerService {
+  final List<String> exported = [];
+
+  @override
+  Future<ClipExportRecord> exportCandidate({
+    required MediaAsset asset,
+    required ClipCandidate candidate,
+    required DownloadSettings settings,
+    ClipExportProgressChanged? onProgress,
+  }) async {
+    exported.add('${asset.id}/${candidate.id}');
+    return ClipExportRecord(
+      id: '${asset.id}#export:${candidate.id}',
+      mediaAssetId: asset.id,
+      candidateId: candidate.id,
+      startMs: candidate.startMs,
+      endMs: candidate.endMs,
+      outputPath: '${settings.saveDirectory}/.clips/${candidate.id}.mp4',
+      status: ClipExportStatus.completed,
+      progress: 100,
+    );
+  }
+}
+
 class _FakeMediaAssetRepository extends MediaAssetRepository {
   _FakeMediaAssetRepository({
-    this.assets = const [],
-    this.candidates = const {},
-    this.exports = const {},
-  });
+    List<MediaAsset> assets = const [],
+    Map<String, List<ClipCandidate>> candidates = const {},
+    Map<String, List<ClipExportRecord>> exports = const {},
+  }) : assets = List.of(assets),
+       candidates = candidates.map(
+         (mediaAssetId, candidates) =>
+             MapEntry(mediaAssetId, List.of(candidates)),
+       ),
+       exports = exports.map(
+         (mediaAssetId, exports) => MapEntry(mediaAssetId, List.of(exports)),
+       );
 
   final List<MediaAsset> assets;
   final Map<String, List<ClipCandidate>> candidates;
   final Map<String, List<ClipExportRecord>> exports;
+  final List<String> deletedCandidates = [];
+  final List<String> deletedExports = [];
+  final List<String> clearedAssets = [];
 
   @override
   Future<List<MediaAsset>> loadMediaAssets() async => assets;
@@ -818,13 +1265,39 @@ class _FakeMediaAssetRepository extends MediaAssetRepository {
   Future<List<ClipCandidate>> loadCompatibleClipCandidates(
     String mediaAssetId,
   ) async {
-    return candidates[mediaAssetId] ?? const [];
+    return List.unmodifiable(candidates[mediaAssetId] ?? const []);
   }
 
   @override
   Future<List<ClipExportRecord>> loadCompatibleClipExportRecords(
     String mediaAssetId,
   ) async {
-    return exports[mediaAssetId] ?? const [];
+    return List.unmodifiable(exports[mediaAssetId] ?? const []);
+  }
+
+  @override
+  Future<void> deleteClipCandidate(String id) async {
+    deletedCandidates.add(id);
+    for (final entry in candidates.entries) {
+      entry.value.removeWhere((candidate) => candidate.id == id);
+    }
+    for (final entry in exports.entries) {
+      entry.value.removeWhere((export) => export.candidateId == id);
+    }
+  }
+
+  @override
+  Future<void> deleteClipExportRecord(String id) async {
+    deletedExports.add(id);
+    for (final entry in exports.entries) {
+      entry.value.removeWhere((export) => export.id == id);
+    }
+  }
+
+  @override
+  Future<void> clearClipResultsForAsset(String mediaAssetId) async {
+    clearedAssets.add(mediaAssetId);
+    candidates[mediaAssetId] = [];
+    exports[mediaAssetId] = [];
   }
 }

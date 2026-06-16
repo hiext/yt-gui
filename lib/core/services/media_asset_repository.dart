@@ -178,6 +178,59 @@ class MediaAssetRepository {
     return [...records, ...legacy.where((record) => seenIds.add(record.id))];
   }
 
+  Future<void> deleteClipCandidate(String id) async {
+    final d = await _db.db;
+    await d.transaction((txn) async {
+      await txn.delete(
+        'clip_export_records',
+        where: 'candidate_id = ?',
+        whereArgs: [id],
+      );
+      await txn.delete(
+        'media_vector_records',
+        where: 'target_type = ? AND target_id = ?',
+        whereArgs: [MediaVectorTargetType.candidate.name, id],
+      );
+      await txn.delete('clip_candidates', where: 'id = ?', whereArgs: [id]);
+    });
+  }
+
+  Future<void> deleteClipExportRecord(String id) async {
+    final d = await _db.db;
+    await d.delete('clip_export_records', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> clearClipResultsForAsset(String mediaAssetId) async {
+    final d = await _db.db;
+    await d.transaction((txn) async {
+      await txn.delete(
+        'media_analysis_jobs',
+        where: 'media_asset_id = ?',
+        whereArgs: [mediaAssetId],
+      );
+      await txn.delete(
+        'clip_candidates',
+        where: 'media_asset_id = ?',
+        whereArgs: [mediaAssetId],
+      );
+      await txn.delete(
+        'clip_export_records',
+        where: 'media_asset_id = ?',
+        whereArgs: [mediaAssetId],
+      );
+      await txn.delete(
+        'media_vector_records',
+        where: 'media_asset_id = ?',
+        whereArgs: [mediaAssetId],
+      );
+      await txn.delete(
+        'cloud_sync_tasks',
+        where: 'media_asset_id = ?',
+        whereArgs: [mediaAssetId],
+      );
+    });
+  }
+
   Future<void> saveVectorRecord(MediaVectorRecord record) async {
     final d = await _db.db;
     await d.insert(

@@ -42,11 +42,11 @@ CI 还会在 GitHub Actions 中执行 Linux 测试，以及 Linux、macOS、Wind
 | 设置持久化 | `test/core/services/settings_repository_test.dart` | 默认值、可选字段清理、多云配置档保存读取 |
 | AI 切片执行 | `test/core/services/ai_clip_analyzer_executor_test.dart` | 内置切片、sidecar manifest、云端请求、模型返回解析 |
 | 切片存储检索 | `test/core/services/clip_analysis_repository_test.dart` | 切片、检测、转写、搜索索引和微调时间 |
-| 媒体资产数据层 | `test/core/models/media_library_models_test.dart`、`test/core/services/media_asset_repository_test.dart` | `MediaAsset`、候选切片、导出记录、轻量向量、云端配置和旧数据兼容 |
+| 媒体资产数据层 | `test/core/models/media_library_models_test.dart`、`test/core/services/media_asset_repository_test.dart` | `MediaAsset`、候选切片、导出记录、轻量向量、云端配置、旧数据兼容、候选删除和结果清空 |
 | 本地 Edge Worker | `test/core/services/local_analysis_service_test.dart`、`test/core/services/local_clip_worker_service_test.dart`、`test/core/services/clip_preview_service_test.dart` | ffprobe 元数据、候选片段生成、FFmpeg 导出、失败记录、进度解析和切片预览图缓存 |
 | 个人云端客户端 | `test/core/services/cloud_clip_client_test.dart` | 健康检查、配对、分析包上传、云端任务、分块上传、取消和 manifest 拉取 |
 | 个人云端服务 | `node --test test/cloud/server.test.mjs` | 自托管 API、鉴权、分块上传、SHA256 校验、Worker 执行、结果 manifest 和文件下载 |
-| 页面交互 | `test/features/*_test.dart`、`test/widget_test.dart` | 导航、设置页、下载页、历史页、集成流程 |
+| 页面交互 | `test/features/*_test.dart`、`test/widget_test.dart` | 导航、设置页、下载页、历史页、Clips 切片预览/重新生成/删除/整理、集成流程 |
 
 ## 手工冒烟清单
 

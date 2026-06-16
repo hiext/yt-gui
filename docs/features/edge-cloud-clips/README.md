@@ -24,6 +24,7 @@
 | [DATA-SCHEMA.md](./DATA-SCHEMA.md) | 媒体资产、切片、向量和云端同步数据模型 |
 | [CLOUD-DEPLOY.md](./CLOUD-DEPLOY.md) | Docker 自托管部署、环境变量、鉴权、存储和运维 |
 | [ROADMAP.md](./ROADMAP.md) | MVP、Beta、Pro 多阶段演进计划 |
+| [TEST-COVERAGE.md](./TEST-COVERAGE.md) | 自动切片功能测试覆盖、适用场景和回归命令 |
 
 ## 默认决策
 
@@ -45,6 +46,8 @@
 - 旧数据兼容：`MediaAssetRepository` 可把旧 `ClipSegment`、`ClipRecord` 只读映射成新候选和导出记录。
 - 旧入口兼容：`AutoClipService` 保持旧自动切片入口可用，并把结果镜像到新媒体库导出记录。
 - 本地媒体库 UI：Clips 页展示媒体资产、候选切片、导出记录、状态筛选、搜索和本地打开入口；切片结果以预览画廊卡片呈现，包含 FFmpeg 缓存预览图、时间范围、摘要、切片原因、状态和打开片段入口。
+- 切片库管理：Clips 页支持单个切片预览、重新生成、删除，支持媒体资产级清空结果，并增加高分候选/待复核质量筛选。
+- 测试补齐：已覆盖导出记录独立删除、默认预览打开、默认删除后刷新、默认清空后刷新、高分/待复核质量筛选和本地 Worker 重新生成入口。
 - 个人云端设置：Settings 页支持服务地址、设备名、Pairing Token、访问 Token、同步开关和上传策略。
 - 个人云端 client：`CloudClipClient` 支持健康检查、设备配对、分析包上传、原片分块上传/查询/取消、创建任务、查询任务和拉取结果 manifest。
 - 自托管服务：`cloud/server.mjs`、`cloud/Dockerfile`、`cloud/docker-compose.yml` 支持本地目录对象存储、分块上传、上传取消/续传状态、Worker 执行、结果 manifest 和切片文件下载。

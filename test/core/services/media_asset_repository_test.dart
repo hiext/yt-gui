@@ -244,6 +244,165 @@ void main() {
     expect(records.single.status, ClipExportStatus.completed);
     expect(records.single.outputPath, '/downloads/clips/record-1.mp4');
   });
+
+  test('deletes a clip candidate with linked exports and vectors', () async {
+    final asset = _mediaAsset(sourceTaskId: 'download-delete-candidate');
+    await repository.saveMediaAsset(asset);
+    await repository.saveClipCandidate(
+      ClipCandidate(
+        id: 'candidate-delete',
+        mediaAssetId: asset.id,
+        startMs: 1000,
+        endMs: 8000,
+        title: 'Delete me',
+        summary: 'Candidate scheduled for deletion',
+        score: 0.7,
+        reason: 'test cleanup',
+      ),
+    );
+    await repository.saveClipExportRecord(
+      ClipExportRecord(
+        id: 'export-delete',
+        mediaAssetId: asset.id,
+        candidateId: 'candidate-delete',
+        startMs: 1000,
+        endMs: 8000,
+        outputPath: '/downloads/clips/delete-me.mp4',
+        status: ClipExportStatus.completed,
+        progress: 100,
+      ),
+    );
+    await repository.saveVectorRecord(
+      MediaVectorRecord(
+        id: 'vector-delete',
+        mediaAssetId: asset.id,
+        targetType: MediaVectorTargetType.candidate,
+        targetId: 'candidate-delete',
+        modality: MediaVectorModality.text,
+        model: 'test-embedding',
+        dimension: 2,
+        vector: const [0.1, 0.2],
+      ),
+    );
+
+    await repository.deleteClipCandidate('candidate-delete');
+
+    expect(await repository.loadClipCandidates(asset.id), isEmpty);
+    expect(await repository.loadClipExportRecords(asset.id), isEmpty);
+    expect(await repository.loadVectorRecords(asset.id), isEmpty);
+  });
+
+  test(
+    'deletes a single clip export record without removing candidate',
+    () async {
+      final asset = _mediaAsset(sourceTaskId: 'download-delete-export');
+      await repository.saveMediaAsset(asset);
+      await repository.saveClipCandidate(
+        ClipCandidate(
+          id: 'candidate-keep',
+          mediaAssetId: asset.id,
+          startMs: 1000,
+          endMs: 8000,
+          title: 'Keep me',
+          summary: 'Candidate should remain after export deletion',
+          score: 0.8,
+          reason: 'test export cleanup',
+        ),
+      );
+      await repository.saveClipExportRecord(
+        ClipExportRecord(
+          id: 'export-delete-only',
+          mediaAssetId: asset.id,
+          candidateId: 'candidate-keep',
+          startMs: 1000,
+          endMs: 8000,
+          outputPath: '/downloads/clips/delete-export.mp4',
+          status: ClipExportStatus.completed,
+          progress: 100,
+        ),
+      );
+
+      await repository.deleteClipExportRecord('export-delete-only');
+
+      expect(await repository.loadClipExportRecords(asset.id), isEmpty);
+      expect(await repository.loadClipCandidates(asset.id), hasLength(1));
+      expect(
+        (await repository.loadClipCandidates(asset.id)).single.id,
+        'candidate-keep',
+      );
+    },
+  );
+
+  test('clears all generated clip results for a media asset', () async {
+    final asset = _mediaAsset(sourceTaskId: 'download-clear-results');
+    await repository.saveMediaAsset(asset);
+    await repository.saveAnalysisJob(
+      MediaAnalysisJob(
+        id: 'analysis-clear',
+        mediaAssetId: asset.id,
+        runtime: MediaJobRuntime.local,
+        status: MediaAnalysisStatus.completed,
+        progress: 1,
+      ),
+    );
+    await repository.saveClipCandidate(
+      ClipCandidate(
+        id: 'candidate-clear',
+        mediaAssetId: asset.id,
+        startMs: 1000,
+        endMs: 8000,
+        title: 'Clear me',
+        summary: 'Candidate scheduled for clear',
+        score: 0.7,
+        reason: 'test clear',
+      ),
+    );
+    await repository.saveClipExportRecord(
+      ClipExportRecord(
+        id: 'export-clear',
+        mediaAssetId: asset.id,
+        candidateId: 'candidate-clear',
+        startMs: 1000,
+        endMs: 8000,
+        outputPath: '/downloads/clips/clear-me.mp4',
+        status: ClipExportStatus.completed,
+        progress: 100,
+      ),
+    );
+    await repository.saveVectorRecord(
+      MediaVectorRecord(
+        id: 'vector-clear',
+        mediaAssetId: asset.id,
+        targetType: MediaVectorTargetType.candidate,
+        targetId: 'candidate-clear',
+        modality: MediaVectorModality.text,
+        model: 'test-embedding',
+        dimension: 2,
+        vector: const [0.1, 0.2],
+      ),
+    );
+    await repository.saveCloudSyncTask(
+      CloudSyncTask(
+        id: 'sync-clear',
+        mediaAssetId: asset.id,
+        type: CloudSyncTaskType.uploadManifest,
+        status: CloudSyncStatus.queued,
+        idempotencyKey: 'clear-results',
+      ),
+    );
+
+    await repository.clearClipResultsForAsset(asset.id);
+
+    expect(await repository.loadMediaAsset(asset.id), isNotNull);
+    expect(await repository.loadAnalysisJobs(asset.id), isEmpty);
+    expect(await repository.loadClipCandidates(asset.id), isEmpty);
+    expect(await repository.loadClipExportRecords(asset.id), isEmpty);
+    expect(await repository.loadVectorRecords(asset.id), isEmpty);
+    expect(
+      await repository.loadCloudSyncTasks(mediaAssetId: asset.id),
+      isEmpty,
+    );
+  });
 }
 
 MediaAsset _mediaAsset({required String sourceTaskId}) {
