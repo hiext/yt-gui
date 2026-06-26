@@ -532,6 +532,83 @@ void main() {
       expect(loaded.single.adjustedEndMs, 8000);
     });
 
+    test('updateClipSegmentOutputPath persists generated clip path', () async {
+      final segment = ClipSegment(
+        id: 'seg-output',
+        sourceTaskId: 'src-1',
+        postProcessTaskId: 'pp-1',
+        sourcePath: '/tmp/test.mp4',
+        startMs: 0,
+        endMs: 12000,
+        title: 'Output Test',
+        summary: 'Test',
+        keywords: const [],
+        tags: const [],
+        confidence: 0.9,
+        reason: 'manual cut',
+      );
+
+      await DatabaseService().replaceClipSegmentsForTask('pp-1', [segment]);
+
+      await DatabaseService().updateClipSegmentOutputPath(
+        'seg-output',
+        outputPath: '/tmp/.clips/generated.mp4',
+      );
+
+      final loaded = await DatabaseService().loadClipSegments();
+      expect(loaded.single.outputPath, '/tmp/.clips/generated.mp4');
+    });
+
+    test(
+      'deleteClipSegment removes segment and linked searchable data',
+      () async {
+        final segment = ClipSegment(
+          id: 'seg-delete',
+          sourceTaskId: 'src-1',
+          postProcessTaskId: 'pp-1',
+          sourcePath: '/tmp/test.mp4',
+          startMs: 0,
+          endMs: 12000,
+          title: 'Delete Test',
+          summary: 'Searchable delete target',
+          keywords: const ['delete-me'],
+          tags: const ['cleanup'],
+          confidence: 0.9,
+          reason: 'manual cleanup',
+          detections: [
+            ClipDetection(
+              id: 'det-delete',
+              segmentId: 'seg-delete',
+              timestampMs: 1000,
+              label: 'object',
+              confidence: 0.8,
+              bbox: const [],
+            ),
+          ],
+          transcripts: [
+            ClipTranscript(
+              id: 'txt-delete',
+              segmentId: 'seg-delete',
+              startMs: 0,
+              endMs: 1000,
+              text: 'delete transcript',
+              words: const [],
+            ),
+          ],
+        );
+
+        await DatabaseService().replaceClipSegmentsForTask('pp-1', [segment]);
+
+        await DatabaseService().deleteClipSegment('seg-delete');
+
+        expect(await DatabaseService().loadClipSegments(), isEmpty);
+        expect(
+          await DatabaseService().searchClipSegments('delete-me'),
+          isEmpty,
+        );
+      },
+    );
+
     test('updateClipSegmentTiming does nothing for unknown id', () async {
       await DatabaseService().updateClipSegmentTiming(
         'nonexistent',

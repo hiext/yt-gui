@@ -58,8 +58,11 @@ class _ClipLibraryPageState extends State<ClipLibraryPage> {
   List<_MediaAssetView> _visibleAssetViews = const [];
   var _isSearching = false;
   var _isLoadingAssets = true;
+  final Set<String> _cuttingSegmentIds = {};
   ClipExportStatus? _exportStatusFilter;
   _ClipQualityFilter _qualityFilter = _ClipQualityFilter.all;
+  _LegacySegmentStatusFilter _segmentStatusFilter =
+      _LegacySegmentStatusFilter.all;
 
   @override
   void initState() {
@@ -353,6 +356,39 @@ class _ClipLibraryPageState extends State<ClipLibraryPage> {
                       onChanged: _setQualityFilter,
                     ),
                   ),
+                  SizedBox(
+                    width: 220,
+                    child: DropdownButtonFormField<_LegacySegmentStatusFilter>(
+                      key: const Key('legacy-segment-status-filter'),
+                      initialValue: _segmentStatusFilter,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Clip status',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: _LegacySegmentStatusFilter.all,
+                          child: Text('All clips'),
+                        ),
+                        DropdownMenuItem(
+                          value: _LegacySegmentStatusFilter.needsExport,
+                          child: Text('Needs export'),
+                        ),
+                        DropdownMenuItem(
+                          value: _LegacySegmentStatusFilter.exported,
+                          child: Text('Exported'),
+                        ),
+                      ],
+                      onChanged: (filter) {
+                        setState(() {
+                          _segmentStatusFilter =
+                              filter ?? _LegacySegmentStatusFilter.all;
+                        });
+                      },
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -389,8 +425,19 @@ class _ClipLibraryPageState extends State<ClipLibraryPage> {
             child: const SizedBox(height: 24),
           )
         else if (_segments.isNotEmpty)
-          for (final segment in _segments) ...[
-            _ClipSegmentCard(segment: segment, onAdjust: _adjustSegment),
+          for (final group in _groupLegacySegments(_segments)) ...[
+            if (group.segments.isEmpty)
+              ...[]
+            else ...[
+              _LegacySegmentGroupCard(
+                group: group,
+                cuttingSegmentIds: _cuttingSegmentIds,
+                onAdjust: _adjustSegment,
+                onOpenLocalPath: _openLocalPath,
+                onCutAndOpen: _cutAndOpenSegment,
+                onDelete: _deleteSegment,
+              ),
+            ],
             const SizedBox(height: 12),
           ],
       ],
@@ -476,6 +523,60 @@ class _ClipLibraryPageState extends State<ClipLibraryPage> {
     );
     await _runSearch(_searchCtrl.text);
   }
+
+  Future<void> _cutAndOpenSegment(ClipSegment segment) async {
+    if (_cuttingSegmentIds.contains(segment.id)) return;
+    setState(() => _cuttingSegmentIds.add(segment.id));
+    try {
+      final record = await widget.controller.cutClipSegment(segment.id);
+      final outputPath = record?.outputPath?.trim();
+      if (record?.status == ClipRecordStatus.completed &&
+          outputPath != null &&
+          outputPath.isNotEmpty) {
+        await _openLocalPath(outputPath);
+        await _runSearch(_searchCtrl.text);
+        return;
+      }
+      final message = record?.errorMessage?.trim().isNotEmpty == true
+          ? record!.errorMessage!
+          : 'Clip export failed. Check ffmpeg path and source file.';
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error.toString()),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _cuttingSegmentIds.remove(segment.id));
+      }
+    }
+  }
+
+  Future<void> _deleteSegment(ClipSegment segment) async {
+    await widget.controller.deleteClipSegment(segment.id);
+    await _runSearch(_searchCtrl.text);
+  }
+
+  List<_LegacySegmentGroup> _groupLegacySegments(List<ClipSegment> segments) {
+    final bySource = <String, List<ClipSegment>>{};
+    for (final segment in segments) {
+      if (!_segmentMatchesStatus(segment, _segmentStatusFilter)) continue;
+      bySource.putIfAbsent(segment.sourceTaskId, () => []).add(segment);
+    }
+    return [
+      for (final entry in bySource.entries)
+        _LegacySegmentGroup(sourceTaskId: entry.key, segments: entry.value),
+    ];
+  }
 }
 
 List<_MediaAssetView> _filterAssetViews(
@@ -557,6 +658,35 @@ _MediaAssetView _filterGalleryItems(
 }
 
 enum _ClipQualityFilter { all, highScore, needsReview }
+
+enum _LegacySegmentStatusFilter { all, needsExport, exported }
+
+bool _segmentMatchesStatus(
+  ClipSegment segment,
+  _LegacySegmentStatusFilter filter,
+) {
+  final exported = segment.outputPath?.trim().isNotEmpty == true;
+  return switch (filter) {
+    _LegacySegmentStatusFilter.all => true,
+    _LegacySegmentStatusFilter.needsExport => !exported,
+    _LegacySegmentStatusFilter.exported => exported,
+  };
+}
+
+class _LegacySegmentGroup {
+  const _LegacySegmentGroup({
+    required this.sourceTaskId,
+    required this.segments,
+  });
+
+  final String sourceTaskId;
+  final List<ClipSegment> segments;
+
+  int get exportedCount => segments
+      .where((segment) => segment.outputPath?.trim().isNotEmpty == true)
+      .length;
+  int get needsExportCount => segments.length - exportedCount;
+}
 
 class _MediaAssetView {
   const _MediaAssetView({
@@ -969,8 +1099,100 @@ class _PreviewPill extends StatelessWidget {
   }
 }
 
+class _LegacySegmentGroupCard extends StatelessWidget {
+  const _LegacySegmentGroupCard({
+    required this.group,
+    required this.cuttingSegmentIds,
+    required this.onAdjust,
+    required this.onOpenLocalPath,
+    required this.onCutAndOpen,
+    required this.onDelete,
+  });
+
+  final _LegacySegmentGroup group;
+  final Set<String> cuttingSegmentIds;
+  final Future<void> Function(
+    ClipSegment segment, {
+    int startDeltaMs,
+    int endDeltaMs,
+  })
+  onAdjust;
+  final Future<void> Function(String path) onOpenLocalPath;
+  final Future<void> Function(ClipSegment segment) onCutAndOpen;
+  final Future<void> Function(ClipSegment segment) onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final first = group.segments.first;
+    return Card(
+      key: Key('clip-source-group-${group.sourceTaskId}'),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.folder_copy_outlined, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    group.sourceTaskId,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleMedium,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              first.sourcePath,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                Chip(label: Text('${group.segments.length} clips')),
+                Chip(label: Text('${group.exportedCount} exported')),
+                Chip(label: Text('${group.needsExportCount} needs export')),
+              ],
+            ),
+            const SizedBox(height: 10),
+            for (final segment in group.segments) ...[
+              _ClipSegmentCard(
+                segment: segment,
+                onAdjust: onAdjust,
+                onOpenLocalPath: onOpenLocalPath,
+                onCutAndOpen: onCutAndOpen,
+                onDelete: onDelete,
+                isCutting: cuttingSegmentIds.contains(segment.id),
+              ),
+              if (segment != group.segments.last) const SizedBox(height: 10),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ClipSegmentCard extends StatelessWidget {
-  const _ClipSegmentCard({required this.segment, required this.onAdjust});
+  const _ClipSegmentCard({
+    required this.segment,
+    required this.onAdjust,
+    required this.onOpenLocalPath,
+    required this.onCutAndOpen,
+    required this.onDelete,
+    required this.isCutting,
+  });
 
   final ClipSegment segment;
   final Future<void> Function(
@@ -979,12 +1201,18 @@ class _ClipSegmentCard extends StatelessWidget {
     int endDeltaMs,
   })
   onAdjust;
+  final Future<void> Function(String path) onOpenLocalPath;
+  final Future<void> Function(ClipSegment segment) onCutAndOpen;
+  final Future<void> Function(ClipSegment segment) onDelete;
+  final bool isCutting;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final transcript = segment.transcripts.map((t) => t.text).join(' ');
+    final outputPath = segment.outputPath?.trim();
+    final sourcePath = segment.sourcePath.trim();
 
     return Card(
       child: Padding(
@@ -992,6 +1220,18 @@ class _ClipSegmentCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (outputPath != null && outputPath.isNotEmpty) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: _ClipPreviewFrame(
+                  key: Key('legacy-clip-preview-${segment.id}'),
+                  previewPath: null,
+                  startLabel: _formatTime(segment.effectiveStartMs),
+                  endLabel: _formatTime(segment.effectiveEndMs),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             Row(
               children: [
                 const Icon(Icons.movie_filter_outlined, size: 18),
@@ -1051,6 +1291,39 @@ class _ClipSegmentCard extends StatelessWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
+                if (outputPath != null && outputPath.isNotEmpty)
+                  OutlinedButton.icon(
+                    key: Key('open-segment-output-${segment.id}'),
+                    onPressed: () => onOpenLocalPath(outputPath),
+                    icon: const Icon(Icons.play_arrow_outlined),
+                    label: const Text('Open clip'),
+                  )
+                else
+                  OutlinedButton.icon(
+                    key: Key('generate-segment-output-${segment.id}'),
+                    onPressed: isCutting ? null : () => onCutAndOpen(segment),
+                    icon: isCutting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.content_cut_outlined),
+                    label: Text(isCutting ? 'Cutting' : 'Cut clip'),
+                  ),
+                if (sourcePath.isNotEmpty)
+                  OutlinedButton.icon(
+                    key: Key('open-segment-source-${segment.id}'),
+                    onPressed: () => onOpenLocalPath(sourcePath),
+                    icon: const Icon(Icons.video_library_outlined),
+                    label: const Text('Open source'),
+                  ),
+                OutlinedButton.icon(
+                  key: Key('delete-segment-${segment.id}'),
+                  onPressed: () => onDelete(segment),
+                  icon: const Icon(Icons.delete_outline),
+                  label: const Text('Delete'),
+                ),
                 OutlinedButton(
                   onPressed: () => onAdjust(segment, startDeltaMs: -1000),
                   child: Text(l10n.clipStartEarlier),

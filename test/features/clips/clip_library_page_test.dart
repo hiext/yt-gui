@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiext_yt_gui/core/controllers/post_process_controller.dart';
 import 'package:hiext_yt_gui/core/models/app_models.dart';
+import 'package:hiext_yt_gui/core/services/auto_clip_service.dart';
 import 'package:hiext_yt_gui/core/services/local_clip_worker_service.dart';
 import 'package:hiext_yt_gui/core/services/media_asset_repository.dart';
 import 'package:hiext_yt_gui/core/services/post_process_executor.dart';
@@ -869,6 +870,321 @@ void main() {
     expect(find.text(l10n.clipEndLater), findsOneWidget);
   });
 
+  testWidgets('legacy clip segment opens exported and source videos', (
+    tester,
+  ) async {
+    final opened = <String>[];
+    final controller = PostProcessController(
+      executor: _FakePostProcessExecutor(
+        completeImmediately: true,
+        segmentOutputPath: '/tmp/.clips/product-demo.mp4',
+      ),
+      settingsProvider: _settings,
+    );
+    addTearDown(controller.dispose);
+
+    await controller.enqueueClipForDownload(
+      DownloadTask(
+        id: 'download-1',
+        title: 'Test Video',
+        source: 'https://example.com/video',
+        status: DownloadStatus.completed,
+        progress: 100,
+        variants: const [],
+        mediaPath: '/tmp/test.mp4',
+      ),
+    );
+
+    await tester.pumpWidget(
+      _buildApp(
+        ClipLibraryPage(
+          controller: controller,
+          mediaAssetRepository: _FakeMediaAssetRepository(),
+          openLocalPath: (path) async => opened.add(path),
+        ),
+        locale: const Locale('en'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final segmentId = controller.clipSegments.single.id;
+    final openOutputButton = find.byKey(Key('open-segment-output-$segmentId'));
+    await tester.ensureVisible(openOutputButton);
+    await tester.pumpAndSettle();
+    await tester.tap(openOutputButton);
+    await tester.pumpAndSettle();
+
+    final openSourceButton = find.byKey(Key('open-segment-source-$segmentId'));
+    await tester.ensureVisible(openSourceButton);
+    await tester.pumpAndSettle();
+    await tester.tap(openSourceButton);
+    await tester.pumpAndSettle();
+
+    expect(opened, ['/tmp/.clips/product-demo.mp4', '/tmp/test.mp4']);
+  });
+
+  testWidgets('legacy clip segment still opens source when no export exists', (
+    tester,
+  ) async {
+    final opened = <String>[];
+    final controller = PostProcessController(
+      executor: _FakePostProcessExecutor(completeImmediately: true),
+      settingsProvider: _settings,
+    );
+    addTearDown(controller.dispose);
+
+    await controller.enqueueClipForDownload(
+      DownloadTask(
+        id: 'download-1',
+        title: 'Test Video',
+        source: 'https://example.com/video',
+        status: DownloadStatus.completed,
+        progress: 100,
+        variants: const [],
+        mediaPath: '/tmp/test.mp4',
+      ),
+    );
+
+    await tester.pumpWidget(
+      _buildApp(
+        ClipLibraryPage(
+          controller: controller,
+          mediaAssetRepository: _FakeMediaAssetRepository(),
+          openLocalPath: (path) async => opened.add(path),
+        ),
+        locale: const Locale('en'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final segmentId = controller.clipSegments.single.id;
+    final openSourceButton = find.byKey(Key('open-segment-source-$segmentId'));
+    await tester.ensureVisible(openSourceButton);
+    await tester.pumpAndSettle();
+    await tester.tap(openSourceButton);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(Key('open-segment-output-$segmentId')), findsNothing);
+    expect(opened, ['/tmp/test.mp4']);
+  });
+
+  testWidgets('legacy clip segment cuts and opens generated clip', (
+    tester,
+  ) async {
+    final opened = <String>[];
+    final autoClipService = _FakeAutoClipService(
+      outputPath: '/tmp/.clips/generated-product-demo.mp4',
+    );
+    final controller = PostProcessController(
+      executor: _FakePostProcessExecutor(completeImmediately: true),
+      settingsProvider: _settings,
+      autoClipService: autoClipService,
+    );
+    addTearDown(controller.dispose);
+
+    await controller.enqueueClipForDownload(
+      DownloadTask(
+        id: 'download-1',
+        title: 'Test Video',
+        source: 'https://example.com/video',
+        status: DownloadStatus.completed,
+        progress: 100,
+        variants: const [],
+        mediaPath: '/tmp/test.mp4',
+      ),
+    );
+
+    await tester.pumpWidget(
+      _buildApp(
+        ClipLibraryPage(
+          controller: controller,
+          mediaAssetRepository: _FakeMediaAssetRepository(),
+          openLocalPath: (path) async => opened.add(path),
+        ),
+        locale: const Locale('en'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final segmentId = controller.clipSegments.single.id;
+    final generateButton = find.byKey(
+      Key('generate-segment-output-$segmentId'),
+    );
+    await tester.ensureVisible(generateButton);
+    await tester.pumpAndSettle();
+    await tester.tap(generateButton);
+    await tester.pumpAndSettle();
+
+    expect(autoClipService.cutSegmentIds, [segmentId]);
+    expect(opened, ['/tmp/.clips/generated-product-demo.mp4']);
+    expect(
+      controller.clipSegments.single.outputPath,
+      '/tmp/.clips/generated-product-demo.mp4',
+    );
+  });
+
+  testWidgets(
+    'legacy clip segment reports cut failure instead of staying silent',
+    (tester) async {
+      final autoClipService = _FakeAutoClipService(
+        outputPath: '',
+        status: ClipRecordStatus.failed,
+        errorMessage: 'ffmpeg not found',
+      );
+      final controller = PostProcessController(
+        executor: _FakePostProcessExecutor(completeImmediately: true),
+        settingsProvider: _settings,
+        autoClipService: autoClipService,
+      );
+      addTearDown(controller.dispose);
+
+      await controller.enqueueClipForDownload(
+        DownloadTask(
+          id: 'download-1',
+          title: 'Test Video',
+          source: 'https://example.com/video',
+          status: DownloadStatus.completed,
+          progress: 100,
+          variants: const [],
+          mediaPath: '/tmp/test.mp4',
+        ),
+      );
+
+      await tester.pumpWidget(
+        _buildApp(
+          ClipLibraryPage(
+            controller: controller,
+            mediaAssetRepository: _FakeMediaAssetRepository(),
+          ),
+          locale: const Locale('en'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final segmentId = controller.clipSegments.single.id;
+      final generateButton = find.byKey(
+        Key('generate-segment-output-$segmentId'),
+      );
+      await tester.ensureVisible(generateButton);
+      await tester.pumpAndSettle();
+      await tester.tap(generateButton);
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('ffmpeg not found'), findsOneWidget);
+    },
+  );
+
+  testWidgets('legacy clip segment delete removes it from management list', (
+    tester,
+  ) async {
+    final controller = PostProcessController(
+      executor: _FakePostProcessExecutor(
+        completeImmediately: true,
+        segmentCount: 2,
+      ),
+      settingsProvider: _settings,
+    );
+    addTearDown(controller.dispose);
+
+    await controller.enqueueClipForDownload(
+      DownloadTask(
+        id: 'download-1',
+        title: 'Test Video',
+        source: 'https://example.com/video',
+        status: DownloadStatus.completed,
+        progress: 100,
+        variants: const [],
+        mediaPath: '/tmp/test.mp4',
+      ),
+    );
+
+    await tester.pumpWidget(
+      _buildApp(
+        ClipLibraryPage(
+          controller: controller,
+          mediaAssetRepository: _FakeMediaAssetRepository(),
+        ),
+        locale: const Locale('en'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final firstSegmentId = controller.clipSegments.first.id;
+    final deleteButton = find.byKey(Key('delete-segment-$firstSegmentId'));
+    await tester.ensureVisible(deleteButton);
+    await tester.pumpAndSettle();
+    await tester.tap(deleteButton);
+    await tester.pumpAndSettle();
+
+    expect(controller.clipSegments, hasLength(1));
+    expect(
+      controller.clipSegments.any((segment) => segment.id == firstSegmentId),
+      isFalse,
+    );
+    expect(find.text('Product demo 1'), findsNothing);
+    expect(find.text('Product demo 2'), findsOneWidget);
+  });
+
+  testWidgets('legacy clip segments support grouped status filter', (
+    tester,
+  ) async {
+    final controller = PostProcessController(
+      executor: _FakePostProcessExecutor(
+        completeImmediately: true,
+        segmentCount: 2,
+        exportedSegmentIndexes: const {2},
+      ),
+      settingsProvider: _settings,
+    );
+    addTearDown(controller.dispose);
+
+    await controller.enqueueClipForDownload(
+      DownloadTask(
+        id: 'download-1',
+        title: 'Test Video',
+        source: 'https://example.com/video',
+        status: DownloadStatus.completed,
+        progress: 100,
+        variants: const [],
+        mediaPath: '/tmp/test.mp4',
+      ),
+    );
+
+    await tester.pumpWidget(
+      _buildApp(
+        ClipLibraryPage(
+          controller: controller,
+          mediaAssetRepository: _FakeMediaAssetRepository(),
+        ),
+        locale: const Locale('en'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const Key('clip-source-group-download-1')),
+      findsOneWidget,
+    );
+    expect(find.textContaining('1 exported'), findsOneWidget);
+    expect(find.textContaining('1 needs export'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('legacy-segment-status-filter')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Needs export').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Product demo 1'), findsOneWidget);
+    expect(find.text('Product demo 2'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('legacy-segment-status-filter')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Exported').last);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Product demo 1'), findsNothing);
+    expect(find.text('Product demo 2'), findsOneWidget);
+  });
+
   testWidgets('adjust timing buttons modify segment', (tester) async {
     final controller = PostProcessController(
       executor: _FakePostProcessExecutor(completeImmediately: true),
@@ -1079,7 +1395,7 @@ Widget _buildApp(Widget child, {Locale? locale}) {
     locale: locale,
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
-    home: child,
+    home: Scaffold(body: child),
   );
 }
 
@@ -1143,10 +1459,16 @@ class _FakePostProcessExecutor implements PostProcessExecutor {
   _FakePostProcessExecutor({
     this.completeImmediately = false,
     this.includeTranscript = true,
+    this.segmentOutputPath,
+    this.segmentCount = 1,
+    this.exportedSegmentIndexes = const {},
   });
 
   final bool completeImmediately;
   final bool includeTranscript;
+  final String? segmentOutputPath;
+  final int segmentCount;
+  final Set<int> exportedSegmentIndexes;
   final List<String> started = [];
 
   @override
@@ -1168,48 +1490,62 @@ class _FakePostProcessExecutor implements PostProcessExecutor {
           status: PostProcessStatus.completed,
           progress: 100,
           clipSegments: [
-            ClipSegment(
-              id: '${task.id}#segment-1',
-              sourceTaskId: task.sourceTaskId,
-              postProcessTaskId: task.id,
-              sourcePath: task.sourcePath,
-              startMs: 0,
-              endMs: 12000,
-              title: 'Product demo',
-              summary: 'Product demo segment',
-              keywords: const ['product', 'demo'],
-              tags: const ['yolo', 'whisper'],
-              confidence: 1.0,
-              reason: 'object + speech',
-              transcripts: includeTranscript
-                  ? [
-                      ClipTranscript(
-                        id: 'tr-1',
-                        segmentId: '${task.id}#segment-1',
-                        startMs: 0,
-                        endMs: 5000,
-                        text: 'This is a product demonstration',
-                        words: const [],
-                      ),
-                    ]
-                  : const [],
-              detections: [
-                ClipDetection(
-                  id: 'det-1',
-                  segmentId: '${task.id}#segment-1',
-                  timestampMs: 2000,
-                  label: 'product',
-                  confidence: 0.95,
-                  bbox: const [],
-                ),
-              ],
-            ),
+            for (var index = 1; index <= segmentCount; index++)
+              _segmentForTask(task, index),
           ],
         ),
       );
     } else {
       onTaskChanged?.call(task.copyWith(status: PostProcessStatus.running));
     }
+  }
+
+  ClipSegment _segmentForTask(PostProcessTask task, int index) {
+    final id = '${task.id}#segment-$index';
+    final isSingle = segmentCount == 1;
+    final title = isSingle ? 'Product demo' : 'Product demo $index';
+    final exported = exportedSegmentIndexes.contains(index);
+    return ClipSegment(
+      id: id,
+      sourceTaskId: task.sourceTaskId,
+      postProcessTaskId: task.id,
+      sourcePath: task.sourcePath,
+      startMs: (index - 1) * 12000,
+      endMs: index * 12000,
+      title: title,
+      summary: isSingle
+          ? 'Product demo segment'
+          : 'Product demo segment $index',
+      keywords: const ['product', 'demo'],
+      tags: const ['yolo', 'whisper'],
+      confidence: index == 1 ? 1.0 : 0.7,
+      reason: 'object + speech',
+      outputPath: exported
+          ? '/tmp/.clips/product-demo-$index.mp4'
+          : segmentOutputPath,
+      transcripts: includeTranscript
+          ? [
+              ClipTranscript(
+                id: 'tr-$index',
+                segmentId: id,
+                startMs: (index - 1) * 12000,
+                endMs: (index - 1) * 12000 + 5000,
+                text: 'This is a product demonstration $index',
+                words: const [],
+              ),
+            ]
+          : const [],
+      detections: [
+        ClipDetection(
+          id: 'det-$index',
+          segmentId: id,
+          timestampMs: (index - 1) * 12000 + 2000,
+          label: 'product',
+          confidence: 0.95,
+          bbox: const [],
+        ),
+      ],
+    );
   }
 }
 
@@ -1232,6 +1568,42 @@ class _FakeLocalClipWorkerService extends LocalClipWorkerService {
       endMs: candidate.endMs,
       outputPath: '${settings.saveDirectory}/.clips/${candidate.id}.mp4',
       status: ClipExportStatus.completed,
+      progress: 100,
+    );
+  }
+}
+
+class _FakeAutoClipService extends AutoClipService {
+  _FakeAutoClipService({
+    required this.outputPath,
+    this.status = ClipRecordStatus.completed,
+    this.errorMessage,
+  });
+
+  final String outputPath;
+  final ClipRecordStatus status;
+  final String? errorMessage;
+  final List<String> cutSegmentIds = [];
+
+  @override
+  Future<ClipRecord> cutSingle({
+    required ClipSegment segment,
+    required DownloadSettings settings,
+    void Function(double progress)? onProgress,
+  }) async {
+    cutSegmentIds.add(segment.id);
+    return ClipRecord(
+      id: '${segment.id}#manual-cut',
+      sourceTaskId: segment.sourceTaskId,
+      sourcePath: segment.sourcePath,
+      title: segment.title,
+      confidence: segment.confidence,
+      startMs: segment.effectiveStartMs,
+      endMs: segment.effectiveEndMs,
+      durationMs: segment.effectiveEndMs - segment.effectiveStartMs,
+      status: status,
+      outputPath: outputPath,
+      errorMessage: errorMessage,
       progress: 100,
     );
   }

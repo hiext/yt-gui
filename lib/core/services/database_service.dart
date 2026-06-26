@@ -608,6 +608,52 @@ class DatabaseService {
     });
   }
 
+  Future<void> updateClipSegmentOutputPath(
+    String segmentId, {
+    required String outputPath,
+  }) async {
+    final d = await db;
+    final rows = await d.query(
+      'clip_segments',
+      where: 'id = ?',
+      whereArgs: [segmentId],
+      limit: 1,
+    );
+    if (rows.isEmpty) return;
+    final segment = ClipSegment.fromJson(
+      jsonDecode(rows.single['data'] as String) as Map<String, Object?>,
+    ).copyWith(outputPath: outputPath);
+    await d.transaction((txn) async {
+      await _insertClipSegment(txn, segment);
+    });
+  }
+
+  Future<void> deleteClipSegment(String segmentId) async {
+    final d = await db;
+    await d.transaction((txn) async {
+      await txn.delete(
+        'clip_detections',
+        where: 'segment_id = ?',
+        whereArgs: [segmentId],
+      );
+      await txn.delete(
+        'clip_transcripts',
+        where: 'segment_id = ?',
+        whereArgs: [segmentId],
+      );
+      await txn.delete(
+        'clip_search_index',
+        where: 'segment_id = ?',
+        whereArgs: [segmentId],
+      );
+      await txn.delete(
+        'clip_segments',
+        where: 'id = ?',
+        whereArgs: [segmentId],
+      );
+    });
+  }
+
   Future<void> _insertClipSegment(Transaction txn, ClipSegment segment) async {
     final data = jsonEncode(segment.toJson());
     await txn.insert('clip_segments', {

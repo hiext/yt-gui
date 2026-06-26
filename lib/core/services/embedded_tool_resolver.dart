@@ -15,12 +15,14 @@ class ResolvedEmbeddedTool {
     required this.kind,
     required this.path,
     required this.isCustom,
+    this.isBundledAsset = false,
     this.fallbackPath,
   });
 
   final EmbeddedToolKind kind;
   final String path;
   final bool isCustom;
+  final bool isBundledAsset;
   final String? fallbackPath;
 }
 
@@ -73,6 +75,7 @@ class EmbeddedToolResolver {
           environment: environment ?? Platform.environment,
         );
         if (customExecutable != null) {
+          _validateCustomToolPath(kind, customExecutable);
           return ResolvedEmbeddedTool(
             kind: kind,
             path: customExecutable,
@@ -84,6 +87,7 @@ class EmbeddedToolResolver {
         );
       }
 
+      _validateCustomToolPath(kind, customPath);
       return ResolvedEmbeddedTool(kind: kind, path: customPath, isCustom: true);
     }
 
@@ -94,21 +98,12 @@ class EmbeddedToolResolver {
       environment: environment ?? Platform.environment,
     );
 
-    if (_fileExists(spec.assetPath)) {
-      return ResolvedEmbeddedTool(
-        kind: kind,
-        path: spec.assetPath,
-        isCustom: false,
-        fallbackPath: systemPath,
-      );
-    }
-
     if (systemPath != null) {
       return ResolvedEmbeddedTool(
         kind: kind,
-        path: spec.assetPath,
+        path: systemPath,
         isCustom: false,
-        fallbackPath: systemPath,
+        fallbackPath: spec.assetPath,
       );
     }
 
@@ -116,6 +111,7 @@ class EmbeddedToolResolver {
       kind: kind,
       path: spec.assetPath,
       isCustom: false,
+      isBundledAsset: true,
     );
   }
 
@@ -224,6 +220,25 @@ class EmbeddedToolResolver {
 
   bool _fileExists(String path) {
     return fileExists?.call(path) ?? File(path).existsSync();
+  }
+
+  void _validateCustomToolPath(EmbeddedToolKind kind, String path) {
+    final fileName = path
+        .split(RegExp(r'[/\\]+'))
+        .where((part) => part.isNotEmpty)
+        .lastOrNull
+        ?.toLowerCase();
+    if (fileName == null) return;
+    final expected = kind.baseExecutableName.toLowerCase();
+    final validNames = {expected, '$expected.exe'};
+    if (validNames.contains(fileName)) return;
+
+    throw EmbeddedToolResolutionException(
+      'Configured ${kind.baseExecutableName} path does not look like '
+      '${kind.baseExecutableName}: $path. Choose the real '
+      '${kind.baseExecutableName} executable and verify it with '
+      '"${kind.baseExecutableName} --version".',
+    );
   }
 }
 

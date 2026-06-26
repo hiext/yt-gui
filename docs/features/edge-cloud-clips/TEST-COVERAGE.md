@@ -9,6 +9,7 @@
 - 下载完成后的媒体资产归档和媒体库索引。
 - 本地 ffprobe 分析、候选片段生成、轻量向量记录。
 - 本地 FFmpeg 切片导出、失败记录、进度解析。
+- `yt-dlp` / `ffmpeg` 工具解析优先级：设置页正确路径 > 系统工具 > 内置资源包。
 - Clips 页媒体资产浏览、片段画廊、预览、重新生成、删除、清空和整理筛选。
 - 个人云端 client、Docker 自托管服务、分块上传、云端任务和 result manifest。
 
@@ -35,6 +36,15 @@
   - FFmpeg 导出候选切片并保存 `ClipExportRecord`。
   - FFmpeg 失败时保存失败导出记录。
   - 解析 FFmpeg `stderr time=...` 并保存中间进度。
+- `test/core/services/embedded_tool_resolver_test.dart`
+  - 自定义路径最高优先级。
+  - 自定义路径必须指向对应工具，阻止 `yt-dlp` / `ffmpeg` 填反。
+  - 未配置时优先使用系统 `PATH` 和 Homebrew 等常见目录。
+  - 系统工具不可用时最后使用内置资源路径。
+- `test/core/services/ffmpeg_clip_executor_test.dart`
+  - 系统 FFmpeg 存在时不先加载内置资源。
+- `test/core/services/process_yt_dlp_executor_test.dart`
+  - 系统 yt-dlp 存在时不先加载内置资源。
 - `test/core/services/clip_preview_service_test.dart`
   - 完成导出后从切片开头生成缓存预览图。
 
@@ -49,6 +59,11 @@
   - 注入式预览、重新生成和删除回调。
   - 默认重新生成走 `LocalClipWorkerService`。
   - 默认预览打开已导出切片文件。
+  - 旧 `ClipSegment` 结果卡片在没有媒体资产记录时仍可打开导出切片或原视频文件。
+  - 旧 `ClipSegment` 结果没有导出产物时，可通过 `AutoClipService.cutSingle` 即时生成切片并打开。
+  - 旧 `ClipSegment` 结果按来源任务分组展示，并支持 `Needs export` / `Exported` 状态筛选。
+  - 旧 `ClipSegment` 结果支持删除，删除后从管理列表和搜索索引中移除。
+  - `Cut clip` 失败时展示错误原因，避免用户点击后无反馈。
   - 默认删除和清空通过 repository 更新数据并刷新页面。
   - `High score` 和 `Needs review` 质量筛选。
 
@@ -71,6 +86,9 @@ flutter test test/core/services/media_asset_repository_test.dart -r expanded
 ### 修改本地分析、切片、预览
 
 ```bash
+flutter test test/core/services/embedded_tool_resolver_test.dart -r expanded
+flutter test test/core/services/process_yt_dlp_executor_test.dart \
+  test/core/services/ffmpeg_clip_executor_test.dart -r expanded
 flutter test test/core/services/local_analysis_service_test.dart \
   test/core/services/local_clip_worker_service_test.dart \
   test/core/services/clip_preview_service_test.dart -r expanded

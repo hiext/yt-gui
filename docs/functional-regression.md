@@ -5,7 +5,7 @@
 ## 回归范围
 
 - **下载链路**：链接解析、格式列表、任务入队、串行/队列/并发调度、暂停、恢复、取消、失败重试、历史记录。
-- **工具解析**：内置 `yt-dlp` / `ffmpeg`、自定义工具路径、平台二进制清单和缺失文件提示。
+- **工具解析**：`yt-dlp` / `ffmpeg` 必须按“设置页已验证正确路径 > 系统 `PATH` / 常见目录 > 内置资源包”解析，覆盖自定义路径填错工具、平台二进制清单、构建前刷新和缺失文件提示。
 - **Cookie 管理**：浏览器 Cookie 导入、站点配置持久化、过期提示和重新导入。
 - **免责声明**：首次启动提示、帮助页说明、README 和 Release 模板中的发布声明。
 - **AI 切片链路**：下载完成后创建后处理任务和本地媒体资产、内置候选切片、外部 Python sidecar、云端大模型配置档、结构化切片存储、媒体资产库搜索、本地 FFmpeg 导出和时间微调。
@@ -52,7 +52,7 @@ CI 还会在 GitHub Actions 中执行 Linux 测试，以及 Linux、macOS、Wind
 
 1. 启动构建产物，确认左侧导航、首页、设置页和帮助页可打开。
 2. 首次启动时确认免责声明弹窗出现，点击确认后不应重复弹出。
-3. 在设置页检查保存目录、默认画质、`yt-dlp` 路径、`ffmpeg` 路径可编辑并持久化。
+3. 在设置页检查保存目录、默认画质、`yt-dlp` 路径、`ffmpeg` 路径可编辑并持久化；自定义路径必须优先于系统工具和内置资源，并且路径要明确验证为对应工具。
 4. 在「AI 切片分析」中切换内置、本地 sidecar、云端大模型三种提供方。
 5. 新增一个云端配置档，检查厂商、配置名、Endpoint、模型 ID、API Key 字段可见；不要输入真实生产 Key 做普通冒烟。
 6. 如需验证云端切片，使用测试 Key 或本地 mock endpoint，返回包含 `segments` 数组的 JSON。
@@ -88,7 +88,7 @@ CI 还会在 GitHub Actions 中执行 Linux 测试，以及 Linux、macOS、Wind
 
 ## 验证边界
 
-- `test/core/services/smoke_test.dart` 默认跳过，因为它需要真实网络、真实 `yt-dlp` / `ffmpeg` 二进制和平台环境。
+- `test/core/services/smoke_test.dart` 默认跳过，因为它需要真实网络、真实 `yt-dlp` / `ffmpeg` 二进制和平台环境。真实冒烟前先运行 `dart run tools/fetch_embedded_tools.dart --platform=<platform>` 或安装系统工具，避免切片/下载因工具缺失失败。
 - 可用 `https://www.youtube.com/watch?v=AQB6dVt-t64` 做手工链接解析验证；该视频约 1 小时 40 分钟，最高格式体积很大，不应用作 CI、自动化下载或默认回归下载样例。
 - 自动化测试不调用真实云厂商 API，也不验证真实账号 Cookie；这些场景必须用测试 Key、测试账号或本地 mock 服务验证。
 - 构建通过不等于平台签名、安装器、公证或 AppImage/DMG/EXE 分发流程完成；发布前仍需按目标平台单独验证。

@@ -140,7 +140,7 @@ void main() {
   });
 
   test(
-    'inspect uses PATH fallback when bundled asset is unavailable',
+    'inspect uses PATH tool before trying bundled asset',
     () async {
       final tempDir = Directory.systemTemp.createTempSync('yt-dlp-fallback-');
       addTearDown(() => tempDir.deleteSync(recursive: true));
@@ -148,12 +148,16 @@ void main() {
       File('${tempDir.path}/ffmpeg.exe').writeAsStringSync('');
       final process = _FakeProcess(exitCodeValue: 0);
       String? executable;
+      var attemptedAssetLoad = false;
       final executor = ProcessYtDlpExecutor(
         toolResolver: EmbeddedToolResolver(
           platformOverride: EmbeddedToolPlatform.windows,
           environment: {'PATH': tempDir.path},
         ),
-        loadAsset: (_) => throw Exception('missing bundled asset'),
+        loadAsset: (_) {
+          attemptedAssetLoad = true;
+          throw Exception('bundled asset should not be loaded first');
+        },
         processRunner: (path, _) async {
           executable = path;
           return process;
@@ -168,6 +172,7 @@ void main() {
       await inspectFuture;
 
       expect(executable, ytDlp.absolute.path);
+      expect(attemptedAssetLoad, isFalse);
     },
   );
 

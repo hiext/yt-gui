@@ -76,6 +76,36 @@ void main() {
       expect(controller.settings.downloadThumbnail, isTrue);
       expect(controller.settings.downloadMode, DownloadMode.concurrent);
     });
+
+    testWidgets('browse file failure shows a message instead of crashing', (
+      tester,
+    ) async {
+      final controller = SettingsController();
+      addTearDown(controller.dispose);
+      await useLargeViewport(tester);
+
+      await tester.pumpWidget(
+        _buildApp(
+          Scaffold(
+            body: SettingsPage(
+              controller: controller,
+              filePicker: _ThrowingFilePicker(),
+            ),
+          ),
+          locale: const Locale('en'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final browseButton = find.byTooltip('Browse file').first;
+      await tester.ensureVisible(browseButton);
+      await tester.pumpAndSettle();
+      await tester.tap(browseButton);
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('File picker is unavailable'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
   });
 
   group('section visibility', () {
@@ -524,6 +554,18 @@ class _FakeMediaAssetRepository extends MediaAssetRepository {
     bool enabledOnly = false,
   }) async {
     return savedConfigs;
+  }
+}
+
+class _ThrowingFilePicker implements SettingsFilePicker {
+  @override
+  Future<String?> pickDirectory({required String title}) {
+    throw const FilePickerUnavailableException('missing picker');
+  }
+
+  @override
+  Future<String?> pickFile({required String title}) {
+    throw const FilePickerUnavailableException('missing picker');
   }
 }
 

@@ -4,11 +4,14 @@ import 'dart:io';
 
 import 'ffmpeg_clip_executor.dart';
 import '../models/app_models.dart';
+import 'embedded_tool_executable.dart';
 import 'embedded_tool_resolver.dart';
 import 'media_asset_repository.dart';
 import 'process_yt_dlp_executor.dart' show ProcessRunner;
 
-typedef FfmpegPathResolver = String Function(DownloadSettings settings);
+typedef FfmpegPathResolver = FutureOr<String> Function(
+  DownloadSettings settings,
+);
 typedef ClipExportProgressChanged =
     void Function(ClipExportRecord record, int progress);
 
@@ -18,15 +21,19 @@ class LocalClipWorkerService {
     EmbeddedToolResolver? toolResolver,
     ProcessRunner? processRunner,
     FfmpegPathResolver? ffmpegPathResolver,
+    EmbeddedToolExecutableResolver? executableResolver,
   }) : _repository = repository ?? MediaAssetRepository(),
        _toolResolver = toolResolver ?? const EmbeddedToolResolver(),
        _processRunner = processRunner ?? _defaultProcessRunner,
-       _ffmpegPathResolver = ffmpegPathResolver;
+       _ffmpegPathResolver = ffmpegPathResolver,
+       _executableResolver =
+           executableResolver ?? EmbeddedToolExecutableResolver();
 
   final MediaAssetRepository _repository;
   final EmbeddedToolResolver _toolResolver;
   final ProcessRunner _processRunner;
   final FfmpegPathResolver? _ffmpegPathResolver;
+  final EmbeddedToolExecutableResolver _executableResolver;
   final Map<String, Process> _processes = {};
 
   Future<ClipExportRecord> exportCandidate({
@@ -54,8 +61,11 @@ class LocalClipWorkerService {
 
     try {
       await Directory(File(outputPath).parent.path).create(recursive: true);
+      final ffmpegPath =
+          await _ffmpegPathResolver?.call(settings) ??
+          await _resolveFfmpegPath(settings);
       final process = await _processRunner(
-        _ffmpegPathResolver?.call(settings) ?? _resolveFfmpegPath(settings),
+        ffmpegPath,
         FfmpegClipExecutor.buildClipArguments(
           sourcePath: asset.mediaPath,
           outputPath: outputPath,
@@ -122,11 +132,9 @@ class LocalClipWorkerService {
     process?.kill(ProcessSignal.sigterm);
   }
 
-  String _resolveFfmpegPath(DownloadSettings settings) {
+  Future<String> _resolveFfmpegPath(DownloadSettings settings) {
     final bundle = _toolResolver.resolveBundle(settings: settings);
-    return bundle.ffmpeg.isCustom
-        ? bundle.ffmpeg.path
-        : bundle.ffmpeg.fallbackPath ?? bundle.ffmpeg.path;
+    return _executableResolver.ensureExecutable(bundle.ffmpeg);
   }
 
   String _outputPath(

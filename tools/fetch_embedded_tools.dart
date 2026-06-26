@@ -159,6 +159,7 @@ class _ToolArtifact {
     required this.archiveType,
     required this.chmod,
     this.url,
+    this.mirrors = const <String>[],
     this.sha256,
     this.extract,
     this.manual = false,
@@ -172,6 +173,7 @@ class _ToolArtifact {
   final String archiveType;
   final bool chmod;
   final String? url;
+  final List<String> mirrors;
   final String? sha256;
   final String? extract;
   final bool manual;
@@ -199,6 +201,22 @@ class _ToolArtifact {
       );
     }
 
+    List<String> optionalStringList(String key) {
+      final value = json[key];
+      if (value == null) return const <String>[];
+      if (value is! List) {
+        throw _ToolException(
+          'Artifact ${json['id'] ?? '<unknown>'}: '
+          'invalid string list "$key"',
+        );
+      }
+      return value
+          .whereType<String>()
+          .map((entry) => entry.trim())
+          .where((entry) => entry.isNotEmpty)
+          .toList(growable: false);
+    }
+
     return _ToolArtifact(
       id: requiredString('id'),
       tool: requiredString('tool'),
@@ -207,6 +225,7 @@ class _ToolArtifact {
       archiveType: optionalString('archiveType') ?? 'file',
       chmod: json['chmod'] == true,
       url: optionalString('url'),
+      mirrors: optionalStringList('mirrors'),
       sha256: optionalString('sha256'),
       extract: optionalString('extract'),
       manual: json['manual'] == true,
@@ -215,21 +234,12 @@ class _ToolArtifact {
   }
 
   Future<void> install(Directory tempDir) async {
-    if (url == null || sha256 == null) {
+    if ((url == null && mirrors.isEmpty) || sha256 == null) {
       throw _ToolException('$id is missing url or sha256');
     }
 
     final downloadFile = File('${tempDir.path}${Platform.pathSeparator}$id');
-    await _download(Uri.parse(url!), downloadFile);
-
-    final actualSha = await _sha256(downloadFile);
-    if (actualSha.toLowerCase() != sha256!.toLowerCase()) {
-      throw _ToolException(
-        '$id checksum mismatch\n'
-        'expected: $sha256\n'
-        'actual:   $actualSha',
-      );
-    }
+    await _downloadVerified(downloadFile);
 
     final outputFile = File(output);
     outputFile.parent.createSync(recursive: true);
@@ -244,6 +254,36 @@ class _ToolArtifact {
     if (chmod && !Platform.isWindows) {
       await _run('chmod', ['+x', outputFile.path]);
     }
+  }
+
+  Future<void> _downloadVerified(File target) async {
+    final urls = [
+      ?url,
+      ...mirrors,
+    ];
+    final failures = <String>[];
+
+    for (final rawUrl in urls) {
+      try {
+        if (target.existsSync()) target.deleteSync();
+        stdout.writeln('  source $rawUrl');
+        await _download(Uri.parse(rawUrl), target);
+        final actualSha = await _sha256(target);
+        if (actualSha.toLowerCase() == sha256!.toLowerCase()) {
+          return;
+        }
+        failures.add(
+          '$rawUrl checksum mismatch, expected $sha256, actual $actualSha',
+        );
+      } catch (error) {
+        failures.add('$rawUrl failed: $error');
+      }
+    }
+
+    throw _ToolException(
+      '$id could not be downloaded from primary source or mirrors:\n'
+      '${failures.map((failure) => '- $failure').join('\n')}',
+    );
   }
 
   Future<File> _extract(File archive, Directory tempDir) async {

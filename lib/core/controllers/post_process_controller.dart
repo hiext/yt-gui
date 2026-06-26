@@ -282,6 +282,46 @@ class PostProcessController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<ClipRecord?> cutClipSegment(String segmentId) async {
+    final service = _autoClipService;
+    if (service == null) return null;
+    final index = _clipSegments.indexWhere(
+      (segment) => segment.id == segmentId,
+    );
+    if (index < 0) return null;
+
+    service.config = settingsProvider().autoClipConfig;
+    final record = await service.cutSingle(
+      segment: _clipSegments[index],
+      settings: settingsProvider(),
+    );
+    final outputPath = record.outputPath?.trim();
+    if (record.status == ClipRecordStatus.completed &&
+        outputPath != null &&
+        outputPath.isNotEmpty) {
+      final updated = _clipSegments[index].copyWith(outputPath: outputPath);
+      _clipSegments[index] = updated;
+      await repository?.updateClipSegmentOutputPath(
+        segmentId,
+        outputPath: outputPath,
+      );
+    }
+    final recordIndex = _clipRecords.indexWhere((item) => item.id == record.id);
+    if (recordIndex >= 0) {
+      _clipRecords[recordIndex] = record;
+    } else {
+      _clipRecords.add(record);
+    }
+    notifyListeners();
+    return record;
+  }
+
+  Future<void> deleteClipSegment(String segmentId) async {
+    _clipSegments.removeWhere((segment) => segment.id == segmentId);
+    await repository?.deleteClipSegment(segmentId);
+    notifyListeners();
+  }
+
   void _startAutoCutIfEnabled(PostProcessTask task) {
     final service = _autoClipService;
     if (service == null) return;
@@ -293,27 +333,31 @@ class PostProcessController extends ChangeNotifier {
     if (!service.config.enabled) return;
 
     unawaited(
-      service.startAutoCut(
-        segments: task.clipSegments,
-        settings: settingsProvider(),
-        onStatusChanged: (recordId, status) {
-          final index = _clipRecords.indexWhere((r) => r.id == recordId);
-          if (index >= 0) {
-            _clipRecords[index] = service.records.firstWhere(
-              (r) => r.id == recordId,
-              orElse: () => _clipRecords[index],
+      service
+          .startAutoCut(
+            segments: task.clipSegments,
+            settings: settingsProvider(),
+            onStatusChanged: (recordId, status) {
+              final index = _clipRecords.indexWhere((r) => r.id == recordId);
+              if (index >= 0) {
+                _clipRecords[index] = service.records.firstWhere(
+                  (r) => r.id == recordId,
+                  orElse: () => _clipRecords[index],
+                );
+              } else {
+                _clipRecords.addAll(
+                  service.records.where((r) => r.id == recordId),
+                );
+              }
+              notifyListeners();
+            },
+          )
+          .then((newRecords) {
+            _clipRecords.addAll(
+              newRecords.where((r) => !_clipRecords.any((e) => e.id == r.id)),
             );
-          } else {
-            _clipRecords.addAll(service.records.where((r) => r.id == recordId));
-          }
-          notifyListeners();
-        },
-      ).then((newRecords) {
-        _clipRecords.addAll(
-          newRecords.where((r) => !_clipRecords.any((e) => e.id == r.id)),
-        );
-        notifyListeners();
-      }),
+            notifyListeners();
+          }),
     );
   }
 

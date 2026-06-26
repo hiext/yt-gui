@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import '../models/app_models.dart';
+import 'embedded_tool_executable.dart';
 import 'embedded_tool_resolver.dart';
 import 'process_yt_dlp_executor.dart' show ProcessRunner;
 
@@ -15,11 +16,15 @@ class ClipPreviewService {
   ClipPreviewService({
     EmbeddedToolResolver? toolResolver,
     ProcessRunner? processRunner,
+    EmbeddedToolExecutableResolver? executableResolver,
   }) : _toolResolver = toolResolver ?? const EmbeddedToolResolver(),
-       _processRunner = processRunner ?? _defaultProcessRunner;
+       _processRunner = processRunner ?? _defaultProcessRunner,
+       _executableResolver =
+           executableResolver ?? EmbeddedToolExecutableResolver();
 
   final EmbeddedToolResolver _toolResolver;
   final ProcessRunner _processRunner;
+  final EmbeddedToolExecutableResolver _executableResolver;
 
   Future<String?> resolvePreviewPath({
     required MediaAsset asset,
@@ -50,7 +55,7 @@ class ClipPreviewService {
               export.outputPath.trim().isNotEmpty
           ? 0
           : candidate.startMs;
-      final process = await _processRunner(_resolveFfmpegPath(settings), [
+      final process = await _processRunner(await _resolveFfmpegPath(settings), [
         '-y',
         '-ss',
         _formatFfmpegTime(seekMs),
@@ -100,11 +105,9 @@ class ClipPreviewService {
     ].join(Platform.pathSeparator);
   }
 
-  String _resolveFfmpegPath(DownloadSettings settings) {
+  Future<String> _resolveFfmpegPath(DownloadSettings settings) {
     final bundle = _toolResolver.resolveBundle(settings: settings);
-    return bundle.ffmpeg.isCustom
-        ? bundle.ffmpeg.path
-        : bundle.ffmpeg.fallbackPath ?? bundle.ffmpeg.path;
+    return _executableResolver.ensureExecutable(bundle.ffmpeg);
   }
 
   String _formatFfmpegTime(int ms) {

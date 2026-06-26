@@ -85,7 +85,7 @@ yt-dlp 可视化桌面下载器，面向普通用户的图形化视频/音频下
    brew install yt-dlp ffmpeg
    ```
 
-   > 应用内置了工具查找逻辑，也可在设置 → yt-dlp/ffmpeg 路径中指定自定义路径。
+   > 应用工具优先级为：设置页自定义路径 > 系统 `PATH` / 常见目录 > 应用内置工具。
 
 ### Windows
 
@@ -132,24 +132,30 @@ flutter doctor
 
 ## yt-dlp / ffmpeg 配置
 
-应用内置了按平台区分的 yt-dlp 和 ffmpeg 查找逻辑。
+应用内置了按平台区分的 yt-dlp 和 ffmpeg 查找逻辑。工具解析顺序固定为：
 
-### 方式一：使用应用内置工具（推荐）
+1. 设置页填写且已验证正确的自定义路径。路径必须指向对应工具本身，`yt-dlp` 路径不能填成 `ffmpeg`，`ffmpeg` 路径不能填成 `yt-dlp`；建议用 `yt-dlp --version` / `ffmpeg --version` 验证。
+2. 当前操作系统的系统二进制包，包括 `PATH`、Homebrew、`/usr/local/bin` 等常见目录。
+3. 应用包内 `assets/bin/<platform>/` 的内置资源包。
 
-发布前运行脚本，将锁定版本的工具下载到 `assets/bin/<platform>/`：
+使用工具时不能静默失败；自定义路径不存在或不像对应工具时会直接报错。三层都找不到时，应用会提示用户设置正确路径、安装系统工具，或运行 `dart run tools/fetch_embedded_tools.dart --tool=yt-dlp,ffmpeg` 刷新内置包。下载源不可用时，脚本会继续尝试锁文件里的 `mirrors` 镜像列表。
+
+### 构建前刷新内置工具
+
+每次正式构建前运行脚本，将锁定版本的工具下载到 `assets/bin/<platform>/`。CI 的 Linux、macOS、Windows 构建任务已经在 `flutter build` 前执行对应平台的下载命令：
 
 ```bash
 # 查看计划下载项
 dart run tools/fetch_embedded_tools.dart --dry-run
 
-# 只准备当前 macOS 包需要的 yt-dlp
-dart run tools/fetch_embedded_tools.dart --platform=macos --tool=yt-dlp
+# 准备当前 macOS 包需要的工具
+dart run tools/fetch_embedded_tools.dart --platform=macos
 
-# 准备 Linux / Windows 已锁定的 yt-dlp 与 LGPL ffmpeg
+# 准备 Linux / Windows 已锁定工具
 dart run tools/fetch_embedded_tools.dart --platform=linux,windows
 ```
 
-脚本读取 `tools/embedded_tools.lock.json`，下载后校验 SHA256，再放入对应目录：
+脚本读取 `tools/embedded_tools.lock.json`，依次尝试主下载地址和 `mirrors` 镜像，下载后校验 SHA256，再放入对应目录：
 
 ```
 assets/bin/
@@ -161,7 +167,7 @@ assets/bin/
   windows/ffmpeg.exe
 ```
 
-这些二进制体积较大，默认被 `.gitignore` 排除；请只提交锁文件、脚本和许可证说明。macOS 的 `ffmpeg` 目前不默认内置，发布前需先在锁文件中补充已确认许可证、签名/公证和 SHA256 的供应源，或继续使用 Homebrew / 自定义路径。
+这些二进制体积较大，默认被 `.gitignore` 排除；请只提交锁文件、脚本和许可证说明。macOS 的 `ffmpeg` 目前仍是 release gate：发布前需在锁文件中补充已确认许可证、签名/公证、SHA256 和镜像供应源，或明确要求用户使用 Homebrew / 自定义路径。
 
 然后在 `pubspec.yaml` 中确认资产声明（已默认包含）：
 
@@ -173,11 +179,11 @@ flutter:
     - assets/bin/windows/
 ```
 
-### 方式二：在设置页指定自定义路径
+### 在设置页指定自定义路径
 
-打开应用 → 设置，在「yt-dlp 路径」和「ffmpeg 路径」输入框中填写系统中已安装的工具路径，留空则优先使用内置工具，再回退到系统 `PATH` 和常见目录（如 `/opt/homebrew/bin`、`/usr/local/bin`）。
+打开应用 → 设置，在「yt-dlp 路径」和「ffmpeg 路径」输入框中填写系统中已安装的工具路径。该路径是最高优先级，但必须明确验证为对应工具：文件名需要匹配目标工具，并且应能在终端执行 `yt-dlp --version` 或 `ffmpeg --version`。留空时先查系统 `PATH` 和常见目录（如 `/opt/homebrew/bin`、`/usr/local/bin`），最后才使用应用内置工具。
 
-> 自定义路径优先于内置工具。路径不存在时，启动下载会给出明确错误提示。
+> 自定义路径不存在、填错工具或无法通过版本校验时，启动下载或切片会给出明确错误提示；不允许在找不到工具时静默继续。
 
 ### 第三方工具许可证
 

@@ -3,6 +3,7 @@ import 'dart:math';
 
 import '../models/app_models.dart';
 import 'clip_record_repository.dart';
+import 'embedded_tool_executable.dart';
 import 'embedded_tool_resolver.dart';
 import 'ffmpeg_clip_executor.dart';
 import 'media_asset_repository.dart';
@@ -12,12 +13,19 @@ class AutoClipService {
     ClipRecordRepository? repository,
     MediaAssetRepository? mediaAssetRepository,
     AutoClipConfig? config,
+    EmbeddedToolResolver? toolResolver,
+    EmbeddedToolExecutableResolver? executableResolver,
   }) : _repo = repository ?? ClipRecordRepository(),
        _mediaAssetRepository = mediaAssetRepository ?? MediaAssetRepository(),
+       _toolResolver = toolResolver ?? const EmbeddedToolResolver(),
+       _executableResolver =
+           executableResolver ?? EmbeddedToolExecutableResolver(),
        config = config ?? AutoClipConfig.defaults;
 
   final ClipRecordRepository _repo;
   final MediaAssetRepository _mediaAssetRepository;
+  final EmbeddedToolResolver _toolResolver;
+  final EmbeddedToolExecutableResolver _executableResolver;
 
   /// Configuration (can be updated from settings).
   AutoClipConfig config;
@@ -325,10 +333,10 @@ class AutoClipService {
     required String outputPath,
     required DownloadSettings settings,
   }) async {
-    final tools = const EmbeddedToolResolver().resolveBundle(
-      settings: settings,
+    final tools = _toolResolver.resolveBundle(settings: settings);
+    final ffmpegPath = await _executableResolver.ensureExecutable(
+      tools.ffmpeg,
     );
-    final ffmpegPath = tools.ffmpeg.path;
 
     // Ensure output directory exists
     final outFile = File(outputPath);

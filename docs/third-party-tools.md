@@ -8,8 +8,10 @@
 - 下载脚本：`dart run tools/fetch_embedded_tools.dart`
 - 输出目录：`assets/bin/<platform>/`
 - Git 策略：下载后的二进制默认不提交，只提交锁文件和脚本。
+- 构建策略：每次正式构建前运行 `tools/fetch_embedded_tools.dart --platform=<platform>`，将锁定版本刷新到 `assets/bin/<platform>/`。
+- 镜像策略：每个 artifact 可配置 `mirrors` 数组；主下载地址失败或校验不通过时，脚本按顺序尝试镜像，并仍以同一 SHA256 作为最终准入条件。
 
-应用启动时优先使用设置页自定义路径；未配置时优先使用包内工具；包内工具缺失时再查找系统 `PATH` 和常见安装目录。
+应用启动和执行切片/下载时必须使用同一条工具解析规则：设置页已验证正确的路径最高优先级；未配置时查找系统 `PATH` 和常见安装目录；最后使用包内工具。自定义路径不能只判断文件存在，还必须确认它指向对应工具，至少阻止 `yt-dlp`/`ffmpeg` 填反，并要求用户可用 `yt-dlp --version` / `ffmpeg --version` 验证。三层都不可用时必须给出明确错误，提示用户设置路径、安装系统工具或刷新内置包，不能静默报“找不到工具”。
 
 ## yt-dlp
 
@@ -31,9 +33,9 @@
 
 1. 运行 `dart run tools/fetch_embedded_tools.dart --dry-run`，确认计划下载项。
 2. 运行目标平台下载命令，例如 `dart run tools/fetch_embedded_tools.dart --platform=linux,windows`。
-3. 确认 `assets/bin/<platform>/yt-dlp` 和 `ffmpeg` 可执行。
-4. 运行对应平台构建和 GUI 冒烟解析。
-5. 在 Release notes 中列出内置工具版本、来源和许可证摘要。
+3. 确认 `assets/bin/<platform>/yt-dlp` 和 `ffmpeg` 可执行；macOS 若继续使用 manual FFmpeg，必须在 release gate 中写明系统/Homebrew/自定义路径要求。
+4. 运行对应平台构建和 GUI 冒烟解析，至少覆盖下载解析和本地切片。
+5. 在 Release notes 中列出内置工具版本、来源、镜像策略和许可证摘要。
 
 ## 免责声明
 

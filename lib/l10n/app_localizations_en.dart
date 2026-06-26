@@ -162,19 +162,21 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get externalToolsDesc =>
-      'Paths to yt-dlp and ffmpeg. Leave empty to use bundled versions.';
+      'Paths to yt-dlp and ffmpeg. Leave empty to use system tools, then bundled versions. Custom paths must validate as the matching tool.';
 
   @override
   String get ytDlpPath => 'yt-dlp Path';
 
   @override
-  String get ytDlpPathHint => 'Leave empty to use bundled yt-dlp';
+  String get ytDlpPathHint =>
+      'Highest priority. Must point to yt-dlp; verify with yt-dlp --version';
 
   @override
   String get ffmpegPath => 'ffmpeg Path';
 
   @override
-  String get ffmpegPathHint => 'Leave empty to use bundled ffmpeg';
+  String get ffmpegPathHint =>
+      'Highest priority. Must point to ffmpeg; verify with ffmpeg --version';
 
   @override
   String get downloadMode => 'Download Mode';
@@ -416,14 +418,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get toolConfigDesc =>
-      'The app bundles yt-dlp and ffmpeg, or use system-installed versions.';
+      'Tool priority: validated settings path, system installation, then bundled version.';
 
   @override
   String get faqYtDlp => 'How to use your own yt-dlp?';
 
   @override
   String get faqYtDlpAnswer =>
-      'Enter full path in Settings, leave empty for bundled version.';
+      'Enter the full path in Settings. It must point to the real yt-dlp executable and pass yt-dlp --version. Leave empty to use system tools first, then bundled versions.';
 
   @override
   String get faqFfmpeg => 'What is ffmpeg for?';
@@ -541,6 +543,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get filePickerExecutableTitle => 'Select executable file';
+
+  @override
+  String get filePickerUnavailable =>
+      'File picker is unavailable in this environment. Enter the path manually.';
 
   @override
   String moreCookies(int count) {

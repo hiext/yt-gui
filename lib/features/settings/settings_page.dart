@@ -9,6 +9,8 @@ import '../../core/models/app_models.dart';
 import '../../core/services/cookie_service.dart'
     show CookieService, CookieEntry, CookieImportResult;
 import '../../core/services/cloud_clip_client.dart';
+import '../../core/services/embedded_tool_executable.dart';
+import '../../core/services/embedded_tool_resolver.dart';
 import '../../core/services/log_service.dart';
 import '../../core/services/media_asset_repository.dart';
 import '../../shared/widgets/section_card.dart';
@@ -18,10 +20,12 @@ class SettingsPage extends StatefulWidget {
     super.key,
     required this.controller,
     this.mediaAssetRepository,
+    this.filePicker,
   });
 
   final SettingsController controller;
   final MediaAssetRepository? mediaAssetRepository;
+  final SettingsFilePicker? filePicker;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -42,6 +46,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _personalCloudPairingTokenCtrl;
   late final TextEditingController _personalCloudTokenCtrl;
   late final MediaAssetRepository _mediaAssetRepository;
+  late final SettingsFilePicker _filePicker;
   AiCloudVendor _newAiCloudVendor = AiCloudVendor.openAI;
   bool _saved = true;
   DateTime? _lastSavedAt;
@@ -55,6 +60,7 @@ class _SettingsPageState extends State<SettingsPage> {
     super.initState();
     _mediaAssetRepository =
         widget.mediaAssetRepository ?? MediaAssetRepository();
+    _filePicker = widget.filePicker ?? const NativeSettingsFilePicker();
     final s = widget.controller.settings;
     _saveDirCtrl = TextEditingController(text: s.saveDirectory);
     _qualityCtrl = TextEditingController(text: s.defaultQuality);
@@ -1276,24 +1282,13 @@ class _SettingsPageState extends State<SettingsPage> {
         '$saveDir/.cookies/$domain'
         '_$browser.txt';
 
-    // Resolve yt-dlp path: custom path → PATH lookup → bundled fallback
-    String ytDlpPath;
-    if (settings.ytDlpPath != null && File(settings.ytDlpPath!).existsSync()) {
-      ytDlpPath = settings.ytDlpPath!;
-    } else {
-      // Check bundled release path first
-      final exeDir = File(Platform.resolvedExecutable).parent.path;
-      final bundledPath = '$exeDir/data/flutter_assets/assets/bin/linux/yt-dlp';
-      if (File(bundledPath).existsSync()) {
-        ytDlpPath = bundledPath;
-      } else {
-        // Fall back to PATH
-        ytDlpPath = 'yt-dlp';
-      }
-    }
-
     final service = CookieService();
     try {
+      final bundle = const EmbeddedToolResolver().resolveBundle(
+        settings: settings,
+      );
+      final ytDlpPath = await EmbeddedToolExecutableResolver()
+          .ensureExecutable(bundle.ytDlp);
       final result = await service.importFromBrowser(
         browser: browser,
         domain: domain,
@@ -1401,30 +1396,26 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _browseDirectory() async {
     final l10n = AppLocalizations.of(context)!;
-    // Use system file picker to choose a directory
-    final result = await Process.run('zenity', [
-      '--file-selection',
-      '--directory',
-      '--title=${l10n.filePickerSaveDirTitle}',
-    ]);
-    if (result.exitCode == 0) {
-      final path = (result.stdout as String).trim();
-      if (path.isNotEmpty) {
+    try {
+      final path = await _filePicker.pickDirectory(
+        title: l10n.filePickerSaveDirTitle,
+      );
+      if (path != null && path.isNotEmpty) {
         _saveDirCtrl.text = path;
         widget.controller.updateSaveDirectory(path);
       }
+    } on FilePickerUnavailableException {
+      _showFilePickerUnavailable();
     }
   }
 
   Future<void> _browseFile(TextEditingController ctrl) async {
     final l10n = AppLocalizations.of(context)!;
-    final result = await Process.run('zenity', [
-      '--file-selection',
-      '--title=${l10n.filePickerExecutableTitle}',
-    ]);
-    if (result.exitCode == 0) {
-      final path = (result.stdout as String).trim();
-      if (path.isNotEmpty) {
+    try {
+      final path = await _filePicker.pickFile(
+        title: l10n.filePickerExecutableTitle,
+      );
+      if (path != null && path.isNotEmpty) {
         ctrl.text = path;
         if (identical(ctrl, _ytDlpCtrl)) {
           widget.controller.updateYtDlpPath(path);
@@ -1432,8 +1423,103 @@ class _SettingsPageState extends State<SettingsPage> {
           widget.controller.updateFfmpegPath(path);
         }
       }
+    } on FilePickerUnavailableException {
+      _showFilePickerUnavailable();
     }
   }
+
+  void _showFilePickerUnavailable() {
+    final l10n = AppLocalizations.of(context)!;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.filePickerUnavailable)),
+    );
+  }
+}
+
+abstract class SettingsFilePicker {
+  Future<String?> pickDirectory({required String title});
+
+  Future<String?> pickFile({required String title});
+}
+
+class NativeSettingsFilePicker implements SettingsFilePicker {
+  const NativeSettingsFilePicker();
+
+  @override
+  Future<String?> pickDirectory({required String title}) {
+    return _pick(title: title, directory: true);
+  }
+
+  @override
+  Future<String?> pickFile({required String title}) {
+    return _pick(title: title, directory: false);
+  }
+
+  Future<String?> _pick({
+    required String title,
+    required bool directory,
+  }) async {
+    final result = await _runPlatformPicker(title: title, directory: directory);
+    if (result.exitCode != 0) return null;
+    final path = (result.stdout as String).trim();
+    return path.isEmpty ? null : path;
+  }
+
+  Future<ProcessResult> _runPlatformPicker({
+    required String title,
+    required bool directory,
+  }) async {
+    try {
+      if (Platform.isMacOS) {
+        final script = directory
+            ? 'POSIX path of (choose folder with prompt "${_escapeAppleScript(title)}")'
+            : 'POSIX path of (choose file with prompt "${_escapeAppleScript(title)}")';
+        return Process.run('osascript', ['-e', script]);
+      }
+      if (Platform.isWindows) {
+        final command = directory
+            ? r'''
+Add-Type -AssemblyName System.Windows.Forms;
+$dialog = New-Object System.Windows.Forms.FolderBrowserDialog;
+$dialog.Description = $args[0];
+if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $dialog.SelectedPath }
+'''
+            : r'''
+Add-Type -AssemblyName System.Windows.Forms;
+$dialog = New-Object System.Windows.Forms.OpenFileDialog;
+$dialog.Title = $args[0];
+if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $dialog.FileName }
+''';
+        return Process.run('powershell', [
+          '-NoProfile',
+          '-STA',
+          '-Command',
+          command,
+          title,
+        ]);
+      }
+      return Process.run('zenity', [
+        '--file-selection',
+        if (directory) '--directory',
+        '--title=$title',
+      ]);
+    } on ProcessException catch (error) {
+      throw FilePickerUnavailableException(error.message);
+    }
+  }
+
+  String _escapeAppleScript(String value) {
+    return value.replaceAll(r'\', r'\\').replaceAll('"', r'\"');
+  }
+}
+
+class FilePickerUnavailableException implements Exception {
+  const FilePickerUnavailableException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
 }
 
 class _CookieSection extends StatefulWidget {

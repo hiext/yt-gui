@@ -151,19 +151,20 @@ class AppLocalizationsZh extends AppLocalizations {
   String get externalTools => '外部工具';
 
   @override
-  String get externalToolsDesc => 'yt-dlp 和 ffmpeg 的路径，留空则使用应用内置版本。';
+  String get externalToolsDesc =>
+      'yt-dlp 和 ffmpeg 的路径，留空则先用系统工具，再用内置版本。自定义路径必须通过对应工具校验。';
 
   @override
   String get ytDlpPath => 'yt-dlp 路径';
 
   @override
-  String get ytDlpPathHint => '留空时使用应用内置 yt-dlp';
+  String get ytDlpPathHint => '最高优先级。必须指向 yt-dlp，可用 yt-dlp --version 验证';
 
   @override
   String get ffmpegPath => 'ffmpeg 路径';
 
   @override
-  String get ffmpegPathHint => '留空时使用应用内置 ffmpeg';
+  String get ffmpegPathHint => '最高优先级。必须指向 ffmpeg，可用 ffmpeg --version 验证';
 
   @override
   String get downloadMode => '下载模式';
@@ -393,13 +394,14 @@ class AppLocalizationsZh extends AppLocalizations {
   String get toolConfig => '工具配置';
 
   @override
-  String get toolConfigDesc => '应用内置了 yt-dlp 和 ffmpeg，也可以使用系统安装的版本。';
+  String get toolConfigDesc => '工具优先级：已校验的设置路径、系统安装版本、应用内置版本。';
 
   @override
   String get faqYtDlp => '如何使用自己安装的 yt-dlp？';
 
   @override
-  String get faqYtDlpAnswer => '在「设置」页面的「yt-dlp 路径」中输入完整路径，留空则使用应用内置版本。';
+  String get faqYtDlpAnswer =>
+      '在「设置」页面的「yt-dlp 路径」中输入完整路径，路径必须指向真实 yt-dlp，可用 yt-dlp --version 验证；留空则先查系统工具，再使用应用内置版本。';
 
   @override
   String get faqFfmpeg => 'ffmpeg 有什么用？';
@@ -515,6 +517,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get filePickerExecutableTitle => '选择可执行文件';
+
+  @override
+  String get filePickerUnavailable => '当前环境无法打开文件选择器，请手动填写路径。';
 
   @override
   String moreCookies(int count) {
