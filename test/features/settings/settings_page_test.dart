@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiext_yt_gui/core/controllers/settings_controller.dart';
 import 'package:hiext_yt_gui/core/models/app_models.dart';
+import 'package:hiext_yt_gui/core/services/cloud_clip_client.dart';
 import 'package:hiext_yt_gui/core/services/media_asset_repository.dart';
 import 'package:hiext_yt_gui/features/settings/settings_page.dart';
 import 'package:hiext_yt_gui/l10n/app_localizations.dart';
@@ -366,6 +367,98 @@ void main() {
   });
 
   group('personal cloud section', () {
+    testWidgets('pairs personal cloud and shows success feedback', (tester) async {
+      final controller = SettingsController();
+      final repository = _FakeMediaAssetRepository();
+      final client = _FakeCloudClipClient.pairingSuccess();
+      addTearDown(controller.dispose);
+      await useLargeViewport(tester);
+
+      await tester.pumpWidget(
+        _buildApp(
+          SettingsPage(
+            controller: controller,
+            mediaAssetRepository: repository,
+            cloudClipClientFactory: (_) => client,
+          ),
+          locale: const Locale('en'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('personal-cloud-url-field')),
+        'https://clips.example.test/',
+      );
+      await tester.enterText(
+        find.byKey(const Key('personal-cloud-device-field')),
+        'mac-mini',
+      );
+      await tester.enterText(
+        find.byKey(const Key('personal-cloud-pairing-token-field')),
+        'pair-once',
+      );
+      await tester.tap(find.byKey(const Key('personal-cloud-pair-button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Personal Cloud paired successfully.'), findsWidgets);
+      expect(
+        find.textContaining('pair-once'),
+        findsNothing,
+      );
+      expect(
+        find.textContaining('token-1'),
+        findsOneWidget,
+      );
+      expect(repository.savedConfigs.single.accessToken, 'token-1');
+      expect(client.pairRequests.single.deviceName, 'mac-mini');
+    });
+
+    testWidgets('shows pairing failure feedback', (tester) async {
+      final controller = SettingsController();
+      final repository = _FakeMediaAssetRepository();
+      final client = _FakeCloudClipClient.pairingFailure(
+        const CloudClipClientException('HTTP 401: invalid pairing token'),
+      );
+      addTearDown(controller.dispose);
+      await useLargeViewport(tester);
+
+      await tester.pumpWidget(
+        _buildApp(
+          SettingsPage(
+            controller: controller,
+            mediaAssetRepository: repository,
+            cloudClipClientFactory: (_) => client,
+          ),
+          locale: const Locale('en'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('personal-cloud-url-field')),
+        'https://clips.example.test/',
+      );
+      await tester.enterText(
+        find.byKey(const Key('personal-cloud-device-field')),
+        'mac-mini',
+      );
+      await tester.enterText(
+        find.byKey(const Key('personal-cloud-pairing-token-field')),
+        'pair-once',
+      );
+      await tester.tap(find.byKey(const Key('personal-cloud-pair-button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(
+        find.text('Pair device failed: HTTP 401: invalid pairing token'),
+        findsWidgets,
+      );
+      expect(repository.savedConfigs, isEmpty);
+    });
+
     testWidgets('saves personal cloud connection config', (tester) async {
       final controller = SettingsController();
       final repository = _FakeMediaAssetRepository();
@@ -541,6 +634,47 @@ void main() {
   });
 }
 
+class _PairRequest {
+  const _PairRequest({
+    required this.deviceName,
+    required this.pairingToken,
+  });
+
+  final String deviceName;
+  final String pairingToken;
+}
+
+class _FakeCloudClipClient extends CloudClipClient {
+  _FakeCloudClipClient._({this.result, this.error})
+    : super(baseUrl: 'https://clips.example.test');
+
+  factory _FakeCloudClipClient.pairingSuccess() {
+    return _FakeCloudClipClient._(
+      result: const CloudPairResult(deviceId: 'dev-1', accessToken: 'token-1'),
+    );
+  }
+
+  factory _FakeCloudClipClient.pairingFailure(Object error) {
+    return _FakeCloudClipClient._(error: error);
+  }
+
+  final CloudPairResult? result;
+  final Object? error;
+  final pairRequests = <_PairRequest>[];
+
+  @override
+  Future<CloudPairResult> pairDevice({
+    required String deviceName,
+    required String pairingToken,
+  }) async {
+    pairRequests.add(
+      _PairRequest(deviceName: deviceName, pairingToken: pairingToken),
+    );
+    if (error != null) throw error!;
+    return result!;
+  }
+}
+
 class _FakeMediaAssetRepository extends MediaAssetRepository {
   final savedConfigs = <CloudConnectionConfig>[];
 
@@ -574,6 +708,6 @@ Widget _buildApp(Widget child, {Locale? locale}) {
     locale: locale,
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
-    home: child,
+    home: Scaffold(body: child),
   );
 }

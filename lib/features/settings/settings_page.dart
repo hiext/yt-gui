@@ -20,11 +20,13 @@ class SettingsPage extends StatefulWidget {
     super.key,
     required this.controller,
     this.mediaAssetRepository,
+    this.cloudClipClientFactory,
     this.filePicker,
   });
 
   final SettingsController controller;
   final MediaAssetRepository? mediaAssetRepository;
+  final CloudClipClient Function(String baseUrl)? cloudClipClientFactory;
   final SettingsFilePicker? filePicker;
 
   @override
@@ -52,6 +54,8 @@ class _SettingsPageState extends State<SettingsPage> {
   DateTime? _lastSavedAt;
   bool _personalCloudSyncEnabled = false;
   bool _isPairingPersonalCloud = false;
+  String? _personalCloudStatusMessage;
+  bool _personalCloudStatusIsError = false;
   CloudUploadPolicy _personalCloudUploadPolicy =
       CloudUploadPolicy.originalOnConfirm;
 
@@ -1087,6 +1091,27 @@ class _SettingsPageState extends State<SettingsPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (_personalCloudStatusMessage != null) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: _personalCloudStatusIsError
+                  ? Theme.of(context).colorScheme.errorContainer
+                  : Theme.of(context).colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              _personalCloudStatusMessage!,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: _personalCloudStatusIsError
+                    ? Theme.of(context).colorScheme.onErrorContainer
+                    : Theme.of(context).colorScheme.onPrimaryContainer,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
         TextFormField(
           key: const Key('personal-cloud-url-field'),
           controller: _personalCloudUrlCtrl,
@@ -1227,9 +1252,16 @@ class _SettingsPageState extends State<SettingsPage> {
     final baseUrl = _personalCloudUrlCtrl.text.trim();
     final pairingToken = _personalCloudPairingTokenCtrl.text.trim();
     if (baseUrl.isEmpty || pairingToken.isEmpty) return;
-    setState(() => _isPairingPersonalCloud = true);
+    setState(() {
+      _isPairingPersonalCloud = true;
+      _personalCloudStatusMessage = null;
+      _personalCloudStatusIsError = false;
+    });
     try {
-      final result = await CloudClipClient(baseUrl: baseUrl).pairDevice(
+      final client =
+          widget.cloudClipClientFactory?.call(baseUrl) ??
+          CloudClipClient(baseUrl: baseUrl);
+      final result = await client.pairDevice(
         deviceName: _personalCloudDeviceCtrl.text.trim().isEmpty
             ? 'desktop'
             : _personalCloudDeviceCtrl.text,
@@ -1238,6 +1270,24 @@ class _SettingsPageState extends State<SettingsPage> {
       _personalCloudTokenCtrl.text = result.accessToken;
       _personalCloudPairingTokenCtrl.clear();
       await _savePersonalCloudConfig();
+      if (!mounted) return;
+      setState(() {
+        _personalCloudStatusMessage = 'Personal Cloud paired successfully.';
+        _personalCloudStatusIsError = false;
+      });
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(content: Text('Personal Cloud paired successfully.')),
+      );
+    } catch (error) {
+      LogService.instance.warn('personal cloud pairing failed: $error', 'ui');
+      if (!mounted) return;
+      setState(() {
+        _personalCloudStatusMessage = 'Pair device failed: $error';
+        _personalCloudStatusIsError = true;
+      });
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(content: Text('Pair device failed: $error')),
+      );
     } finally {
       if (mounted) {
         setState(() => _isPairingPersonalCloud = false);
