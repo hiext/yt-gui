@@ -33,6 +33,9 @@ class AutoClipService {
   /// Currently tracked records.
   final List<ClipRecord> _records = [];
 
+  /// Active ffmpeg processes, keyed by record id.
+  final Map<String, Process> _processes = {};
+
   List<ClipRecord> get records => List.unmodifiable(_records);
 
   /// Start automatic cutting for qualifying segments.
@@ -69,10 +72,9 @@ class AutoClipService {
         effectiveStart + 1000,
         segment.effectiveEndMs + config.endOffsetMs,
       );
-      final maxDurationMs = config.maxClipDurationSec * 1000;
-      final clippedEnd = effectiveStart + maxDurationMs < effectiveEnd
-          ? effectiveStart + maxDurationMs
-          : effectiveEnd;
+      final maxDurationMs = max(1000, config.maxClipDurationSec * 1000);
+      final clippedEnd = min(effectiveEnd, effectiveStart + maxDurationMs);
+      final clampedEnd = max(effectiveStart + 1000, clippedEnd);
 
       final record = ClipRecord(
         id: '${segment.id}#cut',
@@ -81,8 +83,8 @@ class AutoClipService {
         title: segment.title,
         confidence: segment.confidence,
         startMs: effectiveStart,
-        endMs: clippedEnd,
-        durationMs: clippedEnd - effectiveStart,
+        endMs: clampedEnd,
+        durationMs: clampedEnd - effectiveStart,
         status: ClipRecordStatus.pending,
       );
       records.add(record);
@@ -107,11 +109,13 @@ class AutoClipService {
           outputPath: outputPath,
           settings: settings,
         );
+        _processes[record.id] = process;
 
         // Watch for completion
         final exitCode = await process.exitCode;
         await process.stdout.drain<void>();
         await process.stderr.drain<void>();
+        _processes.remove(record.id);
 
         if (exitCode == 0) {
           await _repo.updateStatus(
@@ -219,9 +223,11 @@ class AutoClipService {
         outputPath: outputPath,
         settings: settings,
       );
+      _processes[record.id] = process;
       final exitCode = await process.exitCode;
       await process.stdout.drain<void>();
       await process.stderr.drain<void>();
+      _processes.remove(record.id);
 
       if (exitCode == 0) {
         await _repo.updateStatus(
@@ -284,6 +290,8 @@ class AutoClipService {
 
   /// Cancel an active cutting operation.
   Future<void> cancel(String recordId) async {
+    final process = _processes.remove(recordId);
+    process?.kill(ProcessSignal.sigterm);
     _updateLocalRecord(
       recordId,
       status: ClipRecordStatus.failed,

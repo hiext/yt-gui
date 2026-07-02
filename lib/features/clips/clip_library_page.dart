@@ -505,6 +505,10 @@ class _ClipLibraryPageState extends State<ClipLibraryPage> {
     } else {
       await _mediaAssetRepository.deleteClipCandidate(candidate.id);
     }
+    if (candidate.id.startsWith('export:')) {
+      final realExportId = candidate.id.substring('export:'.length);
+      await _mediaAssetRepository.deleteClipExportRecord(realExportId);
+    }
     await _loadMediaAssets();
   }
 

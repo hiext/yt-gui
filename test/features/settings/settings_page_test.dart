@@ -202,7 +202,9 @@ void main() {
       expect(find.text(l10n.saveSettingsBtn), findsOneWidget);
     });
 
-    testWidgets('save bar shows unsaved after edit', (tester) async {
+    testWidgets('save bar shows unsaved after edit of non-auto-saved field', (
+      tester,
+    ) async {
       final controller = SettingsController();
       addTearDown(controller.dispose);
       await useLargeViewport(tester);
@@ -218,8 +220,10 @@ void main() {
       final l10n = AppLocalizations.of(
         tester.element(find.byType(SettingsPage)),
       )!;
-      final saveField = find.byKey(const Key('save-directory-field'));
-      await tester.enterText(saveField, '/tmp');
+      final cloudUrlField = find.byKey(const Key('personal-cloud-url-field'));
+      await tester.ensureVisible(cloudUrlField);
+      await tester.pumpAndSettle();
+      await tester.enterText(cloudUrlField, 'https://example.com');
       await tester.pump();
 
       expect(find.text(l10n.settingsUnsaved), findsOneWidget);

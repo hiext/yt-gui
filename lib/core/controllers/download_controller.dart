@@ -363,11 +363,16 @@ class DownloadController extends ChangeNotifier {
   }
 
   Future<void> _runAutoClipPipeline(DownloadTask task) async {
+    final settings = settingsProvider();
+    if (!settings.autoClipConfig.enabled) {
+      await _indexCompletedMedia(task);
+      return;
+    }
     final orchestrator = autoClipOrchestrator;
     if (orchestrator != null) {
       final result = await orchestrator.onDownloadCompleted(
         task,
-        settings: settingsProvider(),
+        settings: settings,
       );
       if (result.status == AutoClipOrchestrationStatus.failed) {
         LogService.instance.warn(

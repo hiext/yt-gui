@@ -10,6 +10,7 @@ import '../../core/services/cookie_service.dart'
     show CookieService, CookieEntry, CookieImportResult;
 import '../../core/services/cloud_clip_client.dart';
 import '../../core/services/embedded_tool_executable.dart';
+import '../../core/services/embedded_tool_manifest.dart';
 import '../../core/services/embedded_tool_resolver.dart';
 import '../../core/services/log_service.dart';
 import '../../core/services/media_asset_repository.dart';
@@ -34,8 +35,6 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  static const _filePicker = PlatformFilePicker();
-
   late final TextEditingController _saveDirCtrl;
   late final TextEditingController _qualityCtrl;
   late final TextEditingController _ytDlpCtrl;
@@ -109,17 +108,18 @@ class _SettingsPageState extends State<SettingsPage> {
 
   void _syncFromSettings() {
     final s = widget.controller.settings;
-    _updateCtrlIfChanged(_saveDirCtrl, s.saveDirectory);
-    _updateCtrlIfChanged(_qualityCtrl, s.defaultQuality);
-    _updateCtrlIfChanged(_ytDlpCtrl, s.ytDlpPath ?? '');
-    _updateCtrlIfChanged(_ffmpegCtrl, s.ffmpegPath ?? '');
-    _updateCtrlIfChanged(_aiAnalyzerCtrl, s.aiAnalyzerCommand ?? '');
+    var changed = false;
+    changed |= _updateCtrlIfChanged(_saveDirCtrl, s.saveDirectory);
+    changed |= _updateCtrlIfChanged(_qualityCtrl, s.defaultQuality);
+    changed |= _updateCtrlIfChanged(_ytDlpCtrl, s.ytDlpPath ?? '');
+    changed |= _updateCtrlIfChanged(_ffmpegCtrl, s.ffmpegPath ?? '');
+    changed |= _updateCtrlIfChanged(_aiAnalyzerCtrl, s.aiAnalyzerCommand ?? '');
     final cloudConfig = s.selectedAiCloudConfig;
-    _updateCtrlIfChanged(_aiCloudNameCtrl, cloudConfig?.name ?? '');
-    _updateCtrlIfChanged(_aiCloudEndpointCtrl, cloudConfig?.endpoint ?? '');
-    _updateCtrlIfChanged(_aiCloudApiKeyCtrl, cloudConfig?.apiKey ?? '');
-    _updateCtrlIfChanged(_aiCloudModelCtrl, cloudConfig?.model ?? '');
-    _markDirty();
+    changed |= _updateCtrlIfChanged(_aiCloudNameCtrl, cloudConfig?.name ?? '');
+    changed |= _updateCtrlIfChanged(_aiCloudEndpointCtrl, cloudConfig?.endpoint ?? '');
+    changed |= _updateCtrlIfChanged(_aiCloudApiKeyCtrl, cloudConfig?.apiKey ?? '');
+    changed |= _updateCtrlIfChanged(_aiCloudModelCtrl, cloudConfig?.model ?? '');
+    if (changed) _markDirty();
   }
 
   Future<void> _loadPersonalCloudConfig() async {
@@ -135,10 +135,12 @@ class _SettingsPageState extends State<SettingsPage> {
     });
   }
 
-  void _updateCtrlIfChanged(TextEditingController ctrl, String value) {
+  bool _updateCtrlIfChanged(TextEditingController ctrl, String value) {
     if (ctrl.text != value) {
       ctrl.text = value;
+      return true;
     }
+    return false;
   }
 
   static const _qualityPresets = [
@@ -844,6 +846,8 @@ class _SettingsPageState extends State<SettingsPage> {
                   defaultBrowser: settings.defaultCookieBrowser,
                   onImport: (browser, domain) =>
                       _importCookies(browser, domain),
+                  onImportFile: (domain, browser) =>
+                      _importCookieFile(domain, browser),
                   onRemove: (domain) => _removeCookie(domain),
                   onReimport: (config) => _reimportCookie(config),
                 ),
@@ -863,14 +867,19 @@ class _SettingsPageState extends State<SettingsPage> {
     if (_saved) setState(() => _saved = false);
   }
 
-  void _doSave() {
+  Future<void> _doSave() async {
     // Flush all text field values now — each onChanged already updates
     // the controller immediately; this just provides confirmation.
     widget.controller.updateSettings(widget.controller.settings);
-    setState(() {
-      _saved = true;
-      _lastSavedAt = DateTime.now();
-    });
+    if (_personalCloudUrlCtrl.text.trim().isNotEmpty) {
+      await _savePersonalCloudConfig();
+    }
+    if (mounted) {
+      setState(() {
+        _saved = true;
+        _lastSavedAt = DateTime.now();
+      });
+    }
   }
 
   String _saveStatusText(AppLocalizations l10n) {
@@ -1373,11 +1382,9 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  Future<void> _handleImportResult(
-    CookieImportResult result,
+  Future<void> _importCookieFile(
     String domain,
     String browser,
-    String cookieFile,
   ) async {
     final l10n = AppLocalizations.of(context)!;
     final path = await _filePicker.pickFile(title: l10n.cookieFilePickerTitle);
@@ -1450,12 +1457,12 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  void _handleImportResult(
+  Future<void> _handleImportResult(
     CookieImportResult result,
     String domain,
     String browser,
     String cookieFile,
-  ) {
+  ) async {
     final l10n = AppLocalizations.of(context)!;
     final settings = widget.controller.settings;
 

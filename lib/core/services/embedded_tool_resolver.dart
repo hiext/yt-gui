@@ -397,6 +397,43 @@ class EmbeddedToolResolver {
       '"${kind.baseExecutableName} --version".',
     );
   }
+
+  String? _customPathForKind(
+    EmbeddedToolKind kind,
+    DownloadSettings settings,
+  ) {
+    return switch (kind) {
+      EmbeddedToolKind.ytDlp => settings.ytDlpPath,
+      EmbeddedToolKind.ffmpeg => settings.ffmpegPath,
+    };
+  }
+
+  ResolvedEmbeddedTool? _resolveCustomTool({
+    required EmbeddedToolPlatform platform,
+    required EmbeddedToolKind kind,
+    String? customPath,
+    bool allowMissingCustomFallback = false,
+  }) {
+    if (customPath == null || customPath.trim().isEmpty) return null;
+    final trimmed = customPath.trim();
+    try {
+      _validateCustomToolPath(kind, trimmed);
+    } on EmbeddedToolResolutionException {
+      if (allowMissingCustomFallback) return null;
+      rethrow;
+    }
+    if (!_fileExists(trimmed)) {
+      if (allowMissingCustomFallback) return null;
+      throw EmbeddedToolResolutionException(
+        'Configured ${kind.baseExecutableName} not found at $trimmed',
+      );
+    }
+    return ResolvedEmbeddedTool(
+      kind: kind,
+      path: trimmed,
+      isCustom: true,
+    );
+  }
 }
 
 class EmbeddedToolPlatformDetector {

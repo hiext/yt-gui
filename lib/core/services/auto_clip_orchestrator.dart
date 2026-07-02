@@ -144,13 +144,14 @@ class AutoClipOrchestrator {
   ClipCandidate _applyConfig(ClipCandidate candidate, AutoClipConfig config) {
     final start = max(0, candidate.startMs + config.startOffsetMs);
     final rawEnd = max(start + 1000, candidate.endMs + config.endOffsetMs);
-    final maxDurationMs = config.maxClipDurationSec * 1000;
+    final maxDurationMs = max(1000, config.maxClipDurationSec * 1000);
     final end = min(rawEnd, start + maxDurationMs);
+    final clampedEnd = max(start + 1000, end);
     return ClipCandidate(
       id: candidate.id,
       mediaAssetId: candidate.mediaAssetId,
       startMs: start,
-      endMs: end,
+      endMs: clampedEnd,
       title: candidate.title,
       summary: candidate.summary,
       tags: candidate.tags,
@@ -256,29 +257,29 @@ Future<List<ClipSegment>> _analyzeSegments(
     outputDirectory: '${asset.mediaPath}.clips',
   );
 
-  await executor.startTask(
-    task: task,
-    settings: settings,
-    onTaskChanged: (changed) {
-      if (changed.status == PostProcessStatus.completed &&
-          !completer.isCompleted) {
-        completer.complete(changed.clipSegments);
-      }
-      if (changed.status == PostProcessStatus.failed && !completer.isCompleted) {
-        completer.completeError(
-          AutoClipOrchestrationException(
-            changed.errorMessage ?? 'AI clip analysis failed',
-          ),
-        );
-      }
-      if (changed.status == PostProcessStatus.cancelled &&
-          !completer.isCompleted) {
-        completer.complete(const <ClipSegment>[]);
-      }
-    },
-  );
-
   try {
+    await executor.startTask(
+      task: task,
+      settings: settings,
+      onTaskChanged: (changed) {
+        if (changed.status == PostProcessStatus.completed &&
+            !completer.isCompleted) {
+          completer.complete(changed.clipSegments);
+        }
+        if (changed.status == PostProcessStatus.failed && !completer.isCompleted) {
+          completer.completeError(
+            AutoClipOrchestrationException(
+              changed.errorMessage ?? 'AI clip analysis failed',
+            ),
+          );
+        }
+        if (changed.status == PostProcessStatus.cancelled &&
+            !completer.isCompleted) {
+          completer.complete(const <ClipSegment>[]);
+        }
+      },
+    );
+
     if (!completer.isCompleted) {
       return await completer.future.timeout(
         const Duration(minutes: 5),
