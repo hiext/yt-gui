@@ -253,6 +253,46 @@ void main() {
       ]),
     );
   });
+
+  test('throws on connection refused', () async {
+    final client = CloudClipClient(
+      baseUrl: 'http://127.0.0.1:1',
+      accessToken: 'token-1',
+    );
+
+    await expectLater(
+      client.health(),
+      throwsA(isA<Exception>()),
+    );
+  });
+
+  test('throws CloudClipClientException on 401 unauthorized', () async {
+    final unauthServer = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    unauthServer.listen((request) {
+      request.response
+        ..statusCode = HttpStatus.unauthorized
+        ..headers.contentType = ContentType.json
+        ..write(jsonEncode({'error': 'invalid token'}));
+      request.response.close();
+    });
+    addTearDown(() => unauthServer.close());
+
+    final client = CloudClipClient(
+      baseUrl: _baseUrl(unauthServer),
+      accessToken: 'bad-token',
+    );
+
+    await expectLater(
+      client.fetchClipJobStatus('any'),
+      throwsA(
+        isA<CloudClipClientException>().having(
+          (error) => error.message,
+          'message',
+          contains('HTTP 401'),
+        ),
+      ),
+    );
+  });
 }
 
 String _baseUrl(HttpServer server) {

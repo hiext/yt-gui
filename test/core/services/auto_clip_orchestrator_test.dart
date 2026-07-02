@@ -163,6 +163,126 @@ void main() {
     expect(result.status, AutoClipOrchestrationStatus.failed);
     expect(result.message, contains('index failed'));
   });
+
+  test('local export succeeds even when cloud sync fails', () async {
+    indexer.asset = _asset();
+    final orchestrator = AutoClipOrchestrator(
+      mediaAssetIndexer: indexer,
+      repository: repository,
+      segmentAnalyzer: (_, _) async => [_segment(_asset())],
+      localAnalyzer: ({required asset, required settings, seedSegments = const []}) async {
+        final candidate = ClipCandidate(
+          id: 'local:seg-1', mediaAssetId: asset.id,
+          startMs: 1000, endMs: 9000, title: 'Hook', summary: 'Sum',
+          score: 0.9, reason: 'test', source: ClipCandidateSource.local,
+        );
+        await repository.saveClipCandidate(candidate);
+        return LocalAnalysisResult(
+          asset: asset,
+          job: MediaAnalysisJob(id: 'j', mediaAssetId: asset.id,
+            runtime: MediaJobRuntime.local, status: MediaAnalysisStatus.completed, progress: 1),
+          candidates: [candidate], vectors: const [],
+        );
+      },
+      localExporter: ({required asset, required candidate, required settings, onProgress}) async {
+        final record = ClipExportRecord(
+          id: '${asset.id}#export:${candidate.id}', mediaAssetId: asset.id,
+          candidateId: candidate.id, startMs: candidate.startMs, endMs: candidate.endMs,
+          outputPath: '/tmp/out.mp4', status: ClipExportStatus.completed, progress: 100,
+          runtime: MediaJobRuntime.local,
+        );
+        await repository.saveClipExportRecord(record);
+        return record;
+      },
+      cloudSyncService: _FakeFailingCloudSyncService(),
+    );
+
+    final result = await orchestrator.onDownloadCompleted(
+      _downloadTask(), settings: _settings(),
+    );
+
+    expect(result.status, AutoClipOrchestrationStatus.completed);
+    final exports = await repository.loadClipExportRecords(_asset().id);
+    expect(exports.single.status, ClipExportStatus.completed);
+  });
+
+  test('returns skipped when no candidates match confidence threshold', () async {
+    indexer.asset = _asset();
+    final orchestrator = AutoClipOrchestrator(
+      mediaAssetIndexer: indexer,
+      repository: repository,
+      segmentAnalyzer: (_, _) async => [_segment(_asset())],
+      localAnalyzer: ({required asset, required settings, seedSegments = const []}) async {
+        final candidate = ClipCandidate(
+          id: 'low-score', mediaAssetId: asset.id,
+          startMs: 0, endMs: 5000, title: 'Low', summary: 'Low',
+          score: 0.3, reason: 'low', source: ClipCandidateSource.local,
+        );
+        await repository.saveClipCandidate(candidate);
+        return LocalAnalysisResult(
+          asset: asset,
+          job: MediaAnalysisJob(id: 'j', mediaAssetId: asset.id,
+            runtime: MediaJobRuntime.local, status: MediaAnalysisStatus.completed, progress: 1),
+          candidates: [candidate], vectors: const [],
+        );
+      },
+    );
+
+    final result = await orchestrator.onDownloadCompleted(
+      _downloadTask(), settings: _settings(),
+    );
+
+    expect(result.status, AutoClipOrchestrationStatus.skipped);
+    expect(result.message, contains('No candidates matched'));
+  });
+
+  test('returns failed when analysis job reports failed status', () async {
+    indexer.asset = _asset();
+    final orchestrator = AutoClipOrchestrator(
+      mediaAssetIndexer: indexer,
+      repository: repository,
+      segmentAnalyzer: (_, _) async => [_segment(_asset())],
+      localAnalyzer: ({required asset, required settings, seedSegments = const []}) async {
+        return LocalAnalysisResult(
+          asset: asset,
+          job: MediaAnalysisJob(id: 'j', mediaAssetId: asset.id,
+            runtime: MediaJobRuntime.local, status: MediaAnalysisStatus.failed,
+            progress: 0, errorMessage: 'ffprobe not found'),
+          candidates: const [], vectors: const [],
+        );
+      },
+    );
+
+    final result = await orchestrator.onDownloadCompleted(
+      _downloadTask(), settings: _settings(),
+    );
+
+    expect(result.status, AutoClipOrchestrationStatus.failed);
+    expect(result.message, contains('ffprobe'));
+  });
+
+  test('skips non-video media assets', () async {
+    final audioAsset = MediaAsset(
+      id: 'audio-1', sourceTaskId: 'download-1',
+      sourceUrl: 'https://example.com/audio',
+      title: 'Audio', mediaPath: '/tmp/audio.m4a',
+      mediaType: MediaAssetType.audio,
+      fileSha256: 'b' * 64, durationMs: 60000, fileSizeBytes: 512,
+    );
+    indexer.asset = audioAsset;
+    final orchestrator = AutoClipOrchestrator(
+      mediaAssetIndexer: indexer,
+      repository: repository,
+      segmentAnalyzer: (_, _) async => const [],
+    );
+
+    final result = await orchestrator.onDownloadCompleted(
+      _downloadTask(), settings: _settings(),
+    );
+
+    expect(result.status, AutoClipOrchestrationStatus.skipped);
+    expect(result.message, contains('video'));
+  });
 }
 
 DownloadTask _downloadTask() {
@@ -236,6 +356,18 @@ class _FakeMediaAssetIndexer implements MediaAssetIndexerService {
       await MediaAssetRepository().saveMediaAsset(indexedAsset);
     }
     return indexedAsset;
+  }
+}
+
+class _FakeFailingCloudSyncService implements CloudClipSyncService {
+  @override
+  Future<void> syncAutoClipResult({
+    required MediaAsset asset,
+    required List<ClipCandidate> candidates,
+    required List<ClipExportRecord> localExports,
+    required DownloadSettings settings,
+  }) async {
+    throw Exception('cloud sync failed');
   }
 }
 

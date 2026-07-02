@@ -10,7 +10,6 @@ import '../../core/services/cookie_service.dart'
     show CookieService, CookieEntry, CookieImportResult;
 import '../../core/services/cloud_clip_client.dart';
 import '../../core/services/embedded_tool_executable.dart';
-import '../../core/services/embedded_tool_manifest.dart';
 import '../../core/services/embedded_tool_resolver.dart';
 import '../../core/services/log_service.dart';
 import '../../core/services/media_asset_repository.dart';
@@ -1334,16 +1333,6 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
     );
     _markDirty();
-  }
-
-  String _resolveYtDlpPath(DownloadSettings settings) {
-    return const EmbeddedToolResolver()
-        .resolveExecutable(
-          kind: EmbeddedToolKind.ytDlp,
-          settings: settings,
-          allowMissingCustomFallback: true,
-        )
-        .path;
   }
 
   Future<void> _importCookies(String browser, String domain) async {

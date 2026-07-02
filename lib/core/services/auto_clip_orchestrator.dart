@@ -7,6 +7,7 @@ import 'ai_clip_analyzer_executor.dart';
 import 'cloud_clip_client.dart';
 import 'local_analysis_service.dart';
 import 'local_clip_worker_service.dart';
+import 'log_service.dart';
 import 'media_asset_indexer_service.dart';
 import 'media_asset_repository.dart';
 
@@ -103,12 +104,18 @@ class AutoClipOrchestrator {
       final cloudSync = _cloudSyncService ?? DefaultCloudClipSyncService(
         repository: _repository,
       );
-      await cloudSync.syncAutoClipResult(
-        asset: analysis.asset,
-        candidates: adjusted,
-        localExports: exports,
-        settings: settings,
-      );
+      try {
+        await cloudSync.syncAutoClipResult(
+          asset: analysis.asset,
+          candidates: adjusted,
+          localExports: exports,
+          settings: settings,
+        );
+      } catch (error) {
+        LogService.instance.warn(
+          'cloud sync failed for ${analysis.asset.id}: $error', 'ctrl',
+        );
+      }
 
       return AutoClipOrchestrationResult(
         status: exports.any((record) => record.status == ClipExportStatus.failed)

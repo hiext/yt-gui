@@ -61,11 +61,8 @@ class _AppShellState extends State<AppShell> {
     _settingsController.addListener(_handleSettingsChanged);
     _syncLogLevel();
     LogService.instance.info(
-      
       'AppShell init — settings loaded, disclaimer=${_settingsController.settings.disclaimerAccepted}',
-     
       'app',
-    ,
     );
     _postProcessController = PostProcessController(
       executor: AiClipAnalyzerExecutor(),
