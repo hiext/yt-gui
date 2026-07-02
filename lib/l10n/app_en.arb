@@ -113,11 +113,25 @@
   "browser": "Browser",
   "domain": "Domain",
   "importBtn": "Import",
+  "importCookieFile": "Import cookies.txt",
+  "cookieFilePickerTitle": "Select cookies.txt file",
+  "cookieManualImportInvalid": "Select a Netscape-format cookies.txt file. Export it from a browser cookie extension, then import it here.",
   "commonSites": "Common Sites",
   "delete": "Delete",
   "reimport": "Re-import",
   "viewDetails": "View Details",
   "cookieImportFailed": "Cookie import failed after trying all browsers",
+  "cookieImportTimedOut": "{browser}: cookie import exceeded {seconds} seconds and was stopped. On macOS release builds this may be waiting for Keychain authorization; check for a system permission prompt, or use Import cookies.txt instead.",
+  "@cookieImportTimedOut": {
+    "placeholders": {
+      "browser": {
+        "type": "String"
+      },
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "cookieImportSuccess": "Imported cookies for {domain}",
   "@cookieImportSuccess": {
     "placeholders": {

@@ -51,7 +51,7 @@ CI 还会在 GitHub Actions 中执行 Linux 测试，以及 Linux、macOS、Wind
 4. 在「AI 切片分析」中切换内置、本地 sidecar、云端大模型三种提供方。
 5. 新增一个云端配置档，检查厂商、配置名、Endpoint、模型 ID、API Key 字段可见；不要输入真实生产 Key 做普通冒烟。
 6. 如需验证云端切片，使用测试 Key 或本地 mock endpoint，返回包含 `segments` 数组的 JSON。
-7. 下载一个有合法授权的测试资源，确认下载完成后进入历史记录，并在有媒体路径时创建 AI 切片任务。
+7. 使用真实链接 `https://www.youtube.com/watch?v=NCtc5lIV7pM` 验证解析和下载进度，确认下载开始后任务进度、速度或 ETA 会持续刷新。
 8. 打开「切片」页，确认可查看切片、搜索关键词、查看转写/标签，并可微调开始和结束时间。
 
 ## AI 切片验收要点
@@ -82,7 +82,8 @@ CI 还会在 GitHub Actions 中执行 Linux 测试，以及 Linux、macOS、Wind
 ## 验证边界
 
 - `test/core/services/smoke_test.dart` 默认跳过，因为它需要真实网络、真实 `yt-dlp` / `ffmpeg` 二进制和平台环境。
-- 可用 `https://www.youtube.com/watch?v=AQB6dVt-t64` 做手工链接解析验证；该视频约 1 小时 40 分钟，最高格式体积很大，不应用作 CI、自动化下载或默认回归下载样例。
+- 默认真实回归链接为 `https://www.youtube.com/watch?v=NCtc5lIV7pM`。后续下载进度、格式解析和真实 `yt-dlp` 输出验证优先使用该链接，不要只用 fake URL 或纯 mock 覆盖进度链路。
+- `https://www.youtube.com/watch?v=AQB6dVt-t64` 仅保留为长视频解析参考；该视频约 1 小时 40 分钟，最高格式体积很大，不应用作默认下载回归样例。
 - 自动化测试不调用真实云厂商 API，也不验证真实账号 Cookie；这些场景必须用测试 Key、测试账号或本地 mock 服务验证。
 - 构建通过不等于平台签名、安装器、公证或 AppImage/DMG/EXE 分发流程完成；发布前仍需按目标平台单独验证。
 - 本项目只提供工具能力。回归下载流程时必须使用拥有合法权利或明确授权的测试资源。

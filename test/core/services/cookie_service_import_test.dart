@@ -6,41 +6,74 @@ import 'package:hiext_yt_gui/core/services/cookie_service.dart';
 import 'package:hiext_yt_gui/l10n/app_localizations.dart';
 
 /// Creates a fake yt-dlp script that writes stderr AND creates the cookie output file.
-File _createFakeYtDlp(Directory dir, {
+File _createFakeYtDlp(
+  Directory dir, {
   int exitCode = 0,
   String stderr = '',
+  Map<String, String>? stderrByBrowser,
   bool createOutput = true,
+  int sleepSeconds = 0,
 }) {
   final script = File('${dir.path}/yt-dlp-fake');
 
   final buf = StringBuffer();
   buf.writeln('#!/bin/sh');
   buf.writeln('cookie_file=""');
+  buf.writeln('browser=""');
   buf.writeln('next_is_cookie=0');
+  buf.writeln('next_is_browser=0');
   buf.writeln(r'for arg in $@; do');
+  buf.writeln(r'  if [ "$next_is_browser" = "1" ]; then');
+  buf.writeln(r'    browser="$arg"');
+  buf.writeln(r'    next_is_browser=0');
+  buf.writeln(r'    continue');
+  buf.writeln(r'  fi');
   buf.writeln(r'  if [ "$next_is_cookie" = "1" ]; then');
   buf.writeln(r'    cookie_file="$arg"');
-  buf.writeln(r'    break');
+  buf.writeln(r'    next_is_cookie=0');
+  buf.writeln(r'    continue');
+  buf.writeln(r'  fi');
+  buf.writeln(r'  if [ "$arg" = "--cookies-from-browser" ]; then');
+  buf.writeln(r'    next_is_browser=1');
+  buf.writeln(r'    continue');
   buf.writeln(r'  fi');
   buf.writeln(r'  if [ "$arg" = "--cookies" ]; then');
   buf.writeln(r'    next_is_cookie=1');
   buf.writeln(r'  fi');
   buf.writeln(r'done');
+  if (sleepSeconds > 0) {
+    buf.writeln('sleep $sleepSeconds');
+  }
   // Write the actual stderr (Dart interpolation here is intentional)
-  buf.writeln('echo "${stderr.replaceAll('"', '\\"')}" >&2');
+  if (stderrByBrowser == null) {
+    buf.writeln("printf '%s\\n' ${_shellQuote(stderr)} >&2");
+  } else {
+    buf.writeln(r'case "$browser" in');
+    for (final entry in stderrByBrowser.entries) {
+      buf.writeln(
+        '  ${entry.key}) printf \'%s\\n\' ${_shellQuote(entry.value)} >&2 ;;',
+      );
+    }
+    buf.writeln('  *) printf \'%s\\n\' ${_shellQuote(stderr)} >&2 ;;');
+    buf.writeln('esac');
+  }
   if (createOutput) {
     buf.writeln(r'if [ -n "$cookie_file" ]; then');
     buf.writeln(r'  mkdir -p "$(dirname "$cookie_file")"');
     buf.writeln(r'  echo "# Netscape HTTP Cookie File" > "$cookie_file"');
-    buf.writeln(r'  echo ".example.com\tTRUE\t/\tTRUE\t0\ttest\tvalue123" >> "$cookie_file"');
+    buf.writeln(
+      r'  echo ".example.com\tTRUE\t/\tTRUE\t0\ttest\tvalue123" >> "$cookie_file"',
+    );
     buf.writeln(r'fi');
   }
-  buf.writeln('exit ${exitCode}');
+  buf.writeln('exit $exitCode');
 
   script.writeAsStringSync(buf.toString());
   Process.runSync('chmod', ['+x', script.path]);
   return script;
 }
+
+String _shellQuote(String value) => "'${value.replaceAll("'", "'\"'\"'")}'";
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -52,7 +85,8 @@ void main() {
       addTearDown(() => dir.deleteSync(recursive: true));
       final outputFile = '${dir.path}/cookies.txt';
 
-      final fakeYtDlp = _createFakeYtDlp(dir,
+      final fakeYtDlp = _createFakeYtDlp(
+        dir,
         stderr: '[Cookies] Extracted 10 cookies from chrome',
       );
 
@@ -73,7 +107,8 @@ void main() {
       addTearDown(() => dir.deleteSync(recursive: true));
       final outputFile = '${dir.path}/cookies.txt';
 
-      final fakeYtDlp = _createFakeYtDlp(dir,
+      final fakeYtDlp = _createFakeYtDlp(
+        dir,
         stderr: '[Cookies] Extracted 8 cookies from firefox',
       );
 
@@ -93,7 +128,8 @@ void main() {
       addTearDown(() => dir.deleteSync(recursive: true));
       final outputFile = '${dir.path}/cookies.txt';
 
-      final fakeYtDlp = _createFakeYtDlp(dir,
+      final fakeYtDlp = _createFakeYtDlp(
+        dir,
         stderr: '[Cookies] Extracted 3 cookies from edge',
       );
 
@@ -114,7 +150,8 @@ void main() {
       final nestedDir = '${dir.path}/deeply/nested';
       final outputFile = '$nestedDir/cookies.txt';
 
-      final fakeYtDlp = _createFakeYtDlp(dir,
+      final fakeYtDlp = _createFakeYtDlp(
+        dir,
         stderr: '[Cookies] Extracted 1 cookie from brave',
       );
 
@@ -152,7 +189,8 @@ void main() {
       addTearDown(() => dir.deleteSync(recursive: true));
       final outputFile = '${dir.path}/cookies.txt';
 
-      final fakeYtDlp = _createFakeYtDlp(dir,
+      final fakeYtDlp = _createFakeYtDlp(
+        dir,
         stderr: '[Cookies] Extracted 0 cookies from chrome',
       );
 
@@ -173,7 +211,8 @@ void main() {
       addTearDown(() => dir.deleteSync(recursive: true));
       final outputFile = '${dir.path}/cookies.txt';
 
-      final fakeYtDlp = _createFakeYtDlp(dir,
+      final fakeYtDlp = _createFakeYtDlp(
+        dir,
         stderr: 'Some error occurred',
         createOutput: false,
       );
@@ -189,17 +228,15 @@ void main() {
       expect(result.success, isFalse);
     });
 
-    test('could not be decrypted + 0 cookies → falls back to next browser', () async {
+    test('times out hanging browser cookie import', () async {
       final dir = Directory.systemTemp.createTempSync('cookie-test-');
       addTearDown(() => dir.deleteSync(recursive: true));
       final outputFile = '${dir.path}/cookies.txt';
 
-      // First browser (chrome) hits "could not be decrypted + 0 cookies",
-      // which triggers browser_cookie3 fallback. browser_cookie3 fails,
-      // so it tries the next fallback browser (firefox) which succeeds.
-      final fakeYtDlp = _createFakeYtDlp(dir,
-        stderr: 'WARNING: could not be decrypted\n'
-                '[Cookies] Extracted 0 cookies from chrome',
+      final fakeYtDlp = _createFakeYtDlp(
+        dir,
+        createOutput: false,
+        sleepSeconds: 1,
       );
 
       final result = await CookieService().importFromBrowser(
@@ -208,20 +245,57 @@ void main() {
         ytDlpPath: fakeYtDlp.path,
         outputFile: outputFile,
         localizations: l10n,
+        browserTimeout: const Duration(milliseconds: 30),
       );
 
-      // Falls back to next browser in the list which succeeds
-      expect(result.success, isTrue);
+      expect(result.success, isFalse);
+      expect(result.reason, 'all_failed');
+      expect(result.detail, contains('cookie import exceeded 1 seconds'));
     });
+
+    test(
+      'could not be decrypted + 0 cookies → falls back to next browser',
+      () async {
+        final dir = Directory.systemTemp.createTempSync('cookie-test-');
+        addTearDown(() => dir.deleteSync(recursive: true));
+        final outputFile = '${dir.path}/cookies.txt';
+
+        // First browser (chrome) hits "could not be decrypted + 0 cookies",
+        // which triggers browser_cookie3 fallback. browser_cookie3 fails,
+        // so it tries the next fallback browser (firefox) which succeeds.
+        final fakeYtDlp = _createFakeYtDlp(
+          dir,
+          stderrByBrowser: {
+            'chrome':
+                'WARNING: could not be decrypted\n'
+                '[Cookies] Extracted 0 cookies from chrome',
+            'firefox': '[Cookies] Extracted 4 cookies from firefox',
+          },
+        );
+
+        final result = await CookieService().importFromBrowser(
+          browser: 'chrome',
+          domain: 'youtube.com',
+          ytDlpPath: fakeYtDlp.path,
+          outputFile: outputFile,
+          localizations: l10n,
+        );
+
+        // Falls back to next browser in the list which succeeds
+        expect(result.success, isTrue);
+      },
+    );
 
     test('could not be decrypted with cookies → still succeeds', () async {
       final dir = Directory.systemTemp.createTempSync('cookie-test-');
       addTearDown(() => dir.deleteSync(recursive: true));
       final outputFile = '${dir.path}/cookies.txt';
 
-      final fakeYtDlp = _createFakeYtDlp(dir,
-        stderr: 'WARNING: could not be decrypted\n'
-                '[Cookies] Extracted 5 cookies from chrome',
+      final fakeYtDlp = _createFakeYtDlp(
+        dir,
+        stderr:
+            'WARNING: could not be decrypted\n'
+            '[Cookies] Extracted 5 cookies from chrome',
       );
 
       final result = await CookieService().importFromBrowser(
@@ -241,14 +315,16 @@ void main() {
     test('returns false for file under 10 bytes', () {
       final dir = Directory.systemTemp.createTempSync('cookie-test-');
       addTearDown(() => dir.deleteSync(recursive: true));
-      final file = File('${dir.path}/tiny.txt')..writeAsStringSync('123456789'); // 9 bytes
+      final file = File('${dir.path}/tiny.txt')
+        ..writeAsStringSync('123456789'); // 9 bytes
       expect(CookieService().isCookieFileValid(file.path), isFalse);
     });
 
     test('returns true for file >= 10 bytes', () {
       final dir = Directory.systemTemp.createTempSync('cookie-test-');
       addTearDown(() => dir.deleteSync(recursive: true));
-      final file = File('${dir.path}/ok.txt')..writeAsStringSync('1234567890ABC'); // 13 bytes
+      final file = File('${dir.path}/ok.txt')
+        ..writeAsStringSync('1234567890ABC'); // 13 bytes
       expect(CookieService().isCookieFileValid(file.path), isTrue);
     });
   });
@@ -259,7 +335,8 @@ void main() {
       addTearDown(() => dir.deleteSync(recursive: true));
       final outputFile = '${dir.path}/cookies.txt';
 
-      final fakeYtDlp = _createFakeYtDlp(dir,
+      final fakeYtDlp = _createFakeYtDlp(
+        dir,
         stderr: '[Cookies] Extracted 2 cookies from firefox',
       );
 
@@ -278,7 +355,10 @@ void main() {
 
   group('CookieImportResult', () {
     test('success with detail', () {
-      const r = CookieImportResult(success: true, detail: '5 cookies from chrome');
+      const r = CookieImportResult(
+        success: true,
+        detail: '5 cookies from chrome',
+      );
       expect(r.success, isTrue);
       expect(r.reason, isNull);
       expect(r.detail, '5 cookies from chrome');

@@ -297,6 +297,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get importBtn => 'Import';
 
   @override
+  String get importCookieFile => 'Import cookies.txt';
+
+  @override
+  String get cookieFilePickerTitle => 'Select cookies.txt file';
+
+  @override
+  String get cookieManualImportInvalid =>
+      'Select a Netscape-format cookies.txt file. Export it from a browser cookie extension, then import it here.';
+
+  @override
   String get commonSites => 'Common Sites';
 
   @override
@@ -311,6 +321,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get cookieImportFailed =>
       'Cookie import failed after trying all browsers';
+
+  @override
+  String cookieImportTimedOut(String browser, int seconds) {
+    return '$browser: cookie import exceeded $seconds seconds and was stopped. On macOS release builds this may be waiting for Keychain authorization; check for a system permission prompt, or use Import cookies.txt instead.';
+  }
 
   @override
   String cookieImportSuccess(String domain) {

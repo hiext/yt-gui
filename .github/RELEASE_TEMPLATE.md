@@ -6,9 +6,16 @@
 
 ## 下载说明
 
-- macOS：
-- Windows：
-- Linux：
+- macOS Apple Silicon / M 系列：`hiext-yt-gui-macos-arm64.zip`
+- macOS Intel：`hiext-yt-gui-macos-x64.zip`
+- Windows x64：`hiext-yt-gui-windows-x64.zip`
+- Windows arm64：`hiext-yt-gui-windows-arm64.zip`
+- Linux x64：`hiext-yt-gui-linux-x64.tar.gz` 或 `hiext-yt-gui-linux-x64.deb`
+- Linux arm64：`hiext-yt-gui-linux-arm64.tar.gz` 或 `hiext-yt-gui-linux-arm64.deb`
+
+> Windows 32 位桌面包当前不提供；Flutter 桌面发布目标覆盖 Windows x64 / arm64。
+
+> macOS 正式发布包应已使用 Developer ID 签名并完成 Apple 公证。如果你下载的是未签名测试包，首次启动可能被 Gatekeeper 拦截；确认来源可信后，可在“系统设置 → 隐私与安全性”中选择“仍要打开”，或执行 `xattr -cr hiext_yt_gui.app` 移除下载隔离属性。
 
 ## 内置工具
 

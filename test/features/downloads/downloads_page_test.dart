@@ -31,7 +31,7 @@ void main() {
     );
 
     await tester.pumpWidget(_buildApp(DownloadsPage(controller: controller)));
-    await tester.pumpAndSettle();
+    await tester.pump();
 
     expect(find.textContaining('example.com'), findsWidgets);
     expect(find.textContaining('视频'), findsWidgets);
@@ -45,7 +45,7 @@ void main() {
     expect(find.byIcon(Icons.play_arrow_outlined), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.play_arrow_outlined));
-    await tester.pumpAndSettle();
+    await tester.pump();
 
     expect(executor.started, [
       'https://example.com/video#1',
@@ -98,6 +98,129 @@ void main() {
     expect(find.text(l10n.downloading), findsOneWidget);
     expect(find.textContaining(l10n.completedTasks), findsOneWidget);
     expect(find.text(l10n.expandCompleted), findsOneWidget);
+  });
+
+  testWidgets('shows indeterminate progress before first download percent', (
+    tester,
+  ) async {
+    final executor = _FakeExecutor();
+    final controller = DownloadController(
+      scheduler: DownloadScheduler(settingsProvider: _settings),
+      executor: executor,
+      settingsProvider: _settings,
+    );
+    addTearDown(controller.dispose);
+
+    await controller.queueDownload(
+      url: Uri.parse('https://www.youtube.com/watch?v=NCtc5lIV7pM'),
+      variant: const ResourceVariant(
+        label: '最佳品质（1080p 视频+音频合并）',
+        description: 'mp4',
+        isRecommended: true,
+        formatId: '399+251',
+        type: ResourceType.video,
+      ),
+    );
+
+    await tester.pumpWidget(_buildApp(DownloadsPage(controller: controller)));
+    await tester.pump();
+
+    final indicators = tester.widgetList<LinearProgressIndicator>(
+      find.byType(LinearProgressIndicator),
+    );
+    expect(indicators.any((indicator) => indicator.value == null), isTrue);
+  });
+
+  testWidgets('updates visible progress after download callback', (
+    tester,
+  ) async {
+    final executor = _FakeExecutor();
+    final controller = DownloadController(
+      scheduler: DownloadScheduler(settingsProvider: _settings),
+      executor: executor,
+      settingsProvider: _settings,
+    );
+    addTearDown(controller.dispose);
+
+    await controller.queueDownload(
+      url: Uri.parse('https://www.youtube.com/watch?v=NCtc5lIV7pM'),
+      variant: const ResourceVariant(
+        label: '最佳品质（1080p 视频+音频合并）',
+        description: 'mp4',
+        isRecommended: true,
+        formatId: '399+251',
+        type: ResourceType.video,
+      ),
+    );
+
+    await tester.pumpWidget(_buildApp(DownloadsPage(controller: controller)));
+    await tester.pump();
+
+    executor.emitProgress(
+      'https://www.youtube.com/watch?v=NCtc5lIV7pM#1',
+      7.5,
+      speed: '1.2MiB/s',
+      eta: '00:10',
+    );
+    await tester.pump();
+
+    expect(find.text('7.5%'), findsOneWidget);
+    expect(find.text('1.2MiB/s'), findsOneWidget);
+    final indicators = tester.widgetList<LinearProgressIndicator>(
+      find.byType(LinearProgressIndicator),
+    );
+    expect(
+      indicators
+          .where((indicator) => indicator.value != null)
+          .map((indicator) => indicator.value!),
+      contains(closeTo(0.075, 0.001)),
+    );
+  });
+
+  testWidgets('group progress ignores queued tasks once a task is running', (
+    tester,
+  ) async {
+    final executor = _FakeExecutor();
+    final controller = DownloadController(
+      scheduler: DownloadScheduler(settingsProvider: _settings),
+      executor: executor,
+      settingsProvider: _settings,
+    );
+    addTearDown(controller.dispose);
+    final url = Uri.parse('https://www.youtube.com/watch?v=NCtc5lIV7pM');
+
+    await controller.queueDownloads(
+      url: url,
+      variants: const [
+        ResourceVariant(
+          label: '最佳品质（1080p 视频+音频合并）',
+          description: 'mp4',
+          isRecommended: true,
+          formatId: '399+251',
+          type: ResourceType.video,
+        ),
+        ResourceVariant(
+          label: '推荐品质（720p 视频+音频合并）',
+          description: 'mp4',
+          isRecommended: true,
+          formatId: '398+bestaudio/best',
+          type: ResourceType.video,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(_buildApp(DownloadsPage(controller: controller)));
+    await tester.pump();
+
+    executor.emitProgress('${url.toString()}#1', 40);
+    await tester.pump();
+
+    expect(find.text('40%'), findsWidgets);
+    expect(
+      find.text('20%'),
+      findsNothing,
+      reason: 'Queued tasks should not halve the visible group progress.',
+    );
   });
 
   testWidgets('excludes cancelled tasks from group progress', (tester) async {
@@ -213,6 +336,8 @@ class _FakeExecutor implements YtDlpExecutor {
   final List<String> paused = [];
   final List<String> resumed = [];
   final List<String> cancelled = [];
+  final Map<String, _StartedDownload> _downloads = {};
+  final Map<String, DownloadTaskChanged?> _callbacks = {};
 
   @override
   Future<void> cancel(String taskId) async {
@@ -249,5 +374,37 @@ class _FakeExecutor implements YtDlpExecutor {
     DownloadTaskChanged? onTaskChanged,
   }) async {
     started.add(taskId);
+    _downloads[taskId] = _StartedDownload(url: url, variant: variant);
+    _callbacks[taskId] = onTaskChanged;
   }
+
+  void emitProgress(
+    String taskId,
+    double progress, {
+    String? speed,
+    String? eta,
+  }) {
+    final download = _downloads[taskId];
+    final callback = _callbacks[taskId];
+    if (download == null || callback == null) return;
+    callback(
+      DownloadTask(
+        id: taskId,
+        title: download.url.toString(),
+        source: download.url.toString(),
+        status: DownloadStatus.downloading,
+        progress: progress,
+        speed: speed,
+        eta: eta,
+        variants: [download.variant],
+      ),
+    );
+  }
+}
+
+class _StartedDownload {
+  const _StartedDownload({required this.url, required this.variant});
+
+  final Uri url;
+  final ResourceVariant variant;
 }

@@ -122,11 +122,20 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
   }) async {
     final sw = Stopwatch()..start();
     final tools = _toolResolver.resolveBundle(settings: normalizedSettings);
-    LogService.instance.info('inspect: resolveBundle took ${sw.elapsedMilliseconds}ms', 'executor');
+    LogService.instance.info(
+      'inspect: resolveBundle took ${sw.elapsedMilliseconds}ms',
+      'executor',
+    );
     final ytDlpPath = await _ensureExecutable(tools.ytDlp);
-    LogService.instance.info('inspect: ensureExecutable took ${sw.elapsedMilliseconds}ms, path=$ytDlpPath', 'executor');
+    LogService.instance.info(
+      'inspect: ensureExecutable took ${sw.elapsedMilliseconds}ms, path=$ytDlpPath',
+      'executor',
+    );
     if (cookieFile != null) {
-      LogService.instance.debug('inspect: using cookie $cookieFile', 'executor');
+      LogService.instance.debug(
+        'inspect: using cookie $cookieFile',
+        'executor',
+      );
     }
     final args = buildInspectArguments(url, cookieFile: cookieFile);
     final l10n = localizations ?? currentAppLocalizations();
@@ -135,9 +144,15 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     // use injected _processRunner when customized (for unit testing).
     if (_processRunner == _defaultProcessRunner) {
       try {
-        final result = await Process.run(ytDlpPath, args, runInShell: false)
-            .timeout(Duration(seconds: timeoutSeconds));
-        LogService.instance.info('inspect: exitCode=${result.exitCode} at ${sw.elapsedMilliseconds}ms', 'executor');
+        final result = await Process.run(
+          ytDlpPath,
+          args,
+          runInShell: false,
+        ).timeout(Duration(seconds: timeoutSeconds));
+        LogService.instance.info(
+          'inspect: exitCode=${result.exitCode} at ${sw.elapsedMilliseconds}ms',
+          'executor',
+        );
 
         final stderr = result.stderr as String;
         if (stderr.isNotEmpty && onLog != null) {
@@ -150,55 +165,98 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
           final msg = stderr.trim().isNotEmpty
               ? stderr.trim().split('\n').last
               : 'yt-dlp exit code ${result.exitCode}';
-          LogService.instance.error('inspect failed: exit=${result.exitCode} $msg', 'executor');
+          LogService.instance.error(
+            'inspect failed: exit=${result.exitCode} $msg',
+            'executor',
+          );
           throw YtDlpExecutorException(msg);
         }
 
         final stdout = result.stdout as String;
-        final outputLines = stdout.split('\n').where((l) => l.trim().isNotEmpty).toList();
+        final outputLines = stdout
+            .split('\n')
+            .where((l) => l.trim().isNotEmpty)
+            .toList();
         final variants = _parseInspectVariants(
-          outputLines, l10n,
+          outputLines,
+          l10n,
           recommendedVariantCount: normalizedSettings.recommendedVariantCount,
         );
-        LogService.instance.info('inspect: found ${variants.length} variants at ${sw.elapsedMilliseconds}ms', 'executor');
+        LogService.instance.info(
+          'inspect: found ${variants.length} variants at ${sw.elapsedMilliseconds}ms',
+          'executor',
+        );
         return variants;
       } on TimeoutException {
-        LogService.instance.error('inspect timed out after ${timeoutSeconds}s', 'executor');
-        throw YtDlpExecutorException('Parse timed out after $timeoutSeconds seconds');
+        LogService.instance.error(
+          'inspect timed out after ${timeoutSeconds}s',
+          'executor',
+        );
+        throw YtDlpExecutorException(
+          'Parse timed out after $timeoutSeconds seconds',
+        );
       }
     }
 
     // Custom process runner path (for tests with _FakeProcess)
     final process = await _processRunner(ytDlpPath, args);
-    LogService.instance.info('inspect: process started at ${sw.elapsedMilliseconds}ms, pid=${process.pid}', 'executor');
+    LogService.instance.info(
+      'inspect: process started at ${sw.elapsedMilliseconds}ms, pid=${process.pid}',
+      'executor',
+    );
 
     final outputLines = <String>[];
     final session = YtDlpSession.forTesting(
       task: DownloadTask(
         id: 'inspect:${url.toString()}',
-        title: url.toString(), source: url.toString(),
-        status: DownloadStatus.parsing, progress: 0, variants: const [],
+        title: url.toString(),
+        source: url.toString(),
+        status: DownloadStatus.parsing,
+        progress: 0,
+        variants: const [],
       ),
     );
 
-    final stdoutFuture = _consumeLines(process.stdout, session, collectedLines: outputLines);
-    final stderrFuture = _consumeLines(process.stderr, session, collectedLines: outputLines, onLog: onLog);
-    final exitCode = await process.exitCode
-        .timeout(Duration(seconds: timeoutSeconds), onTimeout: () {
-      process.kill(ProcessSignal.sigkill);
-      return -1;
-    });
-    LogService.instance.info('inspect: exitCode=$exitCode at ${sw.elapsedMilliseconds}ms', 'executor');
+    final stdoutFuture = _consumeLines(
+      process.stdout,
+      session,
+      collectedLines: outputLines,
+    );
+    final stderrFuture = _consumeLines(
+      process.stderr,
+      session,
+      collectedLines: outputLines,
+      onLog: onLog,
+    );
+    final exitCode = await process.exitCode.timeout(
+      Duration(seconds: timeoutSeconds),
+      onTimeout: () {
+        process.kill(ProcessSignal.sigkill);
+        return -1;
+      },
+    );
+    LogService.instance.info(
+      'inspect: exitCode=$exitCode at ${sw.elapsedMilliseconds}ms',
+      'executor',
+    );
 
     try {
-      await Future.wait([stdoutFuture, stderrFuture]).timeout(const Duration(seconds: 10));
+      await Future.wait([
+        stdoutFuture,
+        stderrFuture,
+      ]).timeout(const Duration(seconds: 10));
     } on TimeoutException {
       LogService.instance.warn('inspect: stream drain timed out', 'executor');
     }
 
     if (exitCode == -1) {
-      LogService.instance.error('inspect timed out after ${timeoutSeconds}s', 'executor');
-      throw YtDlpExecutorException('Parse timed out after $timeoutSeconds seconds');
+      LogService.instance.error(
+        'inspect timed out after ${timeoutSeconds}s',
+        'executor',
+      );
+      throw YtDlpExecutorException(
+        'Parse timed out after $timeoutSeconds seconds',
+      );
     }
     if (exitCode != 0) {
       final message = session.errorMessage ?? l10n.ytDlpNonZeroExit;
@@ -206,10 +264,14 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     }
 
     final variants = _parseInspectVariants(
-      outputLines, l10n,
+      outputLines,
+      l10n,
       recommendedVariantCount: normalizedSettings.recommendedVariantCount,
     );
-    LogService.instance.info('inspect: found ${variants.length} variants', 'executor');
+    LogService.instance.info(
+      'inspect: found ${variants.length} variants',
+      'executor',
+    );
     return variants;
   }
 
@@ -228,16 +290,18 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       'startDownload: yt-dlp=$ytDlpPath ffmpeg=$ffmpegPath',
       'executor',
     );
-    final process = await _processRunner(
-      ytDlpPath,
-      buildDownloadArguments(
-        url: url,
-        variant: variant,
-        settings: settings,
-        ffmpegPath: ffmpegPath,
-        cookieFile: _resolveCookieFile(url, settings),
-      ),
+    final downloadArgs = buildDownloadArguments(
+      url: url,
+      variant: variant,
+      settings: settings,
+      ffmpegPath: ffmpegPath,
+      cookieFile: _resolveCookieFile(url, settings),
     );
+    LogService.instance.debug(
+      'startDownload args: ${_redactDownloadArgs(downloadArgs)}',
+      'executor',
+    );
+    final process = await _processRunner(ytDlpPath, downloadArgs);
 
     final task = DownloadTask(
       id: taskId,
@@ -329,17 +393,25 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     final host = url.host;
     if (host.contains('bilibili.com') || host.contains('bilibili.tv')) {
       return [
-        '--add-header', 'Referer:https://www.bilibili.com',
-        '--add-header', 'Origin:https://www.bilibili.com',
         '--add-header',
-          'User-Agent:Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
-              '(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-        '--add-header', 'Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        '--add-header', 'Accept-Language:zh-CN,zh;q=0.9,en;q=0.8',
-        '--add-header', 'Accept-Encoding:gzip, deflate, br',
-        '--add-header', 'Sec-Fetch-Site:none',
-        '--add-header', 'Sec-Fetch-Mode:navigate',
-        '--add-header', 'Sec-Fetch-Dest:document',
+        'Referer:https://www.bilibili.com',
+        '--add-header',
+        'Origin:https://www.bilibili.com',
+        '--add-header',
+        'User-Agent:Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 '
+            '(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+        '--add-header',
+        'Accept:text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        '--add-header',
+        'Accept-Language:zh-CN,zh;q=0.9,en;q=0.8',
+        '--add-header',
+        'Accept-Encoding:gzip, deflate, br',
+        '--add-header',
+        'Sec-Fetch-Site:none',
+        '--add-header',
+        'Sec-Fetch-Mode:navigate',
+        '--add-header',
+        'Sec-Fetch-Dest:document',
       ];
     }
     return const [];
@@ -354,8 +426,14 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
   }) {
     return [
       '--newline',
+      '--progress',
       '--continue',
       '--part',
+      '--progress-template',
+      'download:__HIEYT_PROGRESS__:%(progress.status)s|'
+          '%(progress._percent_str)s|'
+          '%(progress._speed_str)s|'
+          '%(progress._eta_str)s',
       '--ffmpeg-location',
       ffmpegPath,
       ..._antiBotHeaders(url),
@@ -372,6 +450,19 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
           : settings.saveDirectory,
       url.toString(),
     ];
+  }
+
+  static String _redactDownloadArgs(List<String> args) {
+    final redacted = <String>[];
+    for (var i = 0; i < args.length; i += 1) {
+      final arg = args[i];
+      redacted.add(arg);
+      if (arg == '--cookies' && i + 1 < args.length) {
+        redacted.add('[cookie-file]');
+        i += 1;
+      }
+    }
+    return redacted.join(' ');
   }
 
   Future<void> _streamProcess(
@@ -435,19 +526,21 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
         );
         LogService.instance.warn(
           'Retrying ${session.task.id} (attempt ${next + 1}/$_maxRetries) '
-          'after exit=$exitCode',
+              'after exit=$exitCode',
           'executor',
         );
         // Small delay before retry to let transient issues resolve.
         await Future<void>.delayed(const Duration(seconds: 2));
         if (_intentionalStops.contains(session.task.id)) return;
-        unawaited(startDownload(
-          taskId: session.task.id,
-          url: retry.url,
-          variant: retry.variant,
-          settings: retry.settings,
-          onTaskChanged: retry.onTaskChanged,
-        ));
+        unawaited(
+          startDownload(
+            taskId: session.task.id,
+            url: retry.url,
+            variant: retry.variant,
+            settings: retry.settings,
+            onTaskChanged: retry.onTaskChanged,
+          ),
+        );
         return;
       }
 
@@ -458,14 +551,11 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       _pendingRetries.remove(session.task.id);
       LogService.instance.error(
         'Download failed after ${(retry?.attempts ?? 0) + 1} attempts: '
-        'exit=$exitCode ${session.task.id} — $msg',
+            'exit=$exitCode ${session.task.id} — $msg',
         'executor',
       );
       session.handleEvent(
-        YtDlpProgressEvent(
-          type: YtDlpProgressEventType.error,
-          message: msg,
-        ),
+        YtDlpProgressEvent(type: YtDlpProgressEventType.error, message: msg),
       );
       onTaskChanged?.call(session.task);
     }
@@ -491,11 +581,13 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       // \r not followed by \n is a progress overwrite — replace with \n
       lineStream = stream
           .transform(SystemEncoding().decoder)
-          .transform(StreamTransformer<String, String>.fromHandlers(
-            handleData: (data, sink) {
-              sink.add(data.replaceAll(RegExp(r'\r(?!\n)'), '\n'));
-            },
-          ))
+          .transform(
+            StreamTransformer<String, String>.fromHandlers(
+              handleData: (data, sink) {
+                sink.add(data.replaceAll(RegExp(r'\r(?!\n)'), '\n'));
+              },
+            ),
+          )
           .transform(LineSplitter());
     }
     await for (final line in lineStream) {
@@ -504,11 +596,25 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       if (_intentionalStops.contains(session.task.id)) {
         continue;
       }
+      final previousProgress = session.task.progress;
       session.handleLine(line);
       final filepathMatch = _filepathRe.firstMatch(line);
       if (filepathMatch != null) {
         session.task = session.task.copyWith(
           mediaPath: filepathMatch.namedGroup('path'),
+        );
+      }
+      if (session.task.progress != previousProgress) {
+        LogService.instance.debug(
+          'Parsed progress ${session.task.id}: '
+              '${session.task.progress.toStringAsFixed(1)}% '
+              'speed=${session.task.speed} eta=${session.task.eta}',
+          'executor',
+        );
+      } else if (line.contains('__HIEYT_PROGRESS__')) {
+        LogService.instance.warn(
+          'Unparsed progress line ${session.task.id}: $line',
+          'executor',
         );
       }
       // Log progress milestones (every ~20%)
@@ -517,7 +623,7 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
         lastLoggedPercent = pct - (pct % 20);
         LogService.instance.debug(
           'Progress ${session.task.id}: ${pct.toStringAsFixed(0)}% '
-          'speed=${session.task.speed} eta=${session.task.eta}',
+              'speed=${session.task.speed} eta=${session.task.eta}',
           'executor',
         );
       }

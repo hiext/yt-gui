@@ -7,7 +7,10 @@ import '../../core/controllers/settings_controller.dart';
 import '../../core/models/app_models.dart';
 import '../../core/services/cookie_service.dart'
     show CookieService, CookieEntry, CookieImportResult;
+import '../../core/services/embedded_tool_manifest.dart';
+import '../../core/services/embedded_tool_resolver.dart';
 import '../../core/services/log_service.dart';
+import '../../core/services/platform_file_picker.dart';
 import '../../shared/widgets/section_card.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -20,6 +23,8 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  static const _filePicker = PlatformFilePicker();
+
   late final TextEditingController _saveDirCtrl;
   late final TextEditingController _qualityCtrl;
   late final TextEditingController _ytDlpCtrl;
@@ -89,8 +94,14 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   static const _qualityPresets = [
-    'best', 'bestvideo+bestaudio', 'bestvideo', 'bestaudio',
-    'bv*+ba*', 'bv*+ba/b', 'worstvideo+worstaudio', 'worst',
+    'best',
+    'bestvideo+bestaudio',
+    'bestvideo',
+    'bestaudio',
+    'bv*+ba*',
+    'bv*+ba/b',
+    'worstvideo+worstaudio',
+    'worst',
   ];
 
   String _normalizeQualityValue(String value) {
@@ -214,8 +225,14 @@ class _SettingsPageState extends State<SettingsPage> {
                         value: 'bestvideo+bestaudio',
                         child: Text('bestvideo+bestaudio'),
                       ),
-                      DropdownMenuItem(value: 'bestvideo', child: Text('bestvideo')),
-                      DropdownMenuItem(value: 'bestaudio', child: Text('bestaudio')),
+                      DropdownMenuItem(
+                        value: 'bestvideo',
+                        child: Text('bestvideo'),
+                      ),
+                      DropdownMenuItem(
+                        value: 'bestaudio',
+                        child: Text('bestaudio'),
+                      ),
                       DropdownMenuItem(
                         value: 'bv*+ba*',
                         child: Text('bv*+ba* (最佳视频+音频)'),
@@ -669,7 +686,10 @@ class _SettingsPageState extends State<SettingsPage> {
                 items: const [
                   DropdownMenuItem(value: LogLevel.debug, child: Text('Debug')),
                   DropdownMenuItem(value: LogLevel.info, child: Text('Info')),
-                  DropdownMenuItem(value: LogLevel.warning, child: Text('Warning')),
+                  DropdownMenuItem(
+                    value: LogLevel.warning,
+                    child: Text('Warning'),
+                  ),
                   DropdownMenuItem(value: LogLevel.error, child: Text('Error')),
                 ],
                 onChanged: (v) {
@@ -687,6 +707,8 @@ class _SettingsPageState extends State<SettingsPage> {
               configs: settings.cookieConfigs,
               defaultBrowser: settings.defaultCookieBrowser,
               onImport: (browser, domain) => _importCookies(browser, domain),
+              onImportFile: (domain, browser) =>
+                  _importCookieFile(domain, browser),
               onRemove: (domain) => _removeCookie(domain),
               onReimport: (config) => _reimportCookie(config),
             ),
@@ -746,10 +768,10 @@ class _SettingsPageState extends State<SettingsPage> {
               child: Text(
                 _saveStatusText(l10n),
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: saved
-                          ? Theme.of(context).colorScheme.onSurface
-                          : Theme.of(context).colorScheme.onPrimaryContainer,
-                    ),
+                  color: saved
+                      ? Theme.of(context).colorScheme.onSurface
+                      : Theme.of(context).colorScheme.onPrimaryContainer,
+                ),
               ),
             ),
             const SizedBox(width: 12),
@@ -763,7 +785,10 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildAutoClipSection(AppLocalizations l10n, DownloadSettings settings) {
+  Widget _buildAutoClipSection(
+    AppLocalizations l10n,
+    DownloadSettings settings,
+  ) {
     final config = settings.autoClipConfig;
     final enabled = config.enabled;
 
@@ -776,9 +801,7 @@ class _SettingsPageState extends State<SettingsPage> {
           title: Text(l10n.autoClipEnabled),
           value: enabled,
           onChanged: (v) {
-            widget.controller.updateAutoClipConfig(
-              config.copyWith(enabled: v),
-            );
+            widget.controller.updateAutoClipConfig(config.copyWith(enabled: v));
           },
         ),
         const SizedBox(height: 8),
@@ -796,7 +819,9 @@ class _SettingsPageState extends State<SettingsPage> {
           onChanged: enabled
               ? (v) {
                   widget.controller.updateAutoClipConfig(
-                    config.copyWith(minConfidence: double.parse(v.toStringAsFixed(2))),
+                    config.copyWith(
+                      minConfidence: double.parse(v.toStringAsFixed(2)),
+                    ),
                   );
                 }
               : null,
@@ -900,6 +925,16 @@ class _SettingsPageState extends State<SettingsPage> {
     _markDirty();
   }
 
+  String _resolveYtDlpPath(DownloadSettings settings) {
+    return const EmbeddedToolResolver()
+        .resolveExecutable(
+          kind: EmbeddedToolKind.ytDlp,
+          settings: settings,
+          allowMissingCustomFallback: true,
+        )
+        .path;
+  }
+
   Future<void> _importCookies(String browser, String domain) async {
     final l10n = AppLocalizations.of(context)!;
     final settings = widget.controller.settings;
@@ -907,23 +942,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final cookieFile =
         '$saveDir/.cookies/$domain'
         '_$browser.txt';
-
-    // Resolve yt-dlp path: custom path → PATH lookup → bundled fallback
-    String ytDlpPath;
-    if (settings.ytDlpPath != null && File(settings.ytDlpPath!).existsSync()) {
-      ytDlpPath = settings.ytDlpPath!;
-    } else {
-      // Check bundled release path first
-      final exeDir = File(Platform.resolvedExecutable).parent.path;
-      final bundledPath =
-          '$exeDir/data/flutter_assets/assets/bin/linux/yt-dlp';
-      if (File(bundledPath).existsSync()) {
-        ytDlpPath = bundledPath;
-      } else {
-        // Fall back to PATH
-        ytDlpPath = 'yt-dlp';
-      }
-    }
+    final ytDlpPath = _resolveYtDlpPath(settings);
 
     final service = CookieService();
     try {
@@ -948,6 +967,79 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
+  Future<void> _importCookieFile(String domain, String browser) async {
+    if (domain.isEmpty) return;
+    final l10n = AppLocalizations.of(context)!;
+    final path = await _filePicker.pickFile(title: l10n.cookieFilePickerTitle);
+    if (path == null) return;
+
+    final service = CookieService();
+    if (!service.isCookieFileValid(path)) {
+      _showCookieImportFailure(l10n.cookieManualImportInvalid, domain, browser);
+      return;
+    }
+
+    final entries = service.parseCookieFile(path);
+    if (entries.isEmpty) {
+      _showCookieImportFailure(l10n.cookieManualImportInvalid, domain, browser);
+      return;
+    }
+
+    final settings = widget.controller.settings;
+    final configs = List<CookieConfig>.from(settings.cookieConfigs)
+      ..removeWhere((c) => c.domain == domain)
+      ..add(
+        CookieConfig(
+          domain: domain,
+          browser: '$browser-file',
+          cookieFile: path,
+          importedAt: DateTime.now(),
+        ),
+      );
+    await CookieService().saveConfigs(configs);
+    widget.controller.updateSettings(settings.copyWith(cookieConfigs: configs));
+    LogService.instance.info(
+      'Cookie file imported: $domain ($browser) → $path '
+          '(${entries.length} entries)',
+      'cookie',
+    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.cookieImportSuccess(domain)),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  void _showCookieImportFailure(String detail, String domain, String browser) {
+    LogService.instance.error(
+      'Cookie import failed: $domain ($browser) — $detail',
+      'cookie',
+    );
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.cookieImportFailed,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 4),
+            Text(detail, style: const TextStyle(fontSize: 13)),
+          ],
+        ),
+        duration: const Duration(seconds: 10),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   void _handleImportResult(
     CookieImportResult result,
     String domain,
@@ -958,33 +1050,11 @@ class _SettingsPageState extends State<SettingsPage> {
     final settings = widget.controller.settings;
 
     if (!result.success) {
-      LogService.instance.error(
-        'Cookie import failed: $domain ($browser) — ${result.detail}',
-        'cookie',
+      _showCookieImportFailure(
+        result.detail ?? l10n.unknownError,
+        domain,
+        browser,
       );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.cookieImportFailed,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  result.detail ?? l10n.unknownError,
-                  style: const TextStyle(fontSize: 13),
-                ),
-              ],
-            ),
-            duration: const Duration(seconds: 10),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
       return;
     }
 
@@ -992,7 +1062,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final fileSize = fileExists ? File(cookieFile).lengthSync() : 0;
     LogService.instance.info(
       'Cookie import OK: $domain ($browser) → $cookieFile '
-      '($fileSize bytes, exists=$fileExists)',
+          '($fileSize bytes, exists=$fileExists)',
       'cookie',
     );
 
@@ -1029,41 +1099,39 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _reimportCookie(CookieConfig config) async {
+    if (config.browser.endsWith('-file')) {
+      await _importCookieFile(
+        config.domain,
+        config.browser.replaceFirst('-file', ''),
+      );
+      return;
+    }
     await _importCookies(config.browser, config.domain);
   }
 
   Future<void> _browseDirectory() async {
     final l10n = AppLocalizations.of(context)!;
     // Use system file picker to choose a directory
-    final result = await Process.run('zenity', [
-      '--file-selection',
-      '--directory',
-      '--title=${l10n.filePickerSaveDirTitle}',
-    ]);
-    if (result.exitCode == 0) {
-      final path = (result.stdout as String).trim();
-      if (path.isNotEmpty) {
-        _saveDirCtrl.text = path;
-        widget.controller.updateSaveDirectory(path);
-      }
+    final path = await _filePicker.pickDirectory(
+      title: l10n.filePickerSaveDirTitle,
+    );
+    if (path != null) {
+      _saveDirCtrl.text = path;
+      widget.controller.updateSaveDirectory(path);
     }
   }
 
   Future<void> _browseFile(TextEditingController ctrl) async {
     final l10n = AppLocalizations.of(context)!;
-    final result = await Process.run('zenity', [
-      '--file-selection',
-      '--title=${l10n.filePickerExecutableTitle}',
-    ]);
-    if (result.exitCode == 0) {
-      final path = (result.stdout as String).trim();
-      if (path.isNotEmpty) {
-        ctrl.text = path;
-        if (identical(ctrl, _ytDlpCtrl)) {
-          widget.controller.updateYtDlpPath(path);
-        } else {
-          widget.controller.updateFfmpegPath(path);
-        }
+    final path = await _filePicker.pickFile(
+      title: l10n.filePickerExecutableTitle,
+    );
+    if (path != null) {
+      ctrl.text = path;
+      if (identical(ctrl, _ytDlpCtrl)) {
+        widget.controller.updateYtDlpPath(path);
+      } else {
+        widget.controller.updateFfmpegPath(path);
       }
     }
   }
@@ -1074,6 +1142,7 @@ class _CookieSection extends StatefulWidget {
     required this.configs,
     required this.defaultBrowser,
     required this.onImport,
+    required this.onImportFile,
     required this.onRemove,
     required this.onReimport,
   });
@@ -1081,6 +1150,7 @@ class _CookieSection extends StatefulWidget {
   final List<CookieConfig> configs;
   final String? defaultBrowser;
   final Future<void> Function(String browser, String domain) onImport;
+  final Future<void> Function(String domain, String browser) onImportFile;
   final void Function(String domain) onRemove;
   final void Function(CookieConfig config) onReimport;
 
@@ -1135,6 +1205,16 @@ class _CookieSectionState extends State<_CookieSection> {
     }
   }
 
+  Future<void> _doImportFile(String domain) async {
+    if (domain.isEmpty || _importing) return;
+    setState(() => _importing = true);
+    try {
+      await widget.onImportFile(domain, _browser);
+    } finally {
+      if (mounted) setState(() => _importing = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -1178,8 +1258,9 @@ class _CookieSectionState extends State<_CookieSection> {
                 onFieldSubmitted: (v) => _doImport(v.trim()),
               );
               final importButton = FilledButton.tonalIcon(
-                onPressed:
-                    _importing ? null : () => _doImport(_domainCtrl.text.trim()),
+                onPressed: _importing
+                    ? null
+                    : () => _doImport(_domainCtrl.text.trim()),
                 icon: _importing
                     ? const SizedBox(
                         width: 18,
@@ -1188,6 +1269,13 @@ class _CookieSectionState extends State<_CookieSection> {
                       )
                     : const Icon(Icons.file_download_outlined, size: 18),
                 label: Text(_importing ? l10n.importing : l10n.importBtn),
+              );
+              final importFileButton = OutlinedButton.icon(
+                onPressed: _importing
+                    ? null
+                    : () => _doImportFile(_domainCtrl.text.trim()),
+                icon: const Icon(Icons.upload_file_outlined, size: 18),
+                label: Text(l10n.importCookieFile),
               );
 
               if (compact) {
@@ -1198,9 +1286,11 @@ class _CookieSectionState extends State<_CookieSection> {
                     const SizedBox(height: 12),
                     domainField,
                     const SizedBox(height: 8),
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: importButton,
+                    Wrap(
+                      alignment: WrapAlignment.end,
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [importFileButton, importButton],
                     ),
                   ],
                 );
@@ -1212,12 +1302,34 @@ class _CookieSectionState extends State<_CookieSection> {
                   const SizedBox(width: 12),
                   Expanded(
                     flex: 3,
-                    child: Row(
-                      children: [
-                        Expanded(child: domainField),
-                        const SizedBox(width: 8),
-                        importButton,
-                      ],
+                    child: LayoutBuilder(
+                      builder: (context, fieldConstraints) {
+                        final stackButtons = fieldConstraints.maxWidth < 500;
+                        if (stackButtons) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              domainField,
+                              const SizedBox(height: 8),
+                              Wrap(
+                                alignment: WrapAlignment.end,
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [importFileButton, importButton],
+                              ),
+                            ],
+                          );
+                        }
+                        return Row(
+                          children: [
+                            Expanded(child: domainField),
+                            const SizedBox(width: 8),
+                            importFileButton,
+                            const SizedBox(width: 8),
+                            importButton,
+                          ],
+                        );
+                      },
                     ),
                   ),
                 ],

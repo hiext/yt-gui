@@ -14,20 +14,39 @@ yt-dlp 可视化桌面下载器，面向普通用户的图形化视频/音频下
 
 | 平台 | Artifact 名称 | 包内容 |
 |------|--------------|--------|
-| Linux (x64) | `hiext-yt-gui-linux-x64` | 可执行文件 + 运行时库 |
-| macOS | `hiext-yt-gui-macos` | `.app` 应用包 |
-| Windows (x64) | `hiext-yt-gui-windows-x64` | 可执行文件 + DLL |
+| Linux (x64) | `hiext-yt-gui-linux-x64` | `.tar.gz` + Debian/Ubuntu `.deb` |
+| Linux (arm64) | `hiext-yt-gui-linux-arm64` | `.tar.gz` + Debian/Ubuntu `.deb` |
+| macOS Apple Silicon / M 系列 | `hiext-yt-gui-macos-arm64` | `.app` 应用包 zip |
+| macOS Intel | `hiext-yt-gui-macos-x64` | `.app` 应用包 zip |
+| Windows (x64) | `hiext-yt-gui-windows-x64` | 可执行文件 + DLL zip |
+| Windows (arm64) | `hiext-yt-gui-windows-arm64` | 可执行文件 + DLL zip |
+
+> Windows 32 位桌面包当前不生成。Flutter 桌面当前支持 Windows x64 / arm64，不支持 Windows x86 32 位发布目标。
 
 ### Linux
 
-1. 下载 `hiext-yt-gui-linux-x64` artifact 并解压：
+1. 下载匹配架构的 artifact。Debian / Ubuntu 推荐 `.deb`，其他发行版可使用 `.tar.gz`：
 
    ```bash
-   unzip hiext-yt-gui-linux-x64.zip -d hiext-yt-gui
+   # x64 示例
+   sudo apt install ./hiext-yt-gui-linux-x64.deb
+
+   # arm64 示例
+   sudo apt install ./hiext-yt-gui-linux-arm64.deb
+
+   # 通用 tar.gz 示例
+   mkdir -p hiext-yt-gui
+   tar xzf hiext-yt-gui-linux-x64.tar.gz -C hiext-yt-gui
    cd hiext-yt-gui
    ```
 
-2. 确保系统已安装运行依赖：
+2. 如果使用 `.deb`，安装后可直接启动：
+
+   ```bash
+   hiext-yt-gui
+   ```
+
+3. 如果使用 `.tar.gz`，请先确保系统已安装运行依赖：
 
    ```bash
    # Debian / Ubuntu
@@ -40,14 +59,14 @@ yt-dlp 可视化桌面下载器，面向普通用户的图形化视频/音频下
    sudo pacman -S --needed gtk3 libnotify sqlite
    ```
 
-3. 赋予执行权限并运行：
+4. 赋予执行权限并运行：
 
    ```bash
    chmod +x hiext_yt_gui
    ./hiext_yt_gui
    ```
 
-4. （可选）创建桌面快捷方式：
+5. （可选）为 `.tar.gz` 安装创建桌面快捷方式：
 
    ```bash
    mkdir -p ~/.local/share/applications
@@ -66,16 +85,24 @@ yt-dlp 可视化桌面下载器，面向普通用户的图形化视频/音频下
 
 ### macOS
 
-1. 下载 `hiext-yt-gui-macos` artifact 并解压得到 `hiext_yt_gui.app`。
+1. 按芯片下载对应 artifact：
 
-2. 由于应用未经过 Apple 公证，首次打开时需绕过 Gatekeeper：
+   - M 系列 / Apple Silicon：`hiext-yt-gui-macos-arm64`
+   - Intel：`hiext-yt-gui-macos-x64`
+
+   解压后得到 `hiext_yt_gui.app`。
+
+2. 如果下载的是未签名测试包，首次打开可能出现“Apple 无法验证是否包含恶意软件”的提示。确认来源可信后，可任选一种方式放行：
 
    ```bash
-   # 移除隔离属性
+   # 方式一：移除下载隔离属性
    xattr -cr hiext_yt_gui.app
 
-   # 或右键点击 .app → 按住 Option 键 → 选择"打开"
+   # 方式二：右键点击 .app → 选择"打开"
+   # 方式三：系统设置 → 隐私与安全性 → 安全性 → 仍要打开
    ```
+
+   > 正式发布包应使用 Developer ID 签名并完成 Apple 公证；已公证版本无需执行此步骤。
 
 3. 将 `hiext_yt_gui.app` 拖入 `/Applications` 文件夹即可。
 
@@ -89,9 +116,12 @@ yt-dlp 可视化桌面下载器，面向普通用户的图形化视频/音频下
 
 ### Windows
 
-1. 下载 `hiext-yt-gui-windows-x64` artifact 并解压到目标目录。
+1. 下载匹配架构的 artifact 并解压到目标目录：
 
-2. 确保系统已安装 [Visual C++ Redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe)（通常已预装）。
+   - 常见 Intel / AMD 电脑：`hiext-yt-gui-windows-x64`
+   - Windows on ARM 设备：`hiext-yt-gui-windows-arm64`
+
+2. 确保系统已安装对应架构的 Visual C++ Redistributable（通常已预装）。x64 可使用 [vc_redist.x64.exe](https://aka.ms/vs/17/release/vc_redist.x64.exe)。
 
 3. 双击 `hiext_yt_gui.exe` 启动应用。
 
@@ -224,27 +254,29 @@ flutter run -d windows
 ## 构建发布包
 
 ```bash
-# Linux (可执行文件 + 依赖库)
-flutter build linux --release
-# 产物位于 build/linux/x64/release/bundle/
+# Linux x64 / arm64（可执行文件 + 依赖库）
+flutter build linux --release --target-platform linux-x64
+flutter build linux --release --target-platform linux-arm64
+# 产物位于 build/linux/<arch>/release/bundle/
 
-# macOS (.app 包)
+# macOS (.app 包，CI 分别在 Apple Silicon 与 Intel runner 上构建)
 flutter build macos --release
 # 产物位于 build/macos/Build/Products/Release/
 
-# Windows (可执行文件 + DLL)
+# Windows x64 / arm64（CI 分别在 x64 与 ARM64 runner 上构建）
 flutter build windows --release
-# 产物位于 build/windows/x64/runner/Release/
+# 产物位于 build/windows/<arch>/runner/Release/
 ```
 
 ### Linux 打包建议
 
 ```bash
 # 创建可分发的 tar.gz
-cd build/linux/x64/release/bundle
-tar czf hiext-yt-gui-linux-x64.tar.gz *
+tar -C build/linux/x64/release/bundle -czf hiext-yt-gui-linux-x64.tar.gz .
+tar -C build/linux/arm64/release/bundle -czf hiext-yt-gui-linux-arm64.tar.gz .
 
-# 或使用 linuxdeploy 创建 AppImage（需先安装 linuxdeploy）
+# CI 同时生成 Debian / Ubuntu .deb 包。
+# 也可使用 linuxdeploy 创建 AppImage（需先安装 linuxdeploy）
 # linuxdeploy --appdir AppDir --executable hiext_yt_gui --output appimage
 ```
 
@@ -255,11 +287,26 @@ tar czf hiext-yt-gui-linux-x64.tar.gz *
 # create-dmg --volname "Hiext YT GUI" build/macos/Build/Products/Release/hiext_yt_gui.app
 ```
 
+正式发布到 GitHub Release 前，macOS 包需要使用 Developer ID Application 证书签名并通过 Apple 公证。CI 会在 tag 构建时自动检测以下 Secrets，存在证书时执行 `tools/sign_and_notarize_macos.sh`：
+
+- `MACOS_CERTIFICATE_P12_BASE64`：Developer ID Application 证书 `.p12` 的 base64。
+- `MACOS_CERTIFICATE_PASSWORD`：导出 `.p12` 时设置的密码。
+- `MACOS_CODESIGN_IDENTITY`：例如 `Developer ID Application: Hiext (...)`。
+- `APP_STORE_CONNECT_API_KEY_BASE64`、`APP_STORE_CONNECT_API_KEY_ID`、`APP_STORE_CONNECT_API_KEY_ISSUER_ID`：推荐的 notarization API Key 配置。
+- 或使用 `APPLE_ID`、`APPLE_TEAM_ID`、`APPLE_APP_SPECIFIC_PASSWORD` 作为备用公证配置。
+
+本地验证签名与 Gatekeeper 状态：
+
+```bash
+codesign -dv --verbose=4 build/macos/Build/Products/Release/hiext_yt_gui.app
+spctl --assess --type execute --verbose=4 build/macos/Build/Products/Release/hiext_yt_gui.app
+```
+
 ### Windows 打包建议
 
 ```bash
 # 使用 Inno Setup 创建安装程序
-# 或直接分发 build/windows/x64/runner/Release/ 目录
+# 或直接分发 build/windows/<arch>/runner/Release/ 目录
 ```
 
 ## 发布页文案建议

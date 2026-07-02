@@ -8,6 +8,9 @@ import '../models/app_models.dart';
 import 'database_service.dart';
 
 class CookieService {
+  static const defaultBrowserImportTimeout = Duration(seconds: 20);
+  static const macosBrowserImportTimeout = Duration(seconds: 75);
+
   Future<List<CookieConfig>> loadConfigs() async {
     return DatabaseService().loadCookieConfigs();
   }
@@ -30,6 +33,12 @@ class CookieService {
   ];
 
   static const _chromeBased = {'chrome', 'edge', 'brave', 'opera', 'chromium'};
+
+  static Duration defaultImportTimeoutForPlatform() {
+    return Platform.isMacOS
+        ? macosBrowserImportTimeout
+        : defaultBrowserImportTimeout;
+  }
 
   String? _findExtractScript() {
     // Check development paths (relative to project root)
@@ -144,8 +153,10 @@ class CookieService {
     required String ytDlpPath,
     required String outputFile,
     AppLocalizations? localizations,
+    Duration? browserTimeout,
   }) async {
     final l10n = localizations ?? currentAppLocalizations();
+    final resolvedTimeout = browserTimeout ?? defaultImportTimeoutForPlatform();
     final file = File(outputFile);
     if (!file.parent.existsSync()) {
       file.parent.createSync(recursive: true);
@@ -173,28 +184,24 @@ class CookieService {
         env = {'PATH': '$secretDir:$existingPath'};
       }
 
-      final process = await Process.start(
-        ytDlpPath,
-        [
-          '--cookies-from-browser',
-          br,
-          '--cookies',
-          outputFile,
-          '--print',
-          'id',
-          '--skip-download',
-          '--no-playlist',
-          testUrl,
-        ],
-        runInShell: false,
+      final runResult = await _runCookieImportProcess(
+        ytDlpPath: ytDlpPath,
+        browser: br,
+        outputFile: outputFile,
+        testUrl: testUrl,
         environment: env,
+        timeout: resolvedTimeout,
       );
-      unawaited(process.stdout.drain());
-      final stderr = await process.stderr
-          .transform(utf8.decoder)
-          .transform(const LineSplitter())
-          .toList();
-      await process.exitCode;
+      final stderr = runResult.stderr;
+
+      if (runResult.timedOut) {
+        if (file.existsSync()) file.deleteSync();
+        final timeoutSeconds = resolvedTimeout.inSeconds < 1
+            ? 1
+            : resolvedTimeout.inSeconds;
+        failures.add(l10n.cookieImportTimedOut(br, timeoutSeconds));
+        continue;
+      }
 
       final cannotDecrypt = stderr.any(
         (l) => l.contains('could not be decrypted'),
@@ -243,6 +250,73 @@ class CookieService {
       reason: 'all_failed',
       detail: failures.join('\n'),
     );
+  }
+
+  Future<_CookieImportProcessResult> _runCookieImportProcess({
+    required String ytDlpPath,
+    required String browser,
+    required String outputFile,
+    required String testUrl,
+    required Map<String, String>? environment,
+    required Duration timeout,
+  }) async {
+    final process = await Process.start(
+      ytDlpPath,
+      [
+        '--cookies-from-browser',
+        browser,
+        '--cookies',
+        outputFile,
+        '--print',
+        'id',
+        '--skip-download',
+        '--no-playlist',
+        testUrl,
+      ],
+      runInShell: false,
+      environment: environment,
+    ).timeout(timeout);
+
+    final stdoutFuture = process.stdout.drain<void>();
+    final stderrFuture = process.stderr
+        .transform(utf8.decoder)
+        .transform(const LineSplitter())
+        .toList();
+    final exitCodeFuture = process.exitCode;
+
+    try {
+      final exitCode = await exitCodeFuture.timeout(timeout);
+      final stderr = await stderrFuture.timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => const <String>[],
+      );
+      await stdoutFuture
+          .timeout(const Duration(seconds: 2), onTimeout: () {})
+          .catchError((_) {});
+      return _CookieImportProcessResult(
+        stderr: stderr,
+        exitCode: exitCode,
+        timedOut: false,
+      );
+    } on TimeoutException {
+      process.kill();
+      final stderr = await stderrFuture.timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => const <String>[],
+      );
+      await stdoutFuture
+          .timeout(const Duration(seconds: 2), onTimeout: () {})
+          .catchError((_) {});
+      final exitCode = await exitCodeFuture.timeout(
+        const Duration(seconds: 2),
+        onTimeout: () => -1,
+      );
+      return _CookieImportProcessResult(
+        stderr: stderr,
+        exitCode: exitCode,
+        timedOut: true,
+      );
+    }
   }
 
   int _parseExtractedCount(List<String> stderr) {
@@ -295,6 +369,18 @@ class CookieService {
       return const [];
     }
   }
+}
+
+class _CookieImportProcessResult {
+  const _CookieImportProcessResult({
+    required this.stderr,
+    required this.exitCode,
+    required this.timedOut,
+  });
+
+  final List<String> stderr;
+  final int exitCode;
+  final bool timedOut;
 }
 
 class CookieImportResult {

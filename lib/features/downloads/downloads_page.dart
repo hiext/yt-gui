@@ -108,15 +108,26 @@ class _TaskGroupCardState extends State<_TaskGroupCard> {
     final cancelledCount = group.tasks
         .where((t) => t.status == DownloadStatus.cancelled)
         .length;
-    final progressTasks = group.tasks
-        .where((t) => t.status != DownloadStatus.cancelled)
+    final activeProgressTasks = group.tasks
+        .where(
+          (t) =>
+              t.status == DownloadStatus.downloading ||
+              t.status == DownloadStatus.completed ||
+              t.status == DownloadStatus.failed,
+        )
         .toList(growable: false);
+    final progressTasks = activeProgressTasks.isNotEmpty
+        ? activeProgressTasks
+        : group.tasks
+              .where((t) => t.status != DownloadStatus.cancelled)
+              .toList(growable: false);
     final allDone =
         progressTasks.isNotEmpty && doneCount == progressTasks.length;
     final totalProgress = progressTasks.isEmpty
         ? 0.0
         : progressTasks.fold<double>(0, (sum, t) => sum + t.progress) /
               progressTasks.length;
+    final isWaitingForFirstPercent = activeCount > 0 && totalProgress <= 0;
     final visibleTasks = allDone && _collapsed
         ? group.tasks
               .where((t) => t.status != DownloadStatus.completed)
@@ -146,7 +157,9 @@ class _TaskGroupCardState extends State<_TaskGroupCard> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(4),
                   child: LinearProgressIndicator(
-                    value: totalProgress / 100,
+                    value: isWaitingForFirstPercent
+                        ? null
+                        : totalProgress / 100,
                     minHeight: 6,
                     backgroundColor: theme.colorScheme.surfaceContainerHighest,
                     color: allDone ? Colors.green : null,
@@ -169,7 +182,9 @@ class _TaskGroupCardState extends State<_TaskGroupCard> {
                       )
                     else
                       Text(
-                        '${totalProgress.toStringAsFixed(0)}%',
+                        isWaitingForFirstPercent
+                            ? '...'
+                            : '${totalProgress.toStringAsFixed(0)}%',
                         style: theme.textTheme.bodySmall,
                       ),
                   ],
@@ -331,7 +346,9 @@ class _CompactTaskTile extends StatelessWidget {
         ClipRRect(
           borderRadius: BorderRadius.circular(3),
           child: LinearProgressIndicator(
-            value: progress,
+            value: task.status == DownloadStatus.downloading && progress <= 0
+                ? null
+                : progress,
             minHeight: 4,
             backgroundColor: colorScheme.surfaceContainerHighest,
           ),
