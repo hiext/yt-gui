@@ -176,10 +176,11 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Show the result'), findsOneWidget);
-    expect(find.text('1:02 - 1:16'), findsOneWidget);
+    expect(find.text('1:02'), findsOneWidget);
+    expect(find.text('1:16'), findsOneWidget);
     expect(find.text('14s'), findsOneWidget);
     expect(find.textContaining('visual reveal'), findsOneWidget);
-    expect(find.text('completed'), findsOneWidget);
+    expect(find.textContaining('local · completed'), findsOneWidget);
 
     final openClipButton = find.byKey(const Key('open-clip-export-gallery'));
     await tester.ensureVisible(openClipButton);

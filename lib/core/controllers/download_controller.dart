@@ -376,6 +376,10 @@ class DownloadController extends ChangeNotifier {
         );
       }
       postProcessController?.notifyClipLibraryChanged();
+      if (result.status != AutoClipOrchestrationStatus.completed) {
+        await _indexCompletedMedia(task);
+        await postProcessController?.enqueueClipForDownload(task);
+      }
       return;
     }
 

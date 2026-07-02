@@ -218,7 +218,7 @@ Future<LocalAnalysisResult> _defaultLocalAnalyzer({
   required DownloadSettings settings,
   List<ClipSegment> seedSegments = const [],
 }) {
-  return LocalAnalysisService().analyze(
+  return LocalAnalysisService(repository: MediaAssetRepository()).analyze(
     asset: asset,
     settings: settings,
     seedSegments: seedSegments,
@@ -231,7 +231,7 @@ Future<ClipExportRecord> _defaultLocalExporter({
   required DownloadSettings settings,
   ClipExportProgressChanged? onProgress,
 }) {
-  return LocalClipWorkerService().exportCandidate(
+  return LocalClipWorkerService(repository: MediaAssetRepository()).exportCandidate(
     asset: asset,
     candidate: candidate,
     settings: settings,
@@ -280,7 +280,21 @@ Future<List<ClipSegment>> _analyzeSegments(
 
   try {
     if (!completer.isCompleted) {
-      return await completer.future;
+      return await completer.future.timeout(
+        const Duration(minutes: 5),
+        onTimeout: () {
+          if (!completer.isCompleted) {
+            completer.completeError(
+              const AutoClipOrchestrationException(
+                'AI clip analysis timed out after 5 minutes',
+              ),
+            );
+          }
+          throw TimeoutException(
+            'AI clip analysis timed out for ${asset.sourceTaskId}',
+          );
+        },
+      );
     }
     return await completer.future;
   } finally {

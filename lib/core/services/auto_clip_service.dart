@@ -325,7 +325,7 @@ class AutoClipService {
     final baseName = dot > 0 ? sourceName.substring(0, dot) : sourceName;
     final ext = dot > 0 ? sourceName.substring(dot) : '.mp4';
     final clipsDir = '${settings.saveDirectory}/.clips';
-    return '$clipsDir/${baseName}_clip_${record.id}.$ext';
+    return '$clipsDir/${baseName}_clip_${record.id}$ext';
   }
 
   Future<Process> _executorStartCut({

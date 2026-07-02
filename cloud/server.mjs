@@ -331,12 +331,18 @@ function effectiveAccessToken(configuredToken, pairingToken) {
 
 function authorized(req, accessToken) {
   const header = req.headers.authorization ?? '';
-  return header === `Bearer ${accessToken}`;
+  const token = header.startsWith('Bearer ') ? header.slice(7) : '';
+  return safeEqual(token, accessToken);
 }
 
 async function readJson(req) {
   const chunks = [];
+  let totalBytes = 0;
   for await (const chunk of req) {
+    totalBytes += chunk.length;
+    if (totalBytes > MAX_REQUEST_BODY) {
+      throw Object.assign(new Error('Request body too large'), { statusCode: 413 });
+    }
     chunks.push(chunk);
   }
   const text = Buffer.concat(chunks).toString('utf8');
@@ -344,12 +350,19 @@ async function readJson(req) {
   return JSON.parse(text);
 }
 
+const MAX_REQUEST_BODY = 128 * 1024 * 1024; // 128 MB
+
 function writeRequestBody(req, filePath) {
   return new Promise((resolve, reject) => {
     let bytes = 0;
     const stream = createWriteStream(filePath);
     req.on('data', (chunk) => {
       bytes += chunk.length;
+      if (bytes > MAX_REQUEST_BODY) {
+        req.destroy();
+        stream.destroy();
+        reject(Object.assign(new Error('Request body too large'), { statusCode: 413 }));
+      }
     });
     req.on('error', reject);
     stream.on('error', reject);
@@ -381,9 +394,20 @@ function sendJson(res, statusCode, data) {
 }
 
 async function assembleChunks({ chunksDir, outputPath }) {
-  const names = (await readdir(chunksDir))
-    .filter((name) => /^\d+\.part$/.test(name))
-    .sort((a, b) => Number(a.split('.')[0]) - Number(b.split('.')[0]));
+  let names;
+  try {
+    names = (await readdir(chunksDir))
+      .filter((name) => /^\d+\.part$/.test(name))
+      .sort((a, b) => Number(a.split('.')[0]) - Number(b.split('.')[0]));
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      throw Object.assign(new Error('No chunks uploaded'), { statusCode: 409 });
+    }
+    throw error;
+  }
+  if (!names.length) {
+    throw Object.assign(new Error('Upload has no completed chunks'), { statusCode: 409 });
+  }
   const tmpPath = `${outputPath}.tmp`;
   const output = createWriteStream(tmpPath);
   for (const name of names) {
@@ -416,35 +440,53 @@ async function runClipJob(dataDir, job, clipRunner) {
     const fileName = `${safeFileName(candidateId)}.mp4`;
     const outputPath = path.join(dataDir, 'clips', job.cloudJobId, fileName);
     await mkdir(path.dirname(outputPath), { recursive: true });
-    await clipRunner({
-      dataDir,
-      job,
-      candidate,
-      inputPath: await findOriginalObject(dataDir, job.cloudMediaId),
-      outputPath,
-    });
-    clips.push({
-      id: `clip_${candidateId}`,
-      candidateId,
-      index,
-      status: 'completed',
-      startMs: candidate.startMs ?? null,
-      endMs: candidate.endMs ?? null,
-      downloadPath: `/api/clip-jobs/${job.cloudJobId}/files/${fileName}`,
-    });
+    try {
+      await clipRunner({
+        dataDir,
+        job,
+        candidate,
+        inputPath: await findOriginalObject(dataDir, job.cloudMediaId),
+        outputPath,
+      });
+      clips.push({
+        id: `clip_${candidateId}`,
+        candidateId,
+        index,
+        status: 'completed',
+        startMs: candidate.startMs ?? null,
+        endMs: candidate.endMs ?? null,
+        downloadPath: `/api/clip-jobs/${job.cloudJobId}/files/${fileName}`,
+      });
+    } catch (error) {
+      log('clip.failed', {
+        cloudJobId: job.cloudJobId,
+        candidateId,
+        error: error.message ?? String(error),
+      });
+      clips.push({
+        id: `clip_${candidateId}`,
+        candidateId,
+        index,
+        status: 'failed',
+        error: error.message ?? String(error),
+        startMs: candidate.startMs ?? null,
+        endMs: candidate.endMs ?? null,
+      });
+    }
   }
+  const jobStatus = clips.every((c) => c.status === 'completed') ? 'completed' : 'partial';
   const manifest = {
     schemaVersion: 1,
     cloudJobId: job.cloudJobId,
     cloudMediaId: job.cloudMediaId,
-    status: 'completed',
+    status: jobStatus,
     clips,
     generatedAt: new Date().toISOString(),
   };
   await writeJson(dataDir, 'manifests', `${job.cloudJobId}.json`, manifest);
   const completedJob = {
     ...updatedJob,
-    status: 'completed',
+    status: jobStatus,
     progress: 1,
     manifestPath: path.join(dataDir, 'manifests', `${job.cloudJobId}.json`),
     updatedAt: new Date().toISOString(),

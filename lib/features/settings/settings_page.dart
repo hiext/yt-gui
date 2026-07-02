@@ -1347,7 +1347,7 @@ class _SettingsPageState extends State<SettingsPage> {
         outputFile: cookieFile,
         localizations: l10n,
       );
-      _handleImportResult(result, domain, browser, cookieFile);
+      await _handleImportResult(result, domain, browser, cookieFile);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1361,12 +1361,12 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  void _handleImportResult(
+  Future<void> _handleImportResult(
     CookieImportResult result,
     String domain,
     String browser,
     String cookieFile,
-  ) {
+  ) async {
     final l10n = AppLocalizations.of(context)!;
     final settings = widget.controller.settings;
 
@@ -1419,7 +1419,7 @@ class _SettingsPageState extends State<SettingsPage> {
           importedAt: DateTime.now(),
         ),
       );
-    CookieService().saveConfigs(configs);
+    await CookieService().saveConfigs(configs);
     final updated = settings.copyWith(cookieConfigs: configs);
     widget.controller.updateSettings(updated);
     if (mounted) {

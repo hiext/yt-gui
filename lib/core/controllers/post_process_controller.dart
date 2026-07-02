@@ -283,7 +283,7 @@ class PostProcessController extends ChangeNotifier {
   }
 
   Future<ClipRecord?> cutClipSegment(String segmentId) async {
-    final service = _autoClipService;
+    final service = autoClipService;
     if (service == null) return null;
     final index = _clipSegments.indexWhere(
       (segment) => segment.id == segmentId,

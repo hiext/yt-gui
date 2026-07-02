@@ -8,6 +8,7 @@ import '../../core/controllers/post_process_controller.dart';
 import '../../core/models/app_models.dart';
 import '../../core/services/clip_preview_service.dart';
 import '../../core/services/local_clip_worker_service.dart';
+import '../../core/services/log_service.dart';
 import '../../core/services/media_asset_repository.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/widgets/section_card.dart';
@@ -123,9 +124,11 @@ class _ClipLibraryPageState extends State<ClipLibraryPage> {
           ),
         );
       }
-    } catch (_) {
-      // Keep the legacy clip list usable even if the newer media library schema
-      // is unavailable in older test databases or partially migrated installs.
+    } catch (error) {
+      LogService.instance.warn(
+        'Media library load failed, falling back to legacy clip list: $error',
+        'ui',
+      );
     }
     if (!mounted) return;
     setState(() {
@@ -817,6 +820,10 @@ class _MediaAssetCard extends StatelessWidget {
                 Chip(label: Text(_formatBytes(asset.fileSizeBytes))),
               ],
             ),
+            if (view.exports.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              ...view.exports.map((record) => _ExportLine(record: record)),
+            ],
             if (view.galleryItems.isNotEmpty) ...[
               const SizedBox(height: 14),
               Row(
@@ -1047,6 +1054,60 @@ class _ClipPreviewFrame extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      height: 132,
+      decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerHighest),
+      child: Stack(
+        children: [
+          if (previewPath != null)
+            Positioned.fill(child: Image.file(File(previewPath!), fit: BoxFit.cover))
+          else
+            Positioned.fill(
+              child: Center(
+                child: Icon(Icons.movie_outlined, size: 40, color: theme.colorScheme.onSurfaceVariant),
+              ),
+            ),
+          Positioned(
+            left: 4,
+            bottom: 4,
+            child: _TimeLabel(label: startLabel, color: theme.colorScheme.tertiary),
+          ),
+          Positioned(
+            right: 4,
+            bottom: 4,
+            child: _TimeLabel(label: endLabel, color: theme.colorScheme.tertiary),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TimeLabel extends StatelessWidget {
+  const _TimeLabel({required this.label, required this.color});
+
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(color: color.withAlpha(200), borderRadius: BorderRadius.circular(4)),
+      child: Text(label, style: const TextStyle(color: Colors.white, fontSize: 11)),
+    );
+  }
+}
+
+class _ExportLine extends StatelessWidget {
+  const _ExportLine({required this.record});
+
+  final ClipExportRecord record;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final status = [
       record.runtime.name,
       record.status.name,
@@ -1091,8 +1152,50 @@ class _ClipPreviewFrame extends StatelessWidget {
   }
 }
 
+class _LegacySegmentGroupCard extends StatelessWidget {
+  const _LegacySegmentGroupCard({
+    required this.group,
+    required this.cuttingSegmentIds,
+    required this.onAdjust,
+    required this.onOpenLocalPath,
+    required this.onCutAndOpen,
+    required this.onDelete,
+  });
+
+  final _LegacySegmentGroup group;
+  final Set<String> cuttingSegmentIds;
+  final Future<void> Function(ClipSegment segment, {int startDeltaMs, int endDeltaMs}) onAdjust;
+  final Future<void> Function(String path) onOpenLocalPath;
+  final Future<void> Function(ClipSegment segment) onCutAndOpen;
+  final Future<void> Function(ClipSegment segment) onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return SectionCard(
+      key: Key('clip-source-group-${group.sourceTaskId}'),
+      title: group.sourceTaskId,
+      subtitle: '${group.exportedCount} exported · ${group.needsExportCount} needs export',
+      child: Column(
+        children: [
+          for (final segment in group.segments)
+            _ClipSegmentCard(
+              key: Key('legacy-segment-${segment.id}'),
+              segment: segment,
+              onAdjust: onAdjust,
+              onOpenLocalPath: onOpenLocalPath,
+              onCutAndOpen: onCutAndOpen,
+              onDelete: onDelete,
+              isCutting: cuttingSegmentIds.contains(segment.id),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ClipSegmentCard extends StatelessWidget {
   const _ClipSegmentCard({
+    super.key,
     required this.segment,
     required this.onAdjust,
     required this.onOpenLocalPath,
