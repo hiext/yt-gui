@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/services.dart' show rootBundle;
 
@@ -8,6 +9,7 @@ import '../../l10n/app_localizations.dart';
 import 'log_service.dart';
 import '../../l10n/app_localizations_current.dart';
 import '../models/app_models.dart';
+import 'embedded_tool_executable.dart';
 import 'embedded_tool_resolver.dart';
 import 'yt_dlp_progress_parser.dart';
 import 'yt_dlp_session.dart';
@@ -17,58 +19,24 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
   ProcessYtDlpExecutor({
     EmbeddedToolResolver? toolResolver,
     ProcessRunner? processRunner,
+    Future<ByteData> Function(String path)? loadAsset,
   }) : _toolResolver = toolResolver ?? const EmbeddedToolResolver(),
-       _processRunner = processRunner ?? _defaultProcessRunner;
+       _processRunner = processRunner ?? _defaultProcessRunner,
+       _executableResolver = EmbeddedToolExecutableResolver(
+         loadAsset: loadAsset ?? rootBundle.load,
+       );
 
   final EmbeddedToolResolver _toolResolver;
   final ProcessRunner _processRunner;
+  final EmbeddedToolExecutableResolver _executableResolver;
   final Map<String, YtDlpSession> _sessions = {};
   final Map<String, Process> _processes = {};
   final Set<String> _intentionalStops = {};
-  final Map<String, String> _extractedPaths = {};
   final Map<String, _DownloadRequest> _pendingRetries = {};
   static const _maxRetries = 3;
 
   Future<String> _ensureExecutable(ResolvedEmbeddedTool tool) async {
-    if (tool.isCustom) return tool.path;
-    // Always extract embedded tools from rootBundle — never trust
-    // the filesystem path, because CWD differs between dev and prod.
-    final cached = _extractedPaths[tool.path];
-    if (cached != null) {
-      if (File(cached).existsSync()) return cached;
-      _extractedPaths.remove(tool.path);
-    }
-
-    try {
-      final data = await rootBundle.load(tool.path);
-      final dir = Directory.systemTemp.createTempSync('hiext-yt-tools-');
-      final fileName = tool.path.split('/').last;
-      final filePath = '${dir.path}/$fileName';
-      File(filePath).writeAsBytesSync(data.buffer.asUint8List());
-      await Process.run('chmod', ['+x', filePath]);
-      _extractedPaths[tool.path] = filePath;
-      LogService.instance.debug(
-        'Extracted ${tool.kind.name} to $filePath',
-        'executor',
-      );
-      return filePath;
-    } catch (e) {
-      LogService.instance.warn(
-        'Failed to extract ${tool.kind.name}: $e',
-        'executor',
-      );
-      if (tool.fallbackPath != null) {
-        LogService.instance.info(
-          'Using fallback ${tool.kind.name}: ${tool.fallbackPath}',
-          'executor',
-        );
-        return tool.fallbackPath!;
-      }
-      final msg =
-          'Missing ${tool.kind.baseExecutableName}. Install ${tool.kind.baseExecutableName} on PATH, add ${tool.path} to the app bundle, or set a custom path in Settings.';
-      LogService.instance.error(msg, 'executor');
-      throw EmbeddedToolResolutionException(msg);
-    }
+    return _executableResolver.ensureExecutable(tool);
   }
 
   @override

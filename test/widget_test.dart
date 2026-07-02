@@ -27,6 +27,7 @@ void main() {
             'CREATE TABLE post_process_tasks (id TEXT PRIMARY KEY, source_task_id TEXT NOT NULL, type TEXT NOT NULL, status TEXT NOT NULL, progress REAL NOT NULL DEFAULT 0, data TEXT NOT NULL)',
           );
           await createClipAnalysisTestSchema(db);
+          await createMediaLibraryTestSchema(db);
         },
       ),
     );

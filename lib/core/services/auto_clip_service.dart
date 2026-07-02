@@ -3,15 +3,29 @@ import 'dart:math';
 
 import '../models/app_models.dart';
 import 'clip_record_repository.dart';
+import 'embedded_tool_executable.dart';
 import 'embedded_tool_resolver.dart';
 import 'ffmpeg_clip_executor.dart';
+import 'media_asset_repository.dart';
 
 class AutoClipService {
-  AutoClipService({ClipRecordRepository? repository, AutoClipConfig? config})
-    : _repo = repository ?? ClipRecordRepository(),
-      config = config ?? AutoClipConfig.defaults;
+  AutoClipService({
+    ClipRecordRepository? repository,
+    MediaAssetRepository? mediaAssetRepository,
+    AutoClipConfig? config,
+    EmbeddedToolResolver? toolResolver,
+    EmbeddedToolExecutableResolver? executableResolver,
+  }) : _repo = repository ?? ClipRecordRepository(),
+       _mediaAssetRepository = mediaAssetRepository ?? MediaAssetRepository(),
+       _toolResolver = toolResolver ?? const EmbeddedToolResolver(),
+       _executableResolver =
+           executableResolver ?? EmbeddedToolExecutableResolver(),
+       config = config ?? AutoClipConfig.defaults;
 
   final ClipRecordRepository _repo;
+  final MediaAssetRepository _mediaAssetRepository;
+  final EmbeddedToolResolver _toolResolver;
+  final EmbeddedToolExecutableResolver _executableResolver;
 
   /// Configuration (can be updated from settings).
   AutoClipConfig config;
@@ -110,6 +124,14 @@ class AutoClipService {
             status: ClipRecordStatus.completed,
             outputPath: outputPath,
           );
+          await _mirrorRecordToMediaLibrary(
+            record.copyWith(
+              status: ClipRecordStatus.completed,
+              outputPath: outputPath,
+              progress: 100,
+              completedAt: DateTime.now(),
+            ),
+          );
           onStatusChanged?.call(record.id, ClipRecordStatus.completed);
         } else {
           await _repo.updateStatus(
@@ -121,6 +143,12 @@ class AutoClipService {
             record.id,
             status: ClipRecordStatus.failed,
             errorMessage: 'ffmpeg exited with code $exitCode',
+          );
+          await _mirrorRecordToMediaLibrary(
+            record.copyWith(
+              status: ClipRecordStatus.failed,
+              errorMessage: 'ffmpeg exited with code $exitCode',
+            ),
           );
           onStatusChanged?.call(record.id, ClipRecordStatus.failed);
         }
@@ -134,6 +162,12 @@ class AutoClipService {
           record.id,
           status: ClipRecordStatus.failed,
           errorMessage: e.toString(),
+        );
+        await _mirrorRecordToMediaLibrary(
+          record.copyWith(
+            status: ClipRecordStatus.failed,
+            errorMessage: e.toString(),
+          ),
         );
         onStatusChanged?.call(record.id, ClipRecordStatus.failed);
       }
@@ -200,6 +234,14 @@ class AutoClipService {
           status: ClipRecordStatus.completed,
           outputPath: outputPath,
         );
+        await _mirrorRecordToMediaLibrary(
+          record.copyWith(
+            status: ClipRecordStatus.completed,
+            outputPath: outputPath,
+            progress: 100,
+            completedAt: DateTime.now(),
+          ),
+        );
       } else {
         await _repo.updateStatus(
           record.id,
@@ -210,6 +252,12 @@ class AutoClipService {
           record.id,
           status: ClipRecordStatus.failed,
           errorMessage: 'ffmpeg exited with code $exitCode',
+        );
+        await _mirrorRecordToMediaLibrary(
+          record.copyWith(
+            status: ClipRecordStatus.failed,
+            errorMessage: 'ffmpeg exited with code $exitCode',
+          ),
         );
       }
     } catch (e) {
@@ -222,6 +270,12 @@ class AutoClipService {
         record.id,
         status: ClipRecordStatus.failed,
         errorMessage: e.toString(),
+      );
+      await _mirrorRecordToMediaLibrary(
+        record.copyWith(
+          status: ClipRecordStatus.failed,
+          errorMessage: e.toString(),
+        ),
       );
     }
 
@@ -271,7 +325,7 @@ class AutoClipService {
     final baseName = dot > 0 ? sourceName.substring(0, dot) : sourceName;
     final ext = dot > 0 ? sourceName.substring(dot) : '.mp4';
     final clipsDir = '${settings.saveDirectory}/.clips';
-    return '$clipsDir/${baseName}_clip_${record.id}.$ext';
+    return '$clipsDir/${baseName}_clip_${record.id}$ext';
   }
 
   Future<Process> _executorStartCut({
@@ -279,10 +333,10 @@ class AutoClipService {
     required String outputPath,
     required DownloadSettings settings,
   }) async {
-    final tools = const EmbeddedToolResolver().resolveBundle(
-      settings: settings,
+    final tools = _toolResolver.resolveBundle(settings: settings);
+    final ffmpegPath = await _executableResolver.ensureExecutable(
+      tools.ffmpeg,
     );
-    final ffmpegPath = tools.ffmpeg.path;
 
     // Ensure output directory exists
     final outFile = File(outputPath);
@@ -303,6 +357,43 @@ class AutoClipService {
       ),
       runInShell: false,
     );
+  }
+
+  Future<void> _mirrorRecordToMediaLibrary(ClipRecord record) async {
+    try {
+      final asset = await _mediaAssetRepository.loadMediaAssetBySourceTask(
+        record.sourceTaskId,
+      );
+      if (asset == null) return;
+      await _mediaAssetRepository.saveClipExportRecord(
+        ClipExportRecord(
+          id: 'legacy-auto:${record.id}',
+          mediaAssetId: asset.id,
+          candidateId: 'legacy:${record.sourceTaskId}',
+          startMs: record.startMs,
+          endMs: record.endMs,
+          outputPath: record.outputPath ?? '',
+          status: _mapStatus(record.status),
+          progress: record.progress,
+          runtime: MediaJobRuntime.local,
+          errorMessage: record.errorMessage,
+          createdAt: record.createdAt,
+          completedAt: record.completedAt,
+        ),
+      );
+    } catch (_) {
+      // The legacy auto-cut path must remain usable even when the new media
+      // library schema is not present yet.
+    }
+  }
+
+  ClipExportStatus _mapStatus(ClipRecordStatus status) {
+    return switch (status) {
+      ClipRecordStatus.pending => ClipExportStatus.pending,
+      ClipRecordStatus.cutting => ClipExportStatus.cutting,
+      ClipRecordStatus.completed => ClipExportStatus.completed,
+      ClipRecordStatus.failed => ClipExportStatus.failed,
+    };
   }
 
   Future<void> dispose() async {

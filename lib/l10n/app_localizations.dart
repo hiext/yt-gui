@@ -377,7 +377,7 @@ abstract class AppLocalizations {
   /// No description provided for @externalToolsDesc.
   ///
   /// In zh, this message translates to:
-  /// **'yt-dlp 和 ffmpeg 的路径，留空则使用应用内置版本。'**
+  /// **'yt-dlp 和 ffmpeg 的路径，留空则先用系统工具，再用内置版本。自定义路径必须通过对应工具校验。'**
   String get externalToolsDesc;
 
   /// No description provided for @ytDlpPath.
@@ -389,7 +389,7 @@ abstract class AppLocalizations {
   /// No description provided for @ytDlpPathHint.
   ///
   /// In zh, this message translates to:
-  /// **'留空时使用应用内置 yt-dlp'**
+  /// **'最高优先级。必须指向 yt-dlp，可用 yt-dlp --version 验证'**
   String get ytDlpPathHint;
 
   /// No description provided for @ffmpegPath.
@@ -401,7 +401,7 @@ abstract class AppLocalizations {
   /// No description provided for @ffmpegPathHint.
   ///
   /// In zh, this message translates to:
-  /// **'留空时使用应用内置 ffmpeg'**
+  /// **'最高优先级。必须指向 ffmpeg，可用 ffmpeg --version 验证'**
   String get ffmpegPathHint;
 
   /// No description provided for @downloadMode.
@@ -869,7 +869,7 @@ abstract class AppLocalizations {
   /// No description provided for @toolConfigDesc.
   ///
   /// In zh, this message translates to:
-  /// **'应用内置了 yt-dlp 和 ffmpeg，也可以使用系统安装的版本。'**
+  /// **'工具优先级：已校验的设置路径、系统安装版本、应用内置版本。'**
   String get toolConfigDesc;
 
   /// No description provided for @faqYtDlp.
@@ -881,7 +881,7 @@ abstract class AppLocalizations {
   /// No description provided for @faqYtDlpAnswer.
   ///
   /// In zh, this message translates to:
-  /// **'在「设置」页面的「yt-dlp 路径」中输入完整路径，留空则使用应用内置版本。'**
+  /// **'在「设置」页面的「yt-dlp 路径」中输入完整路径，路径必须指向真实 yt-dlp，可用 yt-dlp --version 验证；留空则先查系统工具，再使用应用内置版本。'**
   String get faqYtDlpAnswer;
 
   /// No description provided for @faqFfmpeg.
@@ -1081,6 +1081,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'选择可执行文件'**
   String get filePickerExecutableTitle;
+
+  /// No description provided for @filePickerUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前环境无法打开文件选择器，请手动填写路径。'**
+  String get filePickerUnavailable;
 
   /// No description provided for @moreCookies.
   ///

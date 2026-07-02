@@ -258,18 +258,23 @@ void main() {
     expect(capturedArgs!.last, endsWith('video_clip_001.mkv'));
   });
 
-  test('uses PATH fallback when bundled ffmpeg asset is unavailable', () async {
+  test('uses PATH ffmpeg before bundled asset', () async {
     final tempDir = Directory.systemTemp.createTempSync('ffmpeg-fallback-');
     addTearDown(() => tempDir.deleteSync(recursive: true));
     File('${tempDir.path}/yt-dlp').writeAsStringSync('');
     final ffmpeg = File('${tempDir.path}/ffmpeg')..writeAsStringSync('');
     final process = _FakeProcess(exitCodeValue: 0);
     String? executable;
+    var attemptedAssetLoad = false;
     final executor = FfmpegClipExecutor(
       toolResolver: EmbeddedToolResolver(
         platformOverride: EmbeddedToolPlatform.macos,
         environment: {'PATH': tempDir.path},
       ),
+      loadAsset: (_) {
+        attemptedAssetLoad = true;
+        throw Exception('bundled asset should not be loaded first');
+      },
       processRunner: (path, _) async {
         executable = path;
         return process;
@@ -292,6 +297,7 @@ void main() {
     await pumpEventQueue();
 
     expect(executable, ffmpeg.absolute.path);
+    expect(attemptedAssetLoad, isFalse);
   });
 }
 

@@ -6,6 +6,8 @@ import '../core/controllers/download_controller.dart';
 import '../core/controllers/post_process_controller.dart';
 import '../core/controllers/settings_controller.dart';
 import '../core/services/ai_clip_analyzer_executor.dart';
+import '../core/services/auto_clip_service.dart';
+import '../core/services/auto_clip_orchestrator.dart';
 import '../core/services/cookie_service.dart';
 import '../core/services/download_scheduler.dart';
 import '../core/services/post_process_repository.dart';
@@ -59,13 +61,17 @@ class _AppShellState extends State<AppShell> {
     _settingsController.addListener(_handleSettingsChanged);
     _syncLogLevel();
     LogService.instance.info(
+      
       'AppShell init — settings loaded, disclaimer=${_settingsController.settings.disclaimerAccepted}',
+     
       'app',
+    ,
     );
     _postProcessController = PostProcessController(
       executor: AiClipAnalyzerExecutor(),
       settingsProvider: () => _settingsController.settings,
       repository: PostProcessRepository(),
+      autoClipService: AutoClipService(),
     );
     _downloadController =
         widget.downloadController ??
@@ -77,6 +83,7 @@ class _AppShellState extends State<AppShell> {
           settingsProvider: () => _settingsController.settings,
           taskRepository: TaskRepository(),
           postProcessController: _postProcessController,
+          autoClipOrchestrator: AutoClipOrchestrator(),
         );
     unawaited(_postProcessController.loadPendingTasks());
     unawaited(_downloadController.loadPendingTasks());
@@ -120,67 +127,67 @@ class _AppShellState extends State<AppShell> {
       onClose: () => setState(() => _debugLogVisible = false),
       child: Scaffold(
         body: SafeArea(
-          child: Row(
-            children: [
-              NavigationRail(
-                selectedIndex: _section.index,
-                onDestinationSelected: (index) {
-                  setState(() {
-                    _section = AppSection.values[index];
-                  });
-                },
-                labelType: NavigationRailLabelType.all,
-                leading: Padding(
-                  padding: const EdgeInsets.only(top: 16),
-                  child: GestureDetector(
-                    onTap: _onBrandTap,
-                    child: SectionCard(
-                      title: l10n.appTitle,
-                      subtitle: l10n.appSubtitle,
-                      child: const SizedBox(height: 1),
+            child: Row(
+              children: [
+                NavigationRail(
+                  selectedIndex: _section.index,
+                  onDestinationSelected: (index) {
+                    setState(() {
+                      _section = AppSection.values[index];
+                    });
+                  },
+                  labelType: NavigationRailLabelType.all,
+                  leading: Padding(
+                    padding: const EdgeInsets.only(top: 16),
+                    child: GestureDetector(
+                      onTap: _onBrandTap,
+                      child: SectionCard(
+                        title: l10n.appTitle,
+                        subtitle: l10n.appSubtitle,
+                        child: const SizedBox(height: 1),
+                      ),
                     ),
                   ),
+                  destinations: [
+                    NavigationRailDestination(
+                      icon: const Icon(Icons.add_link_outlined),
+                      selectedIcon: const Icon(Icons.add_link),
+                      label: Text(l10n.newDownload),
+                    ),
+                    NavigationRailDestination(
+                      icon: const Icon(Icons.downloading_outlined),
+                      selectedIcon: const Icon(Icons.downloading),
+                      label: Text(l10n.downloading),
+                    ),
+                    NavigationRailDestination(
+                      icon: const Icon(Icons.auto_awesome_motion_outlined),
+                      selectedIcon: const Icon(Icons.auto_awesome_motion),
+                      label: Text(l10n.clips),
+                    ),
+                    NavigationRailDestination(
+                      icon: const Icon(Icons.history_outlined),
+                      selectedIcon: const Icon(Icons.history),
+                      label: Text(l10n.history),
+                    ),
+                    NavigationRailDestination(
+                      icon: const Icon(Icons.settings_outlined),
+                      selectedIcon: const Icon(Icons.settings),
+                      label: Text(l10n.settings),
+                    ),
+                    NavigationRailDestination(
+                      icon: const Icon(Icons.help_outline),
+                      selectedIcon: const Icon(Icons.help),
+                      label: Text(l10n.help),
+                    ),
+                  ],
                 ),
-                destinations: [
-                  NavigationRailDestination(
-                    icon: const Icon(Icons.add_link_outlined),
-                    selectedIcon: const Icon(Icons.add_link),
-                    label: Text(l10n.newDownload),
-                  ),
-                  NavigationRailDestination(
-                    icon: const Icon(Icons.downloading_outlined),
-                    selectedIcon: const Icon(Icons.downloading),
-                    label: Text(l10n.downloading),
-                  ),
-                  NavigationRailDestination(
-                    icon: const Icon(Icons.auto_awesome_motion_outlined),
-                    selectedIcon: const Icon(Icons.auto_awesome_motion),
-                    label: Text(l10n.clips),
-                  ),
-                  NavigationRailDestination(
-                    icon: const Icon(Icons.history_outlined),
-                    selectedIcon: const Icon(Icons.history),
-                    label: Text(l10n.history),
-                  ),
-                  NavigationRailDestination(
-                    icon: const Icon(Icons.settings_outlined),
-                    selectedIcon: const Icon(Icons.settings),
-                    label: Text(l10n.settings),
-                  ),
-                  NavigationRailDestination(
-                    icon: const Icon(Icons.help_outline),
-                    selectedIcon: const Icon(Icons.help),
-                    label: Text(l10n.help),
-                  ),
-                ],
-              ),
-              const VerticalDivider(width: 1),
-              Expanded(
-                child: IndexedStack(index: _section.index, children: pages),
-              ),
-            ],
+                const VerticalDivider(width: 1),
+                Expanded(
+                  child: IndexedStack(index: _section.index, children: pages),
+                ),
+              ],
+            ),
           ),
-        ),
       ),
     );
   }

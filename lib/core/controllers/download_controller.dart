@@ -8,6 +8,8 @@ import 'post_process_controller.dart';
 import '../models/app_models.dart';
 import '../services/download_scheduler.dart';
 import '../services/log_service.dart';
+import '../services/auto_clip_orchestrator.dart';
+import '../services/media_asset_indexer_service.dart';
 import '../services/notification_service.dart';
 import '../services/task_repository.dart';
 import '../services/yt_dlp_executor.dart';
@@ -20,14 +22,19 @@ class DownloadController extends ChangeNotifier {
     required this.settingsProvider,
     this.taskRepository,
     this.postProcessController,
-  });
+    this.autoClipOrchestrator,
+    MediaAssetIndexerService? mediaAssetIndexer,
+  }) : mediaAssetIndexer = mediaAssetIndexer ?? MediaAssetIndexerService();
 
   final DownloadScheduler scheduler;
   final YtDlpExecutor executor;
   final DownloadSettings Function() settingsProvider;
   final TaskRepository? taskRepository;
   final PostProcessController? postProcessController;
+  final AutoClipOrchestrator? autoClipOrchestrator;
+  final MediaAssetIndexerService mediaAssetIndexer;
   final Set<String> _startedTaskIds = {};
+  final Set<String> _autoClipStartedTaskIds = {};
   int _taskSequence = 0;
 
   Future<void> loadPendingTasks() async {
@@ -159,7 +166,10 @@ class DownloadController extends ChangeNotifier {
     scheduler.enqueue(task);
     scheduler.startNext();
     _notifyChanged();
-    LogService.instance.info('Download queued: ${task.id} variant=${variant.label}', 'ctrl');
+    LogService.instance.info(
+      'Download queued: ${task.id} variant=${variant.label}',
+      'ctrl',
+    );
     await _startPendingRunningTasks();
   }
 
@@ -213,7 +223,7 @@ class DownloadController extends ChangeNotifier {
     if (task.progress > 0 && (task.progress % 10) < 1) {
       LogService.instance.debug(
         'handleTaskChanged: ${task.id} progress=${task.progress.toStringAsFixed(1)}% '
-        'speed=${task.speed} eta=${task.eta}',
+            'speed=${task.speed} eta=${task.eta}',
         'ctrl',
       );
     }
@@ -323,10 +333,7 @@ class DownloadController extends ChangeNotifier {
       } catch (e) {
         _startedTaskIds.remove(task.id);
         final message = e.toString();
-        LogService.instance.error(
-          'startDownload failed: $message',
-          'ctrl',
-        );
+        LogService.instance.error('startDownload failed: $message', 'ctrl');
         scheduler.fail(
           task.id,
           message: message.isNotEmpty ? message : l10n.downloadFailedFallback,
@@ -337,6 +344,9 @@ class DownloadController extends ChangeNotifier {
   }
 
   void _handleCompletedTask(DownloadTask task) {
+    if (scheduler.completedTasks.any((completed) => completed.id == task.id)) {
+      return;
+    }
     _startedTaskIds.remove(task.id);
     scheduler.updateTask(task);
     scheduler.complete(task.id);
@@ -345,15 +355,54 @@ class DownloadController extends ChangeNotifier {
       orElse: () => task,
     );
     _notifyChanged();
-    unawaited(postProcessController?.enqueueClipForDownload(completedTask));
+    if (_autoClipStartedTaskIds.add(completedTask.id)) {
+      unawaited(_runAutoClipPipeline(completedTask));
+    }
     unawaited(_startPendingRunningTasks());
     NotificationService().showDownloadComplete(title: task.title);
+  }
+
+  Future<void> _runAutoClipPipeline(DownloadTask task) async {
+    final orchestrator = autoClipOrchestrator;
+    if (orchestrator != null) {
+      final result = await orchestrator.onDownloadCompleted(
+        task,
+        settings: settingsProvider(),
+      );
+      if (result.status == AutoClipOrchestrationStatus.failed) {
+        LogService.instance.warn(
+          'auto clip pipeline failed for ${task.id}: ${result.message}',
+          'ctrl',
+        );
+      }
+      postProcessController?.notifyClipLibraryChanged();
+      if (result.status != AutoClipOrchestrationStatus.completed) {
+        await _indexCompletedMedia(task);
+        await postProcessController?.enqueueClipForDownload(task);
+      }
+      return;
+    }
+
+    await _indexCompletedMedia(task);
+    await postProcessController?.enqueueClipForDownload(task);
+  }
+
+  Future<void> _indexCompletedMedia(DownloadTask task) async {
+    try {
+      await mediaAssetIndexer.indexCompletedDownload(task);
+    } catch (e) {
+      LogService.instance.warn(
+        'media asset indexing failed for ${task.id}: $e',
+        'ctrl',
+      );
+    }
   }
 
   @override
   void dispose() {
     _isDisposed = true;
     _startedTaskIds.clear();
+    _autoClipStartedTaskIds.clear();
     unawaited(executor.dispose());
     super.dispose();
   }

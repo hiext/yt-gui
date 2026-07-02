@@ -21,4 +21,4 @@
 提交历史采用 Conventional Commits，常见形式如 `feat(i18n): ...`、`fix(test): ...`、`refactor(db): ...`、`ci: ...`。每次提交聚焦单一改动面，标题使用祈使句并带可选 scope。PR 需要说明用户可见变化、影响平台、关联 issue 或规格文档；涉及 UI 时附截图或录屏。发起评审前确保 `flutter analyze`、`flutter test` 以及受影响平台构建通过。
 
 ## 配置与资源注意事项
-不要提交个人 Cookie 文件、机器专属路径或临时二进制。优先使用 `assets/bin/<platform>/` 下的内置工具，并保持文件名与 README 约定一致。新增界面文案时同步更新中英文 ARB，避免硬编码字符串。
+不要提交个人 Cookie 文件、机器专属路径或临时二进制。`yt-dlp` 与 `ffmpeg` 解析顺序必须固定为：设置页已验证正确的路径最高优先级，其次查找系统 `PATH` 和平台常见目录，最后使用 `assets/bin/<platform>/` 下的内置工具；自定义路径必须明确验证为对应工具，至少阻止 `yt-dlp`/`ffmpeg` 填反，并在文档/UI 中要求用 `--version` 验证。使用工具时不能静默找不到工具，必须给出设置路径、系统安装或刷新内置包的明确提示。构建前通过 `tools/fetch_embedded_tools.dart` 按锁文件刷新内置工具，并保持文件名与 README 约定一致。新增界面文案时同步更新中英文 ARB，避免硬编码字符串。
