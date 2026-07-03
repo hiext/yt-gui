@@ -70,7 +70,7 @@ void main() {
   late PostProcessController postProcessController;
   late DownloadController downloadController;
 
-  DownloadSettings _defaultSettings() {
+  DownloadSettings defaultSettings() {
     return DownloadSettings.defaults.copyWith(
       saveDirectory: '/tmp/auto-clip-gui-test',
       downloadMode: DownloadMode.serial,
@@ -97,7 +97,7 @@ void main() {
     final db = await databaseFactoryFfiNoIsolate.openDatabase(inMemoryDatabasePath);
     await createMediaLibraryTestSchema(db);
 
-    final settings = _defaultSettings();
+    final settings = defaultSettings();
     Directory(settings.saveDirectory).createSync(recursive: true);
 
     settingsController = SettingsController(settings: settings);
