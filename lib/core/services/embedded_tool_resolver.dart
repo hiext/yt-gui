@@ -15,12 +15,14 @@ class ResolvedEmbeddedTool {
     required this.kind,
     required this.path,
     required this.isCustom,
+    this.isBundledAsset = false,
     this.fallbackPath,
   });
 
   final EmbeddedToolKind kind;
   final String path;
   final bool isCustom;
+  final bool isBundledAsset;
   final String? fallbackPath;
 }
 
@@ -159,13 +161,29 @@ class EmbeddedToolResolver {
     required EmbeddedToolKind kind,
     required String? customPath,
   }) {
-    final customTool = _resolveCustomTool(
-      platform: platform,
-      kind: kind,
-      customPath: customPath,
-      allowMissingCustomFallback: false,
-    );
-    if (customTool != null) return customTool;
+    if (customPath != null) {
+      if (!_fileExists(customPath)) {
+        final customExecutable = _findCustomExecutableOnPath(
+          platform: platform,
+          command: customPath,
+          environment: environment ?? Platform.environment,
+        );
+        if (customExecutable != null) {
+          _validateCustomToolPath(kind, customExecutable);
+          return ResolvedEmbeddedTool(
+            kind: kind,
+            path: customExecutable,
+            isCustom: true,
+          );
+        }
+        throw EmbeddedToolResolutionException(
+          'Configured ${kind.baseExecutableName} path does not exist: $customPath',
+        );
+      }
+
+      _validateCustomToolPath(kind, customPath);
+      return ResolvedEmbeddedTool(kind: kind, path: customPath, isCustom: true);
+    }
 
     final spec = manifest.resolve(platform: platform, kind: kind);
     final systemPath = _findExecutableOnPath(
@@ -174,21 +192,12 @@ class EmbeddedToolResolver {
       environment: environment ?? Platform.environment,
     );
 
-    if (_fileExists(spec.assetPath)) {
-      return ResolvedEmbeddedTool(
-        kind: kind,
-        path: spec.assetPath,
-        isCustom: false,
-        fallbackPath: systemPath,
-      );
-    }
-
     if (systemPath != null) {
       return ResolvedEmbeddedTool(
         kind: kind,
-        path: spec.assetPath,
+        path: systemPath,
         isCustom: false,
-        fallbackPath: systemPath,
+        fallbackPath: spec.assetPath,
       );
     }
 
@@ -196,43 +205,7 @@ class EmbeddedToolResolver {
       kind: kind,
       path: spec.assetPath,
       isCustom: false,
-    );
-  }
-
-  String? _customPathForKind(EmbeddedToolKind kind, DownloadSettings settings) {
-    return switch (kind) {
-      EmbeddedToolKind.ytDlp => settings.ytDlpPath,
-      EmbeddedToolKind.ffmpeg => settings.ffmpegPath,
-    };
-  }
-
-  ResolvedEmbeddedTool? _resolveCustomTool({
-    required EmbeddedToolPlatform platform,
-    required EmbeddedToolKind kind,
-    required String? customPath,
-    required bool allowMissingCustomFallback,
-  }) {
-    if (customPath == null) return null;
-    if (_fileExists(customPath)) {
-      return ResolvedEmbeddedTool(kind: kind, path: customPath, isCustom: true);
-    }
-
-    final customExecutable = _findCustomExecutableOnPath(
-      platform: platform,
-      command: customPath,
-      environment: environment ?? Platform.environment,
-    );
-    if (customExecutable != null) {
-      return ResolvedEmbeddedTool(
-        kind: kind,
-        path: customExecutable,
-        isCustom: true,
-      );
-    }
-
-    if (allowMissingCustomFallback) return null;
-    throw EmbeddedToolResolutionException(
-      'Configured ${kind.baseExecutableName} path does not exist: $customPath',
+      isBundledAsset: true,
     );
   }
 
@@ -404,6 +377,62 @@ class EmbeddedToolResolver {
 
   bool _fileExists(String path) {
     return fileExists?.call(path) ?? File(path).existsSync();
+  }
+
+  void _validateCustomToolPath(EmbeddedToolKind kind, String path) {
+    final fileName = path
+        .split(RegExp(r'[/\\]+'))
+        .where((part) => part.isNotEmpty)
+        .lastOrNull
+        ?.toLowerCase();
+    if (fileName == null) return;
+    final expected = kind.baseExecutableName.toLowerCase();
+    final validNames = {expected, '$expected.exe'};
+    if (validNames.contains(fileName)) return;
+
+    throw EmbeddedToolResolutionException(
+      'Configured ${kind.baseExecutableName} path does not look like '
+      '${kind.baseExecutableName}: $path. Choose the real '
+      '${kind.baseExecutableName} executable and verify it with '
+      '"${kind.baseExecutableName} --version".',
+    );
+  }
+
+  String? _customPathForKind(
+    EmbeddedToolKind kind,
+    DownloadSettings settings,
+  ) {
+    return switch (kind) {
+      EmbeddedToolKind.ytDlp => settings.ytDlpPath,
+      EmbeddedToolKind.ffmpeg => settings.ffmpegPath,
+    };
+  }
+
+  ResolvedEmbeddedTool? _resolveCustomTool({
+    required EmbeddedToolPlatform platform,
+    required EmbeddedToolKind kind,
+    String? customPath,
+    bool allowMissingCustomFallback = false,
+  }) {
+    if (customPath == null || customPath.trim().isEmpty) return null;
+    final trimmed = customPath.trim();
+    try {
+      _validateCustomToolPath(kind, trimmed);
+    } on EmbeddedToolResolutionException {
+      if (allowMissingCustomFallback) return null;
+      rethrow;
+    }
+    if (!_fileExists(trimmed)) {
+      if (allowMissingCustomFallback) return null;
+      throw EmbeddedToolResolutionException(
+        'Configured ${kind.baseExecutableName} not found at $trimmed',
+      );
+    }
+    return ResolvedEmbeddedTool(
+      kind: kind,
+      path: trimmed,
+      isCustom: true,
+    );
   }
 }
 

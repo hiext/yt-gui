@@ -57,7 +57,7 @@ Future<void> main(List<String> args) async {
         continue;
       }
 
-      await artifact.install(tempDir);
+      await artifact.install(tempDir, lockPath: options.lockPath, updateLock: options.updateLock);
       installed++;
     }
 
@@ -85,6 +85,7 @@ class _Options {
     required this.dryRun,
     required this.keepTemp,
     required this.includeManual,
+    required this.updateLock,
     required this.help,
   });
 
@@ -94,6 +95,7 @@ class _Options {
   final bool dryRun;
   final bool keepTemp;
   final bool includeManual;
+  final bool updateLock;
   final bool help;
 
   static _Options parse(List<String> args) {
@@ -103,6 +105,7 @@ class _Options {
     var dryRun = false;
     var keepTemp = false;
     var includeManual = false;
+    var updateLock = false;
     var help = false;
 
     for (final arg in args) {
@@ -114,6 +117,8 @@ class _Options {
         keepTemp = true;
       } else if (arg == '--include-manual') {
         includeManual = true;
+      } else if (arg == '--update-lock') {
+        updateLock = true;
       } else if (arg.startsWith('--lock=')) {
         lockPath = arg.substring('--lock='.length);
       } else if (arg.startsWith('--platform=')) {
@@ -132,6 +137,7 @@ class _Options {
       dryRun: dryRun,
       keepTemp: keepTemp,
       includeManual: includeManual,
+      updateLock: updateLock,
       help: help,
     );
   }
@@ -159,6 +165,7 @@ class _ToolArtifact {
     required this.archiveType,
     required this.chmod,
     this.url,
+    this.mirrors = const <String>[],
     this.sha256,
     this.extract,
     this.manual = false,
@@ -172,6 +179,7 @@ class _ToolArtifact {
   final String archiveType;
   final bool chmod;
   final String? url;
+  final List<String> mirrors;
   final String? sha256;
   final String? extract;
   final bool manual;
@@ -199,6 +207,22 @@ class _ToolArtifact {
       );
     }
 
+    List<String> optionalStringList(String key) {
+      final value = json[key];
+      if (value == null) return const <String>[];
+      if (value is! List) {
+        throw _ToolException(
+          'Artifact ${json['id'] ?? '<unknown>'}: '
+          'invalid string list "$key"',
+        );
+      }
+      return value
+          .whereType<String>()
+          .map((entry) => entry.trim())
+          .where((entry) => entry.isNotEmpty)
+          .toList(growable: false);
+    }
+
     return _ToolArtifact(
       id: requiredString('id'),
       tool: requiredString('tool'),
@@ -207,6 +231,7 @@ class _ToolArtifact {
       archiveType: optionalString('archiveType') ?? 'file',
       chmod: json['chmod'] == true,
       url: optionalString('url'),
+      mirrors: optionalStringList('mirrors'),
       sha256: optionalString('sha256'),
       extract: optionalString('extract'),
       manual: json['manual'] == true,
@@ -214,22 +239,13 @@ class _ToolArtifact {
     );
   }
 
-  Future<void> install(Directory tempDir) async {
-    if (url == null || sha256 == null) {
+  Future<void> install(Directory tempDir, {String? lockPath, bool updateLock = false}) async {
+    if ((url == null && mirrors.isEmpty) || sha256 == null) {
       throw _ToolException('$id is missing url or sha256');
     }
 
     final downloadFile = File('${tempDir.path}${Platform.pathSeparator}$id');
-    await _download(Uri.parse(url!), downloadFile);
-
-    final actualSha = await _sha256(downloadFile);
-    if (actualSha.toLowerCase() != sha256!.toLowerCase()) {
-      throw _ToolException(
-        '$id checksum mismatch\n'
-        'expected: $sha256\n'
-        'actual:   $actualSha',
-      );
-    }
+    await _downloadVerified(downloadFile, lockPath: lockPath, updateLock: updateLock);
 
     final outputFile = File(output);
     outputFile.parent.createSync(recursive: true);
@@ -244,6 +260,62 @@ class _ToolArtifact {
     if (chmod && !Platform.isWindows) {
       await _run('chmod', ['+x', outputFile.path]);
     }
+  }
+
+  Future<void> _downloadVerified(File target, {String? lockPath, bool updateLock = false}) async {
+    final urls = [
+      ?url,
+      ...mirrors,
+    ];
+    final failures = <String>[];
+
+    for (final rawUrl in urls) {
+      try {
+        if (target.existsSync()) target.deleteSync();
+        stdout.writeln('  source $rawUrl');
+        await _download(Uri.parse(rawUrl), target);
+        final actualSha = await _sha256(target);
+        if (actualSha.toLowerCase() == sha256!.toLowerCase()) {
+          return;
+        }
+        if (updateLock && lockPath != null) {
+          stdout.writeln('  ⚠ checksum changed, updating lock file...');
+          stdout.writeln('    old: $sha256');
+          stdout.writeln('    new: $actualSha');
+          _updateLockFileChecksum(lockPath, id, actualSha);
+          return;
+        }
+        failures.add(
+          '$rawUrl checksum mismatch, expected $sha256, actual $actualSha',
+        );
+      } catch (error) {
+        failures.add('$rawUrl failed: $error');
+      }
+    }
+
+    throw _ToolException(
+      '$id could not be downloaded from primary source or mirrors:\n'
+      '${failures.map((failure) => '- $failure').join('\n')}',
+    );
+  }
+
+  void _updateLockFileChecksum(String lockPath, String artifactId, String newSha256) {
+    final lockFile = File(lockPath);
+    final content = lockFile.readAsStringSync();
+    final lock = jsonDecode(content) as Map<String, Object?>;
+    final artifacts = lock['artifacts'] as List<Object?>;
+    for (final raw in artifacts) {
+      final entry = raw as Map<String, Object?>;
+      if (entry['id'] == artifactId) {
+        entry['sha256'] = newSha256;
+        entry['updatedAt'] = DateTime.now().toIso8601String().split('T').first;
+        break;
+      }
+    }
+    lock['updatedAt'] = DateTime.now().toIso8601String().split('T').first;
+    lockFile.writeAsStringSync(
+      const JsonEncoder.withIndent('  ').convert(lock) + '\n',
+    );
   }
 
   Future<File> _extract(File archive, Directory tempDir) async {
@@ -359,6 +431,7 @@ Options:
   --dry-run                       Show planned downloads only.
   --keep-temp                     Keep downloaded archives for debugging.
   --include-manual                Fail on manual entries instead of skipping.
+  --update-lock                   Auto-update lock file when checksums change.
   --help                          Show this help.
 
 Examples:

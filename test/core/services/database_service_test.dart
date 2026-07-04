@@ -1,5 +1,4 @@
 import 'dart:convert';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiext_yt_gui/core/models/app_models.dart';
 import 'package:hiext_yt_gui/core/services/database_service.dart';
@@ -533,12 +532,122 @@ void main() {
       expect(loaded.single.adjustedEndMs, 8000);
     });
 
+    test('updateClipSegmentOutputPath persists generated clip path', () async {
+      final segment = ClipSegment(
+        id: 'seg-output',
+        sourceTaskId: 'src-1',
+        postProcessTaskId: 'pp-1',
+        sourcePath: '/tmp/test.mp4',
+        startMs: 0,
+        endMs: 12000,
+        title: 'Output Test',
+        summary: 'Test',
+        keywords: const [],
+        tags: const [],
+        confidence: 0.9,
+        reason: 'manual cut',
+      );
+
+      await DatabaseService().replaceClipSegmentsForTask('pp-1', [segment]);
+
+      await DatabaseService().updateClipSegmentOutputPath(
+        'seg-output',
+        outputPath: '/tmp/.clips/generated.mp4',
+      );
+
+      final loaded = await DatabaseService().loadClipSegments();
+      expect(loaded.single.outputPath, '/tmp/.clips/generated.mp4');
+    });
+
+    test(
+      'deleteClipSegment removes segment and linked searchable data',
+      () async {
+        final segment = ClipSegment(
+          id: 'seg-delete',
+          sourceTaskId: 'src-1',
+          postProcessTaskId: 'pp-1',
+          sourcePath: '/tmp/test.mp4',
+          startMs: 0,
+          endMs: 12000,
+          title: 'Delete Test',
+          summary: 'Searchable delete target',
+          keywords: const ['delete-me'],
+          tags: const ['cleanup'],
+          confidence: 0.9,
+          reason: 'manual cleanup',
+          detections: [
+            ClipDetection(
+              id: 'det-delete',
+              segmentId: 'seg-delete',
+              timestampMs: 1000,
+              label: 'object',
+              confidence: 0.8,
+              bbox: const [],
+            ),
+          ],
+          transcripts: [
+            ClipTranscript(
+              id: 'txt-delete',
+              segmentId: 'seg-delete',
+              startMs: 0,
+              endMs: 1000,
+              text: 'delete transcript',
+              words: const [],
+            ),
+          ],
+        );
+
+        await DatabaseService().replaceClipSegmentsForTask('pp-1', [segment]);
+
+        await DatabaseService().deleteClipSegment('seg-delete');
+
+        expect(await DatabaseService().loadClipSegments(), isEmpty);
+        expect(
+          await DatabaseService().searchClipSegments('delete-me'),
+          isEmpty,
+        );
+      },
+    );
+
     test('updateClipSegmentTiming does nothing for unknown id', () async {
       await DatabaseService().updateClipSegmentTiming(
         'nonexistent',
         adjustedStartMs: 1000,
       );
     });
+  });
+
+  group('media library schema', () {
+    test(
+      'ensureMediaLibrarySchema creates phase 2 tables and indexes',
+      () async {
+        await DatabaseService().ensureMediaLibrarySchema(db);
+
+        final tables = await db.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type = 'table'",
+        );
+        final tableNames = tables.map((row) => row['name']).toSet();
+        expect(
+          tableNames,
+          containsAll([
+            'media_assets',
+            'media_analysis_jobs',
+            'clip_candidates',
+            'clip_export_records',
+            'media_vector_records',
+            'cloud_connection_configs',
+            'cloud_sync_tasks',
+          ]),
+        );
+
+        final indexes = await db.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type = 'index'",
+        );
+        final indexNames = indexes.map((row) => row['name']).toSet();
+        expect(indexNames, contains('idx_media_assets_source_task'));
+        expect(indexNames, contains('idx_cloud_sync_tasks_idempotency'));
+      },
+    );
   });
 
   group('cookie configs', () {

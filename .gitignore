@@ -100,3 +100,7 @@ assets/bin/windows/ffprobe.exe
 .cookies/
 .playwright-mcp/
 .spec-workflow/
+.serena/
+
+# Local personal cloud runtime data
+cloud/data/

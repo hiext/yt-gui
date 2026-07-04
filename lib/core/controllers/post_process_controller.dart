@@ -12,13 +12,13 @@ class PostProcessController extends ChangeNotifier {
     required this.executor,
     required this.settingsProvider,
     this.repository,
-    this._autoClipService,
+    this.autoClipService,
   });
 
   final PostProcessExecutor executor;
   final DownloadSettings Function() settingsProvider;
   final PostProcessRepository? repository;
-  final AutoClipService? _autoClipService;
+  final AutoClipService? autoClipService;
 
   final List<PostProcessTask> _queued = [];
   final List<PostProcessTask> _running = [];
@@ -282,8 +282,52 @@ class PostProcessController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<ClipRecord?> cutClipSegment(String segmentId) async {
+    final service = autoClipService;
+    if (service == null) return null;
+    final index = _clipSegments.indexWhere(
+      (segment) => segment.id == segmentId,
+    );
+    if (index < 0) return null;
+
+    service.config = settingsProvider().autoClipConfig;
+    final record = await service.cutSingle(
+      segment: _clipSegments[index],
+      settings: settingsProvider(),
+    );
+    final outputPath = record.outputPath?.trim();
+    if (record.status == ClipRecordStatus.completed &&
+        outputPath != null &&
+        outputPath.isNotEmpty) {
+      final updated = _clipSegments[index].copyWith(outputPath: outputPath);
+      _clipSegments[index] = updated;
+      await repository?.updateClipSegmentOutputPath(
+        segmentId,
+        outputPath: outputPath,
+      );
+    }
+    final recordIndex = _clipRecords.indexWhere((item) => item.id == record.id);
+    if (recordIndex >= 0) {
+      _clipRecords[recordIndex] = record;
+    } else {
+      _clipRecords.add(record);
+    }
+    notifyListeners();
+    return record;
+  }
+
+  Future<void> deleteClipSegment(String segmentId) async {
+    _clipSegments.removeWhere((segment) => segment.id == segmentId);
+    await repository?.deleteClipSegment(segmentId);
+    notifyListeners();
+  }
+
+  void notifyClipLibraryChanged() {
+    notifyListeners();
+  }
+
   void _startAutoCutIfEnabled(PostProcessTask task) {
-    final service = _autoClipService;
+    final service = autoClipService;
     if (service == null) return;
     if (task.clipSegments.isEmpty) return;
 

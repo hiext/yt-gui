@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/services.dart' show rootBundle;
 
 import '../models/app_models.dart';
+import 'embedded_tool_executable.dart';
 import 'embedded_tool_resolver.dart';
 import 'post_process_executor.dart';
 import 'process_yt_dlp_executor.dart' show ProcessRunner;
@@ -12,42 +14,21 @@ class FfmpegClipExecutor implements PostProcessExecutor {
   FfmpegClipExecutor({
     EmbeddedToolResolver? toolResolver,
     ProcessRunner? processRunner,
+    Future<ByteData> Function(String path)? loadAsset,
   }) : _toolResolver = toolResolver ?? const EmbeddedToolResolver(),
-       _processRunner = processRunner ?? _defaultProcessRunner;
+       _processRunner = processRunner ?? _defaultProcessRunner,
+       _executableResolver = EmbeddedToolExecutableResolver(
+         loadAsset: loadAsset ?? rootBundle.load,
+       );
 
   final EmbeddedToolResolver _toolResolver;
   final ProcessRunner _processRunner;
+  final EmbeddedToolExecutableResolver _executableResolver;
   final Map<String, Process> _processes = {};
   final Set<String> _intentionalStops = {};
-  final Map<String, String> _extractedPaths = {};
 
   Future<String> _ensureExecutable(ResolvedEmbeddedTool tool) async {
-    if (tool.isCustom) return tool.path;
-    // Always extract embedded tools from rootBundle — never trust
-    // the filesystem path, because CWD differs between dev and prod.
-    final cached = _extractedPaths[tool.path];
-    if (cached != null) {
-      if (File(cached).existsSync()) return cached;
-      _extractedPaths.remove(tool.path);
-    }
-
-    try {
-      final data = await rootBundle.load(tool.path);
-      final dir = Directory.systemTemp.createTempSync('hiext-yt-tools-');
-      final fileName = tool.path.split('/').last;
-      final filePath = '${dir.path}${Platform.pathSeparator}$fileName';
-      File(filePath).writeAsBytesSync(data.buffer.asUint8List());
-      await Process.run('chmod', ['+x', filePath]);
-      _extractedPaths[tool.path] = filePath;
-      return filePath;
-    } catch (_) {
-      if (tool.fallbackPath != null) {
-        return tool.fallbackPath!;
-      }
-      throw EmbeddedToolResolutionException(
-        'Missing ${tool.kind.baseExecutableName}. Install ${tool.kind.baseExecutableName} on PATH, add ${tool.path} to the app bundle, or set a custom path in Settings.',
-      );
-    }
+    return _executableResolver.ensureExecutable(tool);
   }
 
   @override

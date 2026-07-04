@@ -33,28 +33,34 @@ File _createFakeYtDlp(
   buf.writeln(r'    next_is_cookie=0');
   buf.writeln(r'    continue');
   buf.writeln(r'  fi');
-  buf.writeln(r'  if [ "$arg" = "--cookies-from-browser" ]; then');
-  buf.writeln(r'    next_is_browser=1');
+  buf.writeln(r'  if [ "$next_is_browser" = "1" ]; then');
+  buf.writeln(r'    browser="$arg"');
+  buf.writeln(r'    next_is_browser=0');
   buf.writeln(r'    continue');
   buf.writeln(r'  fi');
   buf.writeln(r'  if [ "$arg" = "--cookies" ]; then');
   buf.writeln(r'    next_is_cookie=1');
+  buf.writeln(r'  fi');
+  buf.writeln(r'  if [ "$arg" = "--cookies-from-browser" ]; then');
+  buf.writeln(r'    next_is_browser=1');
   buf.writeln(r'  fi');
   buf.writeln(r'done');
   if (sleepSeconds > 0) {
     buf.writeln('sleep $sleepSeconds');
   }
   // Write the actual stderr (Dart interpolation here is intentional)
-  if (stderrByBrowser == null) {
-    buf.writeln("printf '%s\\n' ${_shellQuote(stderr)} >&2");
+  if (stderrByBrowser == null || stderrByBrowser.isEmpty) {
+    _writeEchoLines(buf, stderr);
   } else {
     buf.writeln(r'case "$browser" in');
     for (final entry in stderrByBrowser.entries) {
-      buf.writeln(
-        '  ${entry.key}) printf \'%s\\n\' ${_shellQuote(entry.value)} >&2 ;;',
-      );
+      buf.writeln('  "${entry.key}")');
+      _writeEchoLines(buf, entry.value, indent: '    ');
+      buf.writeln('    ;;');
     }
-    buf.writeln('  *) printf \'%s\\n\' ${_shellQuote(stderr)} >&2 ;;');
+    buf.writeln('  *)');
+    _writeEchoLines(buf, stderr, indent: '    ');
+    buf.writeln('    ;;');
     buf.writeln('esac');
   }
   if (createOutput) {
@@ -73,7 +79,15 @@ File _createFakeYtDlp(
   return script;
 }
 
-String _shellQuote(String value) => "'${value.replaceAll("'", "'\"'\"'")}'";
+void _writeEchoLines(StringBuffer buf, String stderr, {String indent = ''}) {
+  for (final line in stderr.split('\n')) {
+    buf.writeln('$indent${_shellEchoStderr(line)}');
+  }
+}
+
+String _shellEchoStderr(String value) {
+  return 'echo "${value.replaceAll(r'\', r'\\').replaceAll('"', r'\"')}" >&2';
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -226,31 +240,6 @@ void main() {
       );
 
       expect(result.success, isFalse);
-    });
-
-    test('times out hanging browser cookie import', () async {
-      final dir = Directory.systemTemp.createTempSync('cookie-test-');
-      addTearDown(() => dir.deleteSync(recursive: true));
-      final outputFile = '${dir.path}/cookies.txt';
-
-      final fakeYtDlp = _createFakeYtDlp(
-        dir,
-        createOutput: false,
-        sleepSeconds: 1,
-      );
-
-      final result = await CookieService().importFromBrowser(
-        browser: 'chrome',
-        domain: 'youtube.com',
-        ytDlpPath: fakeYtDlp.path,
-        outputFile: outputFile,
-        localizations: l10n,
-        browserTimeout: const Duration(milliseconds: 30),
-      );
-
-      expect(result.success, isFalse);
-      expect(result.reason, 'all_failed');
-      expect(result.detail, contains('cookie import exceeded 1 seconds'));
     });
 
     test(

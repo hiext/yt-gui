@@ -63,4 +63,18 @@ class PostProcessRepository {
       adjustedEndMs: adjustedEndMs,
     );
   }
+
+  Future<void> updateClipSegmentOutputPath(
+    String segmentId, {
+    required String outputPath,
+  }) {
+    return DatabaseService().updateClipSegmentOutputPath(
+      segmentId,
+      outputPath: outputPath,
+    );
+  }
+
+  Future<void> deleteClipSegment(String segmentId) {
+    return DatabaseService().deleteClipSegment(segmentId);
+  }
 }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiext_yt_gui/core/controllers/settings_controller.dart';
 import 'package:hiext_yt_gui/core/models/app_models.dart';
+import 'package:hiext_yt_gui/core/services/cloud_clip_client.dart';
+import 'package:hiext_yt_gui/core/services/media_asset_repository.dart';
 import 'package:hiext_yt_gui/features/settings/settings_page.dart';
 import 'package:hiext_yt_gui/l10n/app_localizations.dart';
 
@@ -75,6 +77,36 @@ void main() {
       expect(controller.settings.downloadThumbnail, isTrue);
       expect(controller.settings.downloadMode, DownloadMode.concurrent);
     });
+
+    testWidgets('browse file failure shows a message instead of crashing', (
+      tester,
+    ) async {
+      final controller = SettingsController();
+      addTearDown(controller.dispose);
+      await useLargeViewport(tester);
+
+      await tester.pumpWidget(
+        _buildApp(
+          Scaffold(
+            body: SettingsPage(
+              controller: controller,
+              filePicker: _ThrowingFilePicker(),
+            ),
+          ),
+          locale: const Locale('en'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final browseButton = find.byTooltip('Browse file').first;
+      await tester.ensureVisible(browseButton);
+      await tester.pumpAndSettle();
+      await tester.tap(browseButton);
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('File picker is unavailable'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
   });
 
   group('section visibility', () {
@@ -84,11 +116,16 @@ void main() {
       await useLargeViewport(tester);
 
       await tester.pumpWidget(
-        _buildApp(SettingsPage(controller: controller), locale: const Locale('en')),
+        _buildApp(
+          SettingsPage(controller: controller),
+          locale: const Locale('en'),
+        ),
       );
       await tester.pumpAndSettle();
 
-      final l10n = AppLocalizations.of(tester.element(find.byType(SettingsPage)))!;
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(SettingsPage)),
+      )!;
 
       expect(find.text(l10n.settings), findsOneWidget);
       expect(find.text(l10n.saveAndQuality), findsOneWidget);
@@ -105,11 +142,16 @@ void main() {
       await useLargeViewport(tester);
 
       await tester.pumpWidget(
-        _buildApp(SettingsPage(controller: controller), locale: const Locale('en')),
+        _buildApp(
+          SettingsPage(controller: controller),
+          locale: const Locale('en'),
+        ),
       );
       await tester.pumpAndSettle();
 
-      final l10n = AppLocalizations.of(tester.element(find.byType(SettingsPage)))!;
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(SettingsPage)),
+      )!;
       expect(find.text(l10n.restoreDefaults), findsOneWidget);
       expect(find.byIcon(Icons.restore_outlined), findsOneWidget);
     });
@@ -120,7 +162,10 @@ void main() {
       await useLargeViewport(tester);
 
       await tester.pumpWidget(
-        _buildApp(SettingsPage(controller: controller), locale: const Locale('en')),
+        _buildApp(
+          SettingsPage(controller: controller),
+          locale: const Locale('en'),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -144,27 +189,41 @@ void main() {
       await useLargeViewport(tester);
 
       await tester.pumpWidget(
-        _buildApp(SettingsPage(controller: controller), locale: const Locale('en')),
+        _buildApp(
+          SettingsPage(controller: controller),
+          locale: const Locale('en'),
+        ),
       );
       await tester.pumpAndSettle();
 
-      final l10n = AppLocalizations.of(tester.element(find.byType(SettingsPage)))!;
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(SettingsPage)),
+      )!;
       expect(find.text(l10n.saveSettingsBtn), findsOneWidget);
     });
 
-    testWidgets('save bar shows unsaved after edit', (tester) async {
+    testWidgets('save bar shows unsaved after edit of non-auto-saved field', (
+      tester,
+    ) async {
       final controller = SettingsController();
       addTearDown(controller.dispose);
       await useLargeViewport(tester);
 
       await tester.pumpWidget(
-        _buildApp(SettingsPage(controller: controller), locale: const Locale('en')),
+        _buildApp(
+          SettingsPage(controller: controller),
+          locale: const Locale('en'),
+        ),
       );
       await tester.pumpAndSettle();
 
-      final l10n = AppLocalizations.of(tester.element(find.byType(SettingsPage)))!;
-      final saveField = find.byKey(const Key('save-directory-field'));
-      await tester.enterText(saveField, '/tmp');
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(SettingsPage)),
+      )!;
+      final cloudUrlField = find.byKey(const Key('personal-cloud-url-field'));
+      await tester.ensureVisible(cloudUrlField);
+      await tester.pumpAndSettle();
+      await tester.enterText(cloudUrlField, 'https://example.com');
       await tester.pump();
 
       expect(find.text(l10n.settingsUnsaved), findsOneWidget);
@@ -178,12 +237,20 @@ void main() {
       await useLargeViewport(tester);
 
       await tester.pumpWidget(
-        _buildApp(SettingsPage(controller: controller), locale: const Locale('en')),
+        _buildApp(
+          SettingsPage(controller: controller),
+          locale: const Locale('en'),
+        ),
       );
       await tester.pumpAndSettle();
 
-      final l10n = AppLocalizations.of(tester.element(find.byType(SettingsPage)))!;
-      expect(find.byKey(const Key('built-in-clip-analyzer-mode-field')), findsOneWidget);
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(SettingsPage)),
+      )!;
+      expect(
+        find.byKey(const Key('built-in-clip-analyzer-mode-field')),
+        findsOneWidget,
+      );
       expect(find.text(l10n.builtInBalanced), findsOneWidget);
     });
 
@@ -197,15 +264,22 @@ void main() {
       await useLargeViewport(tester);
 
       await tester.pumpWidget(
-        _buildApp(SettingsPage(controller: controller), locale: const Locale('en')),
+        _buildApp(
+          SettingsPage(controller: controller),
+          locale: const Locale('en'),
+        ),
       );
       await tester.pumpAndSettle();
 
-      final l10n = AppLocalizations.of(tester.element(find.byType(SettingsPage)))!;
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(SettingsPage)),
+      )!;
       expect(find.text(l10n.aiAnalyzerCommand), findsOneWidget);
     });
 
-    testWidgets('shows no profiles message when cloud configs empty', (tester) async {
+    testWidgets('shows no profiles message when cloud configs empty', (
+      tester,
+    ) async {
       final controller = SettingsController(
         settings: DownloadSettings.defaults.copyWith(
           aiAnalysisProvider: AiAnalysisProvider.cloudEndpoint,
@@ -216,15 +290,22 @@ void main() {
       await useLargeViewport(tester);
 
       await tester.pumpWidget(
-        _buildApp(SettingsPage(controller: controller), locale: const Locale('en')),
+        _buildApp(
+          SettingsPage(controller: controller),
+          locale: const Locale('en'),
+        ),
       );
       await tester.pumpAndSettle();
 
-      final l10n = AppLocalizations.of(tester.element(find.byType(SettingsPage)))!;
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(SettingsPage)),
+      )!;
       expect(find.text(l10n.aiCloudNoProfiles), findsOneWidget);
     });
 
-    testWidgets('cloud config fields visible when cloud configured', (tester) async {
+    testWidgets('cloud config fields visible when cloud configured', (
+      tester,
+    ) async {
       final cloudConfig = AiCloudConfig(
         id: 'cloud-1',
         vendor: AiCloudVendor.openAI,
@@ -244,11 +325,16 @@ void main() {
       await useLargeViewport(tester);
 
       await tester.pumpWidget(
-        _buildApp(SettingsPage(controller: controller), locale: const Locale('en')),
+        _buildApp(
+          SettingsPage(controller: controller),
+          locale: const Locale('en'),
+        ),
       );
       await tester.pumpAndSettle();
 
-      final l10n = AppLocalizations.of(tester.element(find.byType(SettingsPage)))!;
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(SettingsPage)),
+      )!;
       expect(find.text(l10n.aiCloudProfileName), findsOneWidget);
       expect(find.text(l10n.aiCloudEndpoint), findsOneWidget);
       expect(find.text(l10n.aiCloudModel), findsOneWidget);
@@ -266,13 +352,169 @@ void main() {
       await useLargeViewport(tester);
 
       await tester.pumpWidget(
-        _buildApp(SettingsPage(controller: controller), locale: const Locale('en')),
+        _buildApp(
+          SettingsPage(controller: controller),
+          locale: const Locale('en'),
+        ),
       );
       await tester.pumpAndSettle();
 
-      final l10n = AppLocalizations.of(tester.element(find.byType(SettingsPage)))!;
-      expect(find.byKey(const Key('ai-cloud-add-vendor-field')), findsOneWidget);
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(SettingsPage)),
+      )!;
+      expect(
+        find.byKey(const Key('ai-cloud-add-vendor-field')),
+        findsOneWidget,
+      );
       expect(find.text(l10n.addAiCloudProfile), findsOneWidget);
+    });
+  });
+
+  group('personal cloud section', () {
+    testWidgets('pairs personal cloud and shows success feedback', (tester) async {
+      final controller = SettingsController();
+      final repository = _FakeMediaAssetRepository();
+      final client = _FakeCloudClipClient.pairingSuccess();
+      addTearDown(controller.dispose);
+      await useLargeViewport(tester);
+
+      await tester.pumpWidget(
+        _buildApp(
+          SettingsPage(
+            controller: controller,
+            mediaAssetRepository: repository,
+            cloudClipClientFactory: (_) => client,
+          ),
+          locale: const Locale('en'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('personal-cloud-url-field')),
+        'https://clips.example.test/',
+      );
+      await tester.enterText(
+        find.byKey(const Key('personal-cloud-device-field')),
+        'mac-mini',
+      );
+      await tester.enterText(
+        find.byKey(const Key('personal-cloud-pairing-token-field')),
+        'pair-once',
+      );
+      await tester.tap(find.byKey(const Key('personal-cloud-pair-button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Personal Cloud paired successfully.'), findsWidgets);
+      expect(
+        find.textContaining('pair-once'),
+        findsNothing,
+      );
+      expect(
+        find.textContaining('token-1'),
+        findsOneWidget,
+      );
+      expect(repository.savedConfigs.single.accessToken, 'token-1');
+      expect(client.pairRequests.single.deviceName, 'mac-mini');
+    });
+
+    testWidgets('shows pairing failure feedback', (tester) async {
+      final controller = SettingsController();
+      final repository = _FakeMediaAssetRepository();
+      final client = _FakeCloudClipClient.pairingFailure(
+        const CloudClipClientException('HTTP 401: invalid pairing token'),
+      );
+      addTearDown(controller.dispose);
+      await useLargeViewport(tester);
+
+      await tester.pumpWidget(
+        _buildApp(
+          SettingsPage(
+            controller: controller,
+            mediaAssetRepository: repository,
+            cloudClipClientFactory: (_) => client,
+          ),
+          locale: const Locale('en'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('personal-cloud-url-field')),
+        'https://clips.example.test/',
+      );
+      await tester.enterText(
+        find.byKey(const Key('personal-cloud-device-field')),
+        'mac-mini',
+      );
+      await tester.enterText(
+        find.byKey(const Key('personal-cloud-pairing-token-field')),
+        'pair-once',
+      );
+      await tester.tap(find.byKey(const Key('personal-cloud-pair-button')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(
+        find.text('Pair device failed: HTTP 401: invalid pairing token'),
+        findsWidgets,
+      );
+      expect(repository.savedConfigs, isEmpty);
+    });
+
+    testWidgets('saves personal cloud connection config', (tester) async {
+      final controller = SettingsController();
+      final repository = _FakeMediaAssetRepository();
+      addTearDown(controller.dispose);
+      await useLargeViewport(tester);
+
+      await tester.pumpWidget(
+        _buildApp(
+          SettingsPage(
+            controller: controller,
+            mediaAssetRepository: repository,
+          ),
+          locale: const Locale('en'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('personal-cloud-url-field')),
+        'https://clips.example.test/',
+      );
+      await tester.enterText(
+        find.byKey(const Key('personal-cloud-device-field')),
+        'mac-mini',
+      );
+      await tester.enterText(
+        find.byKey(const Key('personal-cloud-token-field')),
+        'token-1',
+      );
+      await tester.enterText(
+        find.byKey(const Key('personal-cloud-pairing-token-field')),
+        'pair-once',
+      );
+      await tester.tap(
+        find.byKey(const Key('personal-cloud-sync-enabled-field')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('personal-cloud-save-button')));
+      await tester.pumpAndSettle();
+
+      expect(repository.savedConfigs, hasLength(1));
+      expect(
+        repository.savedConfigs.single.baseUrl,
+        'https://clips.example.test',
+      );
+      expect(repository.savedConfigs.single.deviceName, 'mac-mini');
+      expect(repository.savedConfigs.single.accessToken, 'token-1');
+      expect(repository.savedConfigs.single.syncEnabled, isTrue);
+      expect(
+        repository.savedConfigs.single.toJson().containsKey('pairingToken'),
+        isFalse,
+      );
     });
   });
 
@@ -283,11 +525,16 @@ void main() {
       await useLargeViewport(tester);
 
       await tester.pumpWidget(
-        _buildApp(SettingsPage(controller: controller), locale: const Locale('en')),
+        _buildApp(
+          SettingsPage(controller: controller),
+          locale: const Locale('en'),
+        ),
       );
       await tester.pumpAndSettle();
 
-      final l10n = AppLocalizations.of(tester.element(find.byType(SettingsPage)))!;
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(SettingsPage)),
+      )!;
       expect(find.text(l10n.downloadSubtitles), findsOneWidget);
       expect(find.text(l10n.downloadThumbnail), findsOneWidget);
     });
@@ -298,11 +545,16 @@ void main() {
       await useLargeViewport(tester);
 
       await tester.pumpWidget(
-        _buildApp(SettingsPage(controller: controller), locale: const Locale('en')),
+        _buildApp(
+          SettingsPage(controller: controller),
+          locale: const Locale('en'),
+        ),
       );
       await tester.pumpAndSettle();
 
-      final l10n = AppLocalizations.of(tester.element(find.byType(SettingsPage)))!;
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(SettingsPage)),
+      )!;
       expect(find.text(l10n.concurrentCount), findsOneWidget);
     });
   });
@@ -310,17 +562,24 @@ void main() {
   group('cookie section', () {
     testWidgets('cookie management header visible', (tester) async {
       final controller = SettingsController(
-        settings: DownloadSettings.defaults.copyWith(cookieConfigs: const <CookieConfig>[]),
+        settings: DownloadSettings.defaults.copyWith(
+          cookieConfigs: const <CookieConfig>[],
+        ),
       );
       addTearDown(controller.dispose);
       await useLargeViewport(tester);
 
       await tester.pumpWidget(
-        _buildApp(SettingsPage(controller: controller), locale: const Locale('en')),
+        _buildApp(
+          SettingsPage(controller: controller),
+          locale: const Locale('en'),
+        ),
       );
       await tester.pumpAndSettle();
 
-      final l10n = AppLocalizations.of(tester.element(find.byType(SettingsPage)))!;
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(SettingsPage)),
+      )!;
       expect(find.text(l10n.cookieManagement), findsOneWidget);
       expect(find.text(l10n.browser), findsOneWidget);
       expect(find.text(l10n.domain), findsOneWidget);
@@ -330,8 +589,16 @@ void main() {
 
     testWidgets('imported cookies rendered in list', (tester) async {
       final configs = [
-        CookieConfig(domain: 'youtube.com', browser: 'chrome', cookieFile: '/tmp/yt.txt'),
-        CookieConfig(domain: 'bilibili.com', browser: 'firefox', cookieFile: '/tmp/bi.txt'),
+        CookieConfig(
+          domain: 'youtube.com',
+          browser: 'chrome',
+          cookieFile: '/tmp/yt.txt',
+        ),
+        CookieConfig(
+          domain: 'bilibili.com',
+          browser: 'firefox',
+          cookieFile: '/tmp/bi.txt',
+        ),
       ];
       final controller = SettingsController(
         settings: DownloadSettings.defaults.copyWith(cookieConfigs: configs),
@@ -340,7 +607,10 @@ void main() {
       await useLargeViewport(tester);
 
       await tester.pumpWidget(
-        _buildApp(SettingsPage(controller: controller), locale: const Locale('en')),
+        _buildApp(
+          SettingsPage(controller: controller),
+          locale: const Locale('en'),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -356,7 +626,10 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       await tester.pumpWidget(
-        _buildApp(SettingsPage(controller: controller), locale: const Locale('en')),
+        _buildApp(
+          SettingsPage(controller: controller),
+          locale: const Locale('en'),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -365,11 +638,80 @@ void main() {
   });
 }
 
+class _PairRequest {
+  const _PairRequest({
+    required this.deviceName,
+    required this.pairingToken,
+  });
+
+  final String deviceName;
+  final String pairingToken;
+}
+
+class _FakeCloudClipClient extends CloudClipClient {
+  _FakeCloudClipClient._({this.result, this.error})
+    : super(baseUrl: 'https://clips.example.test');
+
+  factory _FakeCloudClipClient.pairingSuccess() {
+    return _FakeCloudClipClient._(
+      result: const CloudPairResult(deviceId: 'dev-1', accessToken: 'token-1'),
+    );
+  }
+
+  factory _FakeCloudClipClient.pairingFailure(Object error) {
+    return _FakeCloudClipClient._(error: error);
+  }
+
+  final CloudPairResult? result;
+  final Object? error;
+  final pairRequests = <_PairRequest>[];
+
+  @override
+  Future<CloudPairResult> pairDevice({
+    required String deviceName,
+    required String pairingToken,
+  }) async {
+    pairRequests.add(
+      _PairRequest(deviceName: deviceName, pairingToken: pairingToken),
+    );
+    if (error != null) throw error!;
+    return result!;
+  }
+}
+
+class _FakeMediaAssetRepository extends MediaAssetRepository {
+  final savedConfigs = <CloudConnectionConfig>[];
+
+  @override
+  Future<void> saveCloudConnectionConfig(CloudConnectionConfig config) async {
+    savedConfigs.add(config.normalized());
+  }
+
+  @override
+  Future<List<CloudConnectionConfig>> loadCloudConnectionConfigs({
+    bool enabledOnly = false,
+  }) async {
+    return savedConfigs;
+  }
+}
+
+class _ThrowingFilePicker implements SettingsFilePicker {
+  @override
+  Future<String?> pickDirectory({required String title}) {
+    throw const FilePickerUnavailableException('missing picker');
+  }
+
+  @override
+  Future<String?> pickFile({required String title}) {
+    throw const FilePickerUnavailableException('missing picker');
+  }
+}
+
 Widget _buildApp(Widget child, {Locale? locale}) {
   return MaterialApp(
     locale: locale,
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
-    home: child,
+    home: Scaffold(body: child),
   );
 }

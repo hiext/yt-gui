@@ -80,6 +80,7 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq cmake ninja-build clang pkg-config libgtk-3-dev dpkg-dev
       - run: flutter pub get
+      - run: dart run tools/fetch_embedded_tools.dart --platform=linux --update-lock
       - run: flutter build linux --release --target-platform linux-${{ matrix.flutter-arch }}
       - run: |
           set -euo pipefail
@@ -155,6 +156,7 @@ jobs:
         with:
           channel: stable
       - run: flutter pub get
+      - run: dart run tools/fetch_embedded_tools.dart --platform=macos --update-lock
       - run: flutter build macos --release
       - name: Sign and notarize app
         if: startsWith(github.ref, 'refs/tags/v') && env.MACOS_CERTIFICATE_P12_BASE64 != ''
@@ -193,6 +195,7 @@ jobs:
         with:
           channel: ${{ matrix.flutter-channel }}
       - run: flutter pub get
+      - run: dart run tools/fetch_embedded_tools.dart --platform=windows --update-lock
       - run: flutter build windows --release
       - shell: pwsh
         run: |
