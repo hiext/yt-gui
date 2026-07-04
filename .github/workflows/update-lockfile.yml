@@ -1,0 +1,64 @@
+name: Update FFmpeg Lockfile
+
+on:
+  schedule:
+    # 每天 UTC 08:00 (北京时间 16:00) 运行
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    name: Check for FFmpeg updates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+
+      - name: Detect checksum changes
+        id: check
+        run: |
+          set -euo pipefail
+          # 计算当前 lock file 的 hash 作为基线
+          BEFORE=$(sha256sum tools/embedded_tools.lock.json | awk '{print $1}')
+          echo "before=$BEFORE"
+
+          # 运行 fetch 并自动更新 checksum
+          dart run tools/fetch_embedded_tools.dart --platform=linux,windows --update-lock
+
+          AFTER=$(sha256sum tools/embedded_tools.lock.json | awk '{print $1}')
+          echo "after=$AFTER"
+
+          if [ "$BEFORE" != "$AFTER" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            # 提取变更详情
+            git diff tools/embedded_tools.lock.json | grep '^[-+].*sha256' | head -10 > /tmp/diff.txt || true
+            cat /tmp/diff.txt
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No checksum changes detected."
+          fi
+
+      - name: Create Pull Request
+        if: steps.check.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore: sync embedded ffmpeg checksums'
+          title: 'chore: sync embedded ffmpeg checksums'
+          body: |
+            Automated checksum update from BtbN FFmpeg-Builds `/latest`.
+
+            FFmpeg upstream has published new builds. This PR syncs the SHA256
+            checksums in `tools/embedded_tools.lock.json`.
+
+            Please verify the new checksums before merging.
+          branch: chore/update-ffmpeg-checksums
+          base: build
+          delete-branch: true

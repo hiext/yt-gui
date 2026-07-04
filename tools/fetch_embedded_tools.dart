@@ -431,6 +431,7 @@ Options:
   --dry-run                       Show planned downloads only.
   --keep-temp                     Keep downloaded archives for debugging.
   --include-manual                Fail on manual entries instead of skipping.
+  --update-lock                   Auto-update lock file when checksums change.
   --help                          Show this help.
 
 Examples:
