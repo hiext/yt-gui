@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-07-03",
+  "updatedAt": "2026-07-10",
   "policy": {
     "git": "Do not commit downloaded binaries. Keep this lock file and fetch them before release builds.",
     "ffmpeg": "Use LGPL builds by default. GPL or nonfree builds require explicit release/legal review."
@@ -60,12 +60,13 @@
       "license": "LGPL build; verify bundled codecs before public release",
       "url": "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n8.1-latest-linux64-lgpl-8.1.tar.xz",
       "mirrors": [],
-      "sha256": "ea539f19137199816819bc3a844e440ba101818a1ec985f74e7a967c2fb4ae1f",
+      "sha256": "acbeb2219eebc24f63117bfda4457fc3f58e7fff857ad68b12b89a753fc7b783",
       "size": 128662596,
       "archiveType": "tar.xz",
       "extract": "bin/ffmpeg",
       "output": "assets/bin/linux/ffmpeg",
-      "chmod": true
+      "chmod": true,
+      "updatedAt": "2026-07-10"
     },
     {
       "id": "ffmpeg-windows",
@@ -76,12 +77,13 @@
       "license": "LGPL build; verify bundled codecs before public release",
       "url": "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-n8.1-latest-win64-lgpl-8.1.zip",
       "mirrors": [],
-      "sha256": "2b8f73904e627a16cf217d82441921bc0bba7ce2d39def12d6afe1585cf9259b",
+      "sha256": "19d01b7a82467a14c6b84851730ec4b4edf364e5fddcb7f04e65393d9dd561f6",
       "size": 198639020,
       "archiveType": "zip",
       "extract": "bin/ffmpeg.exe",
       "output": "assets/bin/windows/ffmpeg.exe",
-      "chmod": false
+      "chmod": false,
+      "updatedAt": "2026-07-10"
     },
     {
       "id": "ffmpeg-macos",
