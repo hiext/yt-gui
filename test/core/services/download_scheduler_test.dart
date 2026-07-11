@@ -1,6 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiext_yt_gui/core/models/app_models.dart';
+import 'package:hiext_yt_gui/core/models/license_models.dart';
 import 'package:hiext_yt_gui/core/services/download_scheduler.dart';
+
+// Scheduler concurrency tests exercise the settings-driven cap, so they run
+// with Pro entitlements (cap 8) to isolate scheduler logic from license gating.
+Entitlements _pro() => Entitlements.forTier(LicenseTier.pro);
 
 void main() {
   group('DownloadScheduler', () {
@@ -8,6 +13,7 @@ void main() {
       final scheduler = DownloadScheduler(
         settingsProvider: () =>
             _settings(DownloadMode.serial, concurrentCount: 3),
+        entitlementsProvider: _pro,
       );
 
       scheduler.enqueueAll([_task('1'), _task('2'), _task('3')]);
@@ -21,6 +27,7 @@ void main() {
       final scheduler = DownloadScheduler(
         settingsProvider: () =>
             _settings(DownloadMode.concurrent, concurrentCount: 2),
+        entitlementsProvider: _pro,
       );
 
       scheduler.enqueueAll([_task('1'), _task('2'), _task('3')]);
@@ -34,6 +41,7 @@ void main() {
       final scheduler = DownloadScheduler(
         settingsProvider: () =>
             _settings(DownloadMode.concurrent, concurrentCount: 99),
+        entitlementsProvider: _pro,
       );
 
       scheduler.enqueueAll(List.generate(10, (index) => _task('$index')));

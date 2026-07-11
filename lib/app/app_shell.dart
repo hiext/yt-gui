@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../core/controllers/download_controller.dart';
 import '../core/controllers/post_process_controller.dart';
+import '../core/controllers/license_controller.dart';
 import '../core/controllers/settings_controller.dart';
 import '../core/services/ai_clip_analyzer_executor.dart';
 import '../core/services/auto_clip_service.dart';
@@ -19,13 +20,14 @@ import '../l10n/app_localizations.dart';
 import '../features/downloads/downloads_page.dart';
 import '../features/help/help_page.dart';
 import '../features/history/history_page.dart';
+import '../features/license/license_page.dart';
 import '../features/home/home_page.dart';
 import '../features/settings/settings_page.dart';
 import '../shared/widgets/debug_log_overlay.dart';
 import '../shared/widgets/section_card.dart';
 import '../core/services/log_service.dart';
 
-enum AppSection { home, downloads, clips, history, settings, help }
+enum AppSection { home, downloads, clips, history, license, settings, help }
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key, this.settingsController, this.downloadController});
@@ -42,6 +44,7 @@ class _AppShellState extends State<AppShell> {
   late final SettingsController _settingsController;
   late final DownloadController _downloadController;
   late final PostProcessController _postProcessController;
+  late final LicenseController _licenseController;
   bool _startupDisclaimerHandled = false;
   bool _debugLogVisible = false;
   final _debugTapTimes = <DateTime>[];
@@ -60,6 +63,8 @@ class _AppShellState extends State<AppShell> {
     }
     _settingsController.addListener(_handleSettingsChanged);
     _syncLogLevel();
+    _licenseController = LicenseController();
+    unawaited(_licenseController.load());
     LogService.instance.info(
       'AppShell init — settings loaded, disclaimer=${_settingsController.settings.disclaimerAccepted}',
       'app',
@@ -75,6 +80,7 @@ class _AppShellState extends State<AppShell> {
         DownloadController(
           scheduler: DownloadScheduler(
             settingsProvider: () => _settingsController.settings,
+            entitlementsProvider: () => _licenseController.entitlements,
           ),
           executor: ProcessYtDlpExecutor(),
           settingsProvider: () => _settingsController.settings,
@@ -100,6 +106,7 @@ class _AppShellState extends State<AppShell> {
     _downloadController.dispose();
     _postProcessController.dispose();
     _settingsController.dispose();
+    _licenseController.dispose();
     super.dispose();
   }
 
@@ -113,6 +120,7 @@ class _AppShellState extends State<AppShell> {
       DownloadsPage(controller: _downloadController),
       ClipLibraryPage(controller: _postProcessController),
       HistoryPage(controller: _downloadController),
+      LicenseStatusPage(controller: _licenseController),
       SettingsPage(controller: _settingsController),
       const HelpPage(),
     ];
@@ -165,6 +173,11 @@ class _AppShellState extends State<AppShell> {
                       icon: const Icon(Icons.history_outlined),
                       selectedIcon: const Icon(Icons.history),
                       label: Text(l10n.history),
+                    ),
+                    const NavigationRailDestination(
+                      icon: Icon(Icons.workspace_premium_outlined),
+                      selectedIcon: Icon(Icons.workspace_premium),
+                      label: Text('升级'),
                     ),
                     NavigationRailDestination(
                       icon: const Icon(Icons.settings_outlined),

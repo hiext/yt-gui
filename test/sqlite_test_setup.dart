@@ -107,6 +107,12 @@ Future<void> createClipRecordsTestSchema(Database db) async {
 
 Future<void> createMediaLibraryTestSchema(Database db) async {
   await db.execute('''
+    CREATE TABLE IF NOT EXISTS license_state (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      data TEXT NOT NULL
+    )
+  ''');
+  await db.execute('''
     CREATE TABLE IF NOT EXISTS media_assets (
       id TEXT PRIMARY KEY,
       source_task_id TEXT NOT NULL,
