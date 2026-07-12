@@ -88,6 +88,11 @@ class _LicensePageState extends State<LicenseStatusPage> {
             const SizedBox(height: 24),
 
             if (!isActivated) ...[
+              const _ProUpsellCard(),
+              const SizedBox(height: 24),
+            ],
+
+            if (!isActivated) ...[
               Text('输入激活码', style: theme.textTheme.titleMedium),
               const SizedBox(height: 12),
               TextField(
@@ -222,6 +227,105 @@ class _TierComparisonCard extends StatelessWidget {
           style: theme.textTheme.bodyMedium,
         ),
       );
+}
+
+class _ProUpsellCard extends StatelessWidget {
+  const _ProUpsellCard();
+
+  static const _benefits = <(IconData, String, String)>[
+    (Icons.download_done_outlined, '8 路并发下载', '同时下载多个清晰度/多个视频，速度拉满'),
+    (Icons.auto_awesome_outlined, '无限 AI 智能切片', '每个视频不再限制 3 条，随意生成高光片段'),
+    (Icons.playlist_add_check_outlined, '批量下载', '一次勾选多个格式/多条链接，排队自动下'),
+    (Icons.devices_outlined, '3 台设备', '一份授权，最多绑定 3 台电脑同时使用'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      color: theme.colorScheme.primaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.workspace_premium,
+                    color: theme.colorScheme.onPrimaryContainer),
+                const SizedBox(width: 8),
+                Text(
+                  '专业版 Pro',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: theme.colorScheme.onPrimaryContainer,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '¥128',
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: theme.colorScheme.onPrimaryContainer,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      '买断永久 · 一次付费',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            for (final benefit in _benefits) ...[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(benefit.$1,
+                      size: 20, color: theme.colorScheme.onPrimaryContainer),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          benefit.$2,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: theme.colorScheme.onPrimaryContainer,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          benefit.$3,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onPrimaryContainer
+                                .withValues(alpha: 0.85),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+            ],
+            Text(
+              '在下方输入激活码即可解锁 Pro，永久有效，无需续费。',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onPrimaryContainer,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _ActivatedInfo extends StatelessWidget {

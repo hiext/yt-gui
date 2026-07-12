@@ -6,6 +6,7 @@ import '../../l10n/app_localizations.dart';
 import '../../l10n/app_localizations_current.dart';
 import 'post_process_controller.dart';
 import '../models/app_models.dart';
+import '../models/license_models.dart';
 import '../services/download_scheduler.dart';
 import '../services/log_service.dart';
 import '../services/auto_clip_orchestrator.dart';
@@ -20,6 +21,7 @@ class DownloadController extends ChangeNotifier {
     required this.scheduler,
     required this.executor,
     required this.settingsProvider,
+    this.entitlementsProvider,
     this.taskRepository,
     this.postProcessController,
     this.autoClipOrchestrator,
@@ -29,6 +31,10 @@ class DownloadController extends ChangeNotifier {
   final DownloadScheduler scheduler;
   final YtDlpExecutor executor;
   final DownloadSettings Function() settingsProvider;
+
+  /// Optional license entitlements. When absent, behaves as Free — batch
+  /// download is disabled so only a single variant is enqueued at a time.
+  final Entitlements Function()? entitlementsProvider;
   final TaskRepository? taskRepository;
   final PostProcessController? postProcessController;
   final AutoClipOrchestrator? autoClipOrchestrator;
@@ -36,6 +42,17 @@ class DownloadController extends ChangeNotifier {
   final Set<String> _startedTaskIds = {};
   final Set<String> _autoClipStartedTaskIds = {};
   int _taskSequence = 0;
+
+  /// Resolves live entitlements, defaulting to Free when no provider is wired.
+  Entitlements get entitlements =>
+      entitlementsProvider?.call() ?? Entitlements.forTier(LicenseTier.free);
+
+  /// Number of variants that may be enqueued from a single batch request.
+  /// Free is clamped to a single variant; Pro/Team allow unlimited batching.
+  int allowedBatchCount(int requested) {
+    if (requested <= 0) return 0;
+    return entitlements.batchDownloadEnabled ? requested : 1;
+  }
 
   Future<void> loadPendingTasks() async {
     final repo = taskRepository;
@@ -178,7 +195,10 @@ class DownloadController extends ChangeNotifier {
     required List<ResourceVariant> variants,
     String? title,
   }) async {
-    for (final variant in variants) {
+    // Free tier is gated to single downloads; Pro/Team batch without limit.
+    final allowed = allowedBatchCount(variants.length);
+    final permitted = variants.take(allowed);
+    for (final variant in permitted) {
       final task = DownloadTask(
         id: _createTaskId(url),
         title: title ?? url.toString(),
