@@ -7,6 +7,7 @@
 import { sha256Hex, signEntitlementToken, type EntitlementClaims } from './crypto';
 import { generateCode, isValidCodeFormat, normalizeCode } from './codes';
 import { checkRateLimit, type RateLimitBinding } from './rate_limit';
+import { verifyTurnstile } from './turnstile';
 
 interface Env {
   DB: D1Database;
@@ -14,6 +15,7 @@ interface Env {
   ADMIN_TOKEN: string;
   ED25519_PRIVATE_KEY: string;
   ED25519_PUBLIC_KEY: string;
+  TURNSTILE_SECRET_KEY?: string;
 }
 
 type Tier = 'pro' | 'team';
@@ -210,6 +212,17 @@ function isAdmin(request: Request, env: Env): boolean {
 
 async function handleAdminCreateLicense(request: Request, env: Env): Promise<Response> {
   const body = await readJson(request);
+
+  // Second factor: require a valid Turnstile token when a secret is configured.
+  const turnstile = await verifyTurnstile(
+    body.turnstileToken ? String(body.turnstileToken) : undefined,
+    env.TURNSTILE_SECRET_KEY,
+    clientIp(request),
+  );
+  if (!turnstile.ok) {
+    return json(403, { success: false, error: `turnstile: ${turnstile.error}` });
+  }
+
   const tier = body.tier === 'team' ? 'team' : 'pro';
   const count = Math.min(Math.max(Number(body.count ?? 1), 1), 100);
   const maxDevices = Number(body.maxDevices ?? DEFAULT_MAX_DEVICES[tier]);
