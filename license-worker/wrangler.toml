@@ -2,9 +2,9 @@ name = "hiext-license"
 main = "src/index.ts"
 compatibility_date = "2026-06-06"
 
-# License API — bind to api.hiext.com/v1/license/*
+# License API — bind to dp-api.hiext.com/v1/license/*
 # routes = [
-#   { pattern = "api.hiext.com/v1/license/*", zone_name = "hiext.com" }
+#   { pattern = "dp-api.hiext.com/v1/license/*", zone_name = "hiext.com" }
 # ]
 
 [[d1_databases]]

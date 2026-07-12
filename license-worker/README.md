@@ -53,7 +53,7 @@ wrangler deploy
 ## 手动发码
 
 ```bash
-curl -X POST https://api.hiext.com/v1/license/admin/licenses \
+curl -X POST https://dp-api.hiext.com/v1/license/admin/licenses \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"tier":"pro","maxDevices":3,"email":"buyer@example.com"}'

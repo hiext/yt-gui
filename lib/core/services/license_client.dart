@@ -11,7 +11,7 @@ class LicenseClient {
     HttpClient Function()? httpClientFactory,
   }) : _httpClientFactory = httpClientFactory ?? HttpClient.new;
 
-  static const defaultBaseUrl = 'https://api.hiext.com/v1/license';
+  static const defaultBaseUrl = 'https://dp-api.hiext.com/v1/license';
 
   final String baseUrl;
   final HttpClient Function() _httpClientFactory;
