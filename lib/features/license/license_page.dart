@@ -115,11 +115,16 @@ class _LicensePageState extends State<LicenseStatusPage> {
             ] else ...[
               _ActivatedInfo(state: state),
               const SizedBox(height: 12),
+              _SeatInfo(
+                entitlements: widget.controller.entitlements,
+                fingerprint: state.fingerprint,
+              ),
+              const SizedBox(height: 12),
               OutlinedButton.icon(
                 key: const Key('license-deactivate-button'),
                 onPressed: _busy ? null : _deactivate,
                 icon: const Icon(Icons.link_off_outlined),
-                label: const Text('取消激活（释放本设备）'),
+                label: const Text('释放本设备（取消激活）'),
               ),
             ],
 
@@ -234,6 +239,16 @@ class _ActivatedInfo extends StatelessWidget {
     final theme = Theme.of(context);
     String fmt(DateTime? d) =>
         d == null ? '—' : '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+    // Remaining days until subscription expiry (Team is an annual subscription).
+    final expiresAt = state.expiresAt;
+    int? remainingDays;
+    if (expiresAt != null) {
+      final diff = expiresAt.difference(DateTime.now());
+      remainingDays = diff.inSeconds <= 0 ? 0 : diff.inDays + 1;
+    }
+    final nearingExpiry = remainingDays != null && remainingDays <= 7;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -249,8 +264,110 @@ class _ActivatedInfo extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text('激活时间：${fmt(state.activatedAt)}'),
-            if (state.expiresAt != null) Text('到期时间：${fmt(state.expiresAt)}'),
+            if (expiresAt != null) ...[
+              Text('订阅到期：${fmt(expiresAt)}'),
+              const SizedBox(height: 4),
+              if (remainingDays == 0)
+                Text(
+                  '订阅已到期，已降级为免费版',
+                  key: const Key('license-expired-notice'),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.error,
+                    fontWeight: FontWeight.bold,
+                  ),
+                )
+              else
+                Text(
+                  '剩余 $remainingDays 天',
+                  key: const Key('license-remaining-days'),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: nearingExpiry
+                        ? theme.colorScheme.error
+                        : theme.colorScheme.onSurfaceVariant,
+                    fontWeight: nearingExpiry ? FontWeight.bold : null,
+                  ),
+                ),
+            ],
             Text('离线宽限至：${fmt(state.graceUntil)}'),
+            if (nearingExpiry && remainingDays != 0) ...[
+              const SizedBox(height: 12),
+              Container(
+                key: const Key('license-renew-prompt'),
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.errorContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.notifications_active_outlined,
+                      color: theme.colorScheme.onErrorContainer,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        '订阅即将到期，请及时续订以免功能降级为免费版。',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onErrorContainer,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Shows device-seat binding for the current tier (Team allows up to 10
+/// devices). The release action lives next to this card (deactivate button).
+class _SeatInfo extends StatelessWidget {
+  const _SeatInfo({required this.entitlements, required this.fingerprint});
+
+  final Entitlements entitlements;
+  final String? fingerprint;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final fp = fingerprint;
+    final shortFp = (fp != null && fp.length > 12) ? '${fp.substring(0, 12)}…' : (fp ?? '—');
+    return Card(
+      key: const Key('license-seat-info'),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.devices_outlined, color: theme.colorScheme.primary),
+                const SizedBox(width: 8),
+                Text('设备席位', style: theme.textTheme.titleMedium),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text('本设备已绑定 · 席位上限 ${entitlements.maxDevices} 台'),
+            const SizedBox(height: 4),
+            Text(
+              '设备标识：$shortFp',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '如需在其他设备使用，可先释放本设备席位。',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
           ],
         ),
       ),

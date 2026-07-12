@@ -109,6 +109,7 @@ class AutoClipOrchestrator {
 
       final cloudSync = _cloudSyncService ?? DefaultCloudClipSyncService(
         repository: _repository,
+        entitlementsProvider: entitlementsProvider,
       );
       try {
         await cloudSync.syncAutoClipResult(
@@ -324,12 +325,18 @@ class DefaultCloudClipSyncService implements CloudClipSyncService {
     MediaAssetRepository? repository,
     this._clientFactory,
     CloudOriginalUploader? originalUploader,
+    this.entitlementsProvider,
   }) : _repository = repository ?? MediaAssetRepository(),
        _originalUploader = originalUploader ?? _uploadOriginalFile;
 
   final MediaAssetRepository _repository;
   final CloudClipClient Function(CloudConnectionConfig config)? _clientFactory;
   final CloudOriginalUploader _originalUploader;
+
+  /// License entitlements gate. Cloud sync is a Team-only feature; when the
+  /// provider is absent or reports a non-Team tier we fall back to Free
+  /// (disabled) so unactivated / Pro apps never sync to the cloud.
+  final Entitlements Function()? entitlementsProvider;
 
   @override
   Future<void> syncAutoClipResult({
@@ -338,6 +345,10 @@ class DefaultCloudClipSyncService implements CloudClipSyncService {
     required List<ClipExportRecord> localExports,
     required DownloadSettings settings,
   }) async {
+    final cloudSyncEnabled = entitlementsProvider?.call().cloudSyncEnabled ??
+        Entitlements.forTier(LicenseTier.free).cloudSyncEnabled;
+    if (!cloudSyncEnabled) return;
+
     final configs = await _repository.loadCloudConnectionConfigs(
       enabledOnly: true,
     );

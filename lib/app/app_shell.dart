@@ -125,7 +125,10 @@ class _AppShellState extends State<AppShell> {
       ClipLibraryPage(controller: _postProcessController),
       HistoryPage(controller: _downloadController),
       LicenseStatusPage(controller: _licenseController),
-      SettingsPage(controller: _settingsController),
+      SettingsPage(
+        controller: _settingsController,
+        entitlementsProvider: () => _licenseController.entitlements,
+      ),
       const HelpPage(),
     ];
 
