@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>HiExt · 激活码发放（内部）</title>
+    <meta name="theme-color" content="#1f4fd1" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="shortcut icon" href="favicon.ico" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <!-- Cloudflare Turnstile 客户端脚本（公开 sitekey，非机密） -->
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+    <style>
+      .admin-wrap {
+        width: min(720px, calc(100% - 40px));
+        margin: 48px auto 72px;
+      }
+      .admin-card {
+        padding: 30px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+        background: rgba(255, 255, 255, 0.92);
+        box-shadow: var(--shadow-soft);
+      }
+      .admin-head {
+        margin-bottom: 24px;
+      }
+      .admin-head h1 {
+        margin: 6px 0 8px;
+        font-family: var(--font-display);
+        font-size: 1.9rem;
+        letter-spacing: -0.03em;
+      }
+      .admin-note {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.7;
+        font-size: 0.96rem;
+      }
+      .admin-form {
+        display: grid;
+        gap: 18px;
+      }
+      .turnstile-box {
+        min-height: 66px;
+      }
+      .result {
+        margin-top: 26px;
+        display: none;
+      }
+      .result.visible {
+        display: block;
+      }
+      .result-warn {
+        margin: 0 0 14px;
+        padding: 14px 16px;
+        border-radius: 14px;
+        background: rgba(255, 138, 61, 0.12);
+        color: #b45309;
+        font-weight: 600;
+        line-height: 1.6;
+      }
+      .code-list {
+        display: grid;
+        gap: 12px;
+      }
+      .code-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 16px;
+        border: 1px solid var(--line-strong);
+        border-radius: 14px;
+        background: rgba(248, 251, 255, 0.96);
+      }
+      .code-item code {
+        font-family: "Space Grotesk", monospace;
+        font-size: 1.02rem;
+        letter-spacing: 0.03em;
+        word-break: break-all;
+      }
+      .status-line {
+        margin: 0;
+        min-height: 1.4em;
+        line-height: 1.6;
+        color: var(--muted);
+      }
+      .status-line[data-state="error"] {
+        color: #c13d3d;
+      }
+      .status-line[data-state="success"] {
+        color: #0f7a4b;
+      }
+      .status-line[data-state="loading"] {
+        color: var(--brand);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="admin-wrap">
+      <div class="admin-card">
+        <div class="admin-head">
+          <span class="signal-label">内部工具</span>
+          <h1>激活码发放</h1>
+          <p class="admin-note">
+            调用 <code>POST /v1/license/admin/licenses</code> 生成激活码。ADMIN_TOKEN
+            由你手动输入，不会保存到本地或提交到代码库。生成的明文码<strong>仅展示一次</strong>，请立即复制并发放。
+          </p>
+        </div>
+
+        <form class="admin-form" id="issue-form" autocomplete="off">
+          <label class="field">
+            <span>ADMIN_TOKEN（Bearer）</span>
+            <input
+              id="admin-token"
+              name="adminToken"
+              type="password"
+              placeholder="仅本次会话使用，不写入代码"
+              autocomplete="off"
+              required
+            />
+          </label>
+
+          <div class="field-grid">
+            <label class="field">
+              <span>版本 tier</span>
+              <select id="tier" name="tier">
+                <option value="pro">pro（默认 3 台设备）</option>
+                <option value="team">team（默认 10 台设备）</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>最大设备数 maxDevices</span>
+              <input
+                id="max-devices"
+                name="maxDevices"
+                type="number"
+                min="1"
+                max="100"
+                step="1"
+                placeholder="留空则用版本默认值"
+              />
+            </label>
+          </div>
+
+          <div class="field-grid">
+            <label class="field">
+              <span>买家邮箱 email</span>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                inputmode="email"
+                placeholder="buyer@example.com"
+              />
+            </label>
+            <label class="field">
+              <span>数量 count</span>
+              <input
+                id="count"
+                name="count"
+                type="number"
+                min="1"
+                max="100"
+                step="1"
+                value="1"
+              />
+            </label>
+          </div>
+
+          <div class="field">
+            <span>人机验证</span>
+            <!-- data-sitekey 为公开值；部署时替换为真实 Turnstile sitekey。
+                 1x00000000000000000000AA 是 Cloudflare 官方"始终通过"测试 key，便于本地预览。 -->
+            <div
+              class="cf-turnstile turnstile-box"
+              id="turnstile"
+              data-sitekey="1x00000000000000000000AA"
+              data-callback="onTurnstile"
+              data-expired-callback="onTurnstileExpired"
+              data-theme="light"
+            ></div>
+          </div>
+
+          <div class="reserve-actions">
+            <button class="button button-primary button-large" id="submit-btn" type="submit">
+              生成激活码
+            </button>
+            <a class="button button-secondary button-large" href="index.html">返回首页</a>
+          </div>
+
+          <p class="status-line" id="status" aria-live="polite"></p>
+        </form>
+
+        <div class="result" id="result">
+          <p class="result-warn">⚠ 以下明文码只显示这一次，关闭或刷新后无法再次查看，请立即复制并妥善发放给买家。</p>
+          <div class="code-list" id="code-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // 激活码后端。生产环境走 dp-api.hiext.com，绝不在此硬编码任何 token。
+      const API_ENDPOINT = "https://dp-api.hiext.com/v1/license/admin/licenses";
+
+      const form = document.getElementById("issue-form");
+      const statusEl = document.getElementById("status");
+      const resultEl = document.getElementById("result");
+      const codeListEl = document.getElementById("code-list");
+      const submitBtn = document.getElementById("submit-btn");
+
+      let turnstileToken = "";
+
+      // Turnstile 回调（由脚本通过 data-callback 调用）
+      window.onTurnstile = function (token) {
+        turnstileToken = token || "";
+      };
+      window.onTurnstileExpired = function () {
+        turnstileToken = "";
+      };
+
+      function setStatus(message, state) {
+        statusEl.textContent = message;
+        if (state) {
+          statusEl.setAttribute("data-state", state);
+        } else {
+          statusEl.removeAttribute("data-state");
+        }
+      }
+
+      function resetTurnstile() {
+        turnstileToken = "";
+        if (window.turnstile && typeof window.turnstile.reset === "function") {
+          window.turnstile.reset();
+        }
+      }
+
+      function renderCodes(licenses) {
+        codeListEl.innerHTML = "";
+        licenses.forEach((lic) => {
+          const item = document.createElement("div");
+          item.className = "code-item";
+
+          const codeEl = document.createElement("code");
+          codeEl.textContent = lic.code;
+
+          const copyBtn = document.createElement("button");
+          copyBtn.type = "button";
+          copyBtn.className = "button button-secondary";
+          copyBtn.textContent = "复制";
+          copyBtn.addEventListener("click", async () => {
+            try {
+              await navigator.clipboard.writeText(lic.code);
+              copyBtn.textContent = "已复制";
+              setTimeout(() => (copyBtn.textContent = "复制"), 1500);
+            } catch {
+              copyBtn.textContent = "复制失败";
+            }
+          });
+
+          item.appendChild(codeEl);
+          item.appendChild(copyBtn);
+          codeListEl.appendChild(item);
+        });
+        resultEl.classList.add("visible");
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const adminToken = document.getElementById("admin-token").value.trim();
+        const tier = document.getElementById("tier").value;
+        const email = document.getElementById("email").value.trim();
+        const maxDevicesRaw = document.getElementById("max-devices").value.trim();
+        const countRaw = document.getElementById("count").value.trim();
+
+        if (!adminToken) {
+          setStatus("请先输入 ADMIN_TOKEN。", "error");
+          return;
+        }
+        if (!turnstileToken) {
+          setStatus("请先完成人机验证。", "error");
+          return;
+        }
+
+        const payload = { tier };
+        if (email) payload.email = email;
+        if (maxDevicesRaw) payload.maxDevices = Number(maxDevicesRaw);
+        if (countRaw) payload.count = Number(countRaw);
+        // 把 Turnstile token 一并上送，供后端（若开启校验）验证；后端未校验时会被忽略。
+        payload.turnstileToken = turnstileToken;
+
+        submitBtn.disabled = true;
+        setStatus("正在生成…", "loading");
+        resultEl.classList.remove("visible");
+
+        try {
+          const res = await fetch(API_ENDPOINT, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: "Bearer " + adminToken,
+            },
+            body: JSON.stringify(payload),
+          });
+
+          const data = await res.json().catch(() => ({}));
+
+          if (!res.ok || !data.success) {
+            const reason = data.error || res.status + " " + res.statusText;
+            setStatus("生成失败：" + reason, "error");
+            resetTurnstile();
+            return;
+          }
+
+          const licenses = Array.isArray(data.licenses) ? data.licenses : [];
+          renderCodes(licenses);
+          setStatus(
+            "已生成 " + licenses.length + " 个 " + data.tier + " 码（maxDevices=" + data.maxDevices + "）。",
+            "success"
+          );
+          resetTurnstile();
+        } catch (err) {
+          setStatus("请求出错：" + (err && err.message ? err.message : "网络错误"), "error");
+          resetTurnstile();
+        } finally {
+          submitBtn.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>
