@@ -38,7 +38,7 @@ class DatabaseService {
     final database = await databaseFactoryFfi.openDatabase(
       join(dbPath, 'hiext_yt.db'),
       options: OpenDatabaseOptions(
-        version: 5,
+        version: 6,
         onCreate: _onCreate,
         onUpgrade: _onUpgrade,
       ),
@@ -74,6 +74,7 @@ class DatabaseService {
     await _createClipAnalysisTables(db);
     await _createClipRecordsTable(db);
     await ensureMediaLibrarySchema(db);
+    await _createLicenseTable(db);
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -89,6 +90,18 @@ class DatabaseService {
     if (oldVersion < 5) {
       await ensureMediaLibrarySchema(db);
     }
+    if (oldVersion < 6) {
+      await _createLicenseTable(db);
+    }
+  }
+
+  Future<void> _createLicenseTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS license_state (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        data TEXT NOT NULL
+      )
+    ''');
   }
 
   Future<void> ensureMediaLibrarySchema(Database db) async {
@@ -370,6 +383,24 @@ class DatabaseService {
         });
       }
     });
+  }
+
+  // ---- License ----
+
+  Future<String?> loadLicense() async {
+    final d = await db;
+    final rows = await d.query('license_state', where: 'id = 1', limit: 1);
+    if (rows.isEmpty) return null;
+    return rows.first['data'] as String?;
+  }
+
+  Future<void> saveLicense(String data) async {
+    final d = await db;
+    await d.insert(
+      'license_state',
+      {'id': 1, 'data': data},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   // ---- Tasks ----

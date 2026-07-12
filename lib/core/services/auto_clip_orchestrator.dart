@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math';
 
 import '../models/app_models.dart';
+import '../models/license_models.dart';
 import 'ai_clip_analyzer_executor.dart';
 import 'cloud_clip_client.dart';
 import 'local_analysis_service.dart';
@@ -19,9 +20,10 @@ class AutoClipOrchestrator {
     this._localAnalyzer,
     this._localExporter,
     this._cloudSyncService,
-  }) : _mediaAssetIndexer = mediaAssetIndexer ?? MediaAssetIndexerService(),
-       _repository = repository ?? MediaAssetRepository(),
-       _segmentAnalyzer = segmentAnalyzer ?? _analyzeSegments;
+    this.entitlementsProvider,
+  })  : _mediaAssetIndexer = mediaAssetIndexer ?? MediaAssetIndexerService(),
+        _repository = repository ?? MediaAssetRepository(),
+        _segmentAnalyzer = segmentAnalyzer ?? _analyzeSegments;
 
   final MediaAssetIndexerService _mediaAssetIndexer;
   final MediaAssetRepository _repository;
@@ -29,6 +31,10 @@ class AutoClipOrchestrator {
   final LocalAnalysisRunner? _localAnalyzer;
   final LocalClipExporter? _localExporter;
   final CloudClipSyncService? _cloudSyncService;
+
+  /// License entitlements for capping slice counts. Falls back to Free (3 per
+  /// video) when absent so legacy callers (tests / older AppShell) stay safe.
+  final Entitlements Function()? entitlementsProvider;
 
   Future<AutoClipOrchestrationResult> onDownloadCompleted(
     DownloadTask task, {
@@ -144,8 +150,11 @@ class AutoClipOrchestrator {
       final score = b.score.compareTo(a.score);
       return score != 0 ? score : a.startMs.compareTo(b.startMs);
     });
-    if (config.maxClipsPerVideo <= 0) return qualified;
-    return qualified.take(config.maxClipsPerVideo).toList(growable: false);
+    final settingsCap = config.maxClipsPerVideo;
+    final licenseCap = entitlementsProvider?.call().maxClipsPerVideo ??
+        Entitlements.forTier(LicenseTier.free).maxClipsPerVideo;
+    final cap = settingsCap <= 0 ? licenseCap : min(settingsCap, licenseCap);
+    return qualified.take(cap).toList(growable: false);
   }
 
   ClipCandidate _applyConfig(ClipCandidate candidate, AutoClipConfig config) {

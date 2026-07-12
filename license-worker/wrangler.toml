@@ -1,0 +1,22 @@
+name = "hiext-license"
+main = "src/index.ts"
+compatibility_date = "2026-06-06"
+
+# License API — bind to dp-api.hiext.com/v1/license/*
+# routes = [
+#   { pattern = "dp-api.hiext.com/v1/license/*", zone_name = "hiext.com" }
+# ]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "hiext-license"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+[[kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# Secrets (set via `wrangler secret put`, never commit):
+#   ADMIN_TOKEN            - bearer token for /admin endpoints
+#   ED25519_PRIVATE_KEY    - base64 PKCS8 signing key for entitlement tokens
+#   ED25519_PUBLIC_KEY     - base64 SPKI public key (also embedded in the app)

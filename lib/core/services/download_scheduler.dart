@@ -1,9 +1,16 @@
 import '../models/app_models.dart';
+import '../models/license_models.dart';
 
 class DownloadScheduler {
-  DownloadScheduler({required this.settingsProvider});
+  DownloadScheduler({
+    required this.settingsProvider,
+    this.entitlementsProvider,
+  });
 
   final DownloadSettings Function() settingsProvider;
+
+  /// Optional license entitlements. When absent, behaves as Free (cap 1).
+  final Entitlements Function()? entitlementsProvider;
   final List<DownloadTask> _queued = [];
   final List<DownloadTask> _running = [];
   final List<DownloadTask> _paused = [];
@@ -139,10 +146,12 @@ class DownloadScheduler {
 
   int get _maxRunningTasks {
     final settings = settingsProvider();
+    final cap = entitlementsProvider?.call().maxConcurrentDownloads ?? 1;
     return switch (settings.downloadMode) {
       DownloadMode.serial => 1,
       DownloadMode.queue => 1,
-      DownloadMode.concurrent => settings.concurrentCount.clamp(1, 8).toInt(),
+      DownloadMode.concurrent =>
+        settings.concurrentCount.clamp(1, cap).toInt(),
     };
   }
 
