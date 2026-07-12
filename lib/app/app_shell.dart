@@ -73,7 +73,9 @@ class _AppShellState extends State<AppShell> {
       executor: AiClipAnalyzerExecutor(),
       settingsProvider: () => _settingsController.settings,
       repository: PostProcessRepository(),
-      autoClipService: AutoClipService(),
+      autoClipService: AutoClipService(
+        entitlementsProvider: () => _licenseController.entitlements,
+      ),
     );
     _downloadController =
         widget.downloadController ??
@@ -86,7 +88,9 @@ class _AppShellState extends State<AppShell> {
           settingsProvider: () => _settingsController.settings,
           taskRepository: TaskRepository(),
           postProcessController: _postProcessController,
-          autoClipOrchestrator: AutoClipOrchestrator(),
+          autoClipOrchestrator: AutoClipOrchestrator(
+            entitlementsProvider: () => _licenseController.entitlements,
+          ),
         );
     unawaited(_postProcessController.loadPendingTasks());
     unawaited(_downloadController.loadPendingTasks());

@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:math';
 
 import '../models/app_models.dart';
+import '../models/license_models.dart';
 import 'clip_record_repository.dart';
 import 'embedded_tool_executable.dart';
 import 'embedded_tool_resolver.dart';
@@ -15,6 +16,7 @@ class AutoClipService {
     AutoClipConfig? config,
     EmbeddedToolResolver? toolResolver,
     EmbeddedToolExecutableResolver? executableResolver,
+    this.entitlementsProvider,
   }) : _repo = repository ?? ClipRecordRepository(),
        _mediaAssetRepository = mediaAssetRepository ?? MediaAssetRepository(),
        _toolResolver = toolResolver ?? const EmbeddedToolResolver(),
@@ -29,6 +31,9 @@ class AutoClipService {
 
   /// Configuration (can be updated from settings).
   AutoClipConfig config;
+
+  /// License entitlements for capping slice counts.
+  final Entitlements Function()? entitlementsProvider;
 
   /// Currently tracked records.
   final List<ClipRecord> _records = [];
@@ -57,9 +62,12 @@ class AutoClipService {
 
     // Sort by confidence descending, then limit
     qualified.sort((a, b) => b.confidence.compareTo(a.confidence));
-    final limited = config.maxClipsPerVideo > 0
-        ? qualified.take(config.maxClipsPerVideo).toList()
-        : qualified;
+    final licenseCap = entitlementsProvider?.call().maxClipsPerVideo ??
+        Entitlements.forTier(LicenseTier.free).maxClipsPerVideo;
+    final cap = config.maxClipsPerVideo <= 0
+        ? licenseCap
+        : min(config.maxClipsPerVideo, licenseCap);
+    final limited = qualified.take(cap).toList();
 
     // Apply offsets and duration limits
     final records = <ClipRecord>[];
