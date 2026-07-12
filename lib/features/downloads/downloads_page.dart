@@ -2,21 +2,42 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 
 import '../../core/controllers/download_controller.dart';
+import '../../core/controllers/license_controller.dart';
 import '../../core/models/app_models.dart';
+import '../../core/models/license_models.dart';
 import '../../shared/widgets/section_card.dart';
+import '../../shared/widgets/upgrade_prompt_dialog.dart';
 
 class DownloadsPage extends StatelessWidget {
-  const DownloadsPage({super.key, required this.controller});
+  const DownloadsPage({
+    super.key,
+    required this.controller,
+    this.licenseController,
+    this.onUpgrade,
+  });
 
   final DownloadController controller;
 
+  /// Optional license controller. When the user is on the Free tier an
+  /// [UpgradeBanner] is surfaced so batch/high-concurrency downloads are
+  /// discoverable as a Pro upgrade.
+  final LicenseController? licenseController;
+  final VoidCallback? onUpgrade;
+
   @override
   Widget build(BuildContext context) {
+    final license = licenseController;
+    final listenable = license == null
+        ? controller
+        : Listenable.merge([controller, license]);
     return AnimatedBuilder(
-      animation: controller,
+      animation: listenable,
       builder: (context, _) {
         final l10n = AppLocalizations.of(context)!;
         final groups = controller.taskGroups;
+        final tier = license?.tier ?? LicenseTier.free;
+        final showUpgradeBanner =
+            tier == LicenseTier.free && groups.isNotEmpty;
 
         return ListView(
           padding: const EdgeInsets.all(24),
@@ -26,6 +47,14 @@ class DownloadsPage extends StatelessWidget {
               style: Theme.of(context).textTheme.headlineMedium,
             ),
             const SizedBox(height: 16),
+            if (showUpgradeBanner) ...[
+              UpgradeBanner(
+                tier: tier,
+                feature: '批量下载与 8 路并发',
+                onUpgrade: onUpgrade,
+              ),
+              const SizedBox(height: 16),
+            ],
             if (groups.isEmpty)
               SectionCard(
                 title: l10n.taskList,

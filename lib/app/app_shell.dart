@@ -86,6 +86,7 @@ class _AppShellState extends State<AppShell> {
           ),
           executor: ProcessYtDlpExecutor(),
           settingsProvider: () => _settingsController.settings,
+          entitlementsProvider: () => _licenseController.entitlements,
           taskRepository: TaskRepository(),
           postProcessController: _postProcessController,
           autoClipOrchestrator: AutoClipOrchestrator(
@@ -121,7 +122,11 @@ class _AppShellState extends State<AppShell> {
         controller: _downloadController,
         onShowDownloads: () => _selectSection(AppSection.downloads),
       ),
-      DownloadsPage(controller: _downloadController),
+      DownloadsPage(
+        controller: _downloadController,
+        licenseController: _licenseController,
+        onUpgrade: () => _selectSection(AppSection.license),
+      ),
       ClipLibraryPage(controller: _postProcessController),
       HistoryPage(controller: _downloadController),
       LicenseStatusPage(controller: _licenseController),

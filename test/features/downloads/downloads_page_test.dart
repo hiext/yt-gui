@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiext_yt_gui/core/controllers/download_controller.dart';
 import 'package:hiext_yt_gui/core/models/app_models.dart';
+import 'package:hiext_yt_gui/core/models/license_models.dart';
 import 'package:hiext_yt_gui/core/services/download_scheduler.dart';
 import 'package:hiext_yt_gui/core/services/yt_dlp_executor.dart';
 import 'package:hiext_yt_gui/features/downloads/downloads_page.dart';
@@ -185,6 +186,7 @@ void main() {
       scheduler: DownloadScheduler(settingsProvider: _settings),
       executor: executor,
       settingsProvider: _settings,
+      entitlementsProvider: () => Entitlements.forTier(LicenseTier.pro),
     );
     addTearDown(controller.dispose);
     final url = Uri.parse('https://www.youtube.com/watch?v=NCtc5lIV7pM');
