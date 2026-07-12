@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiext_yt_gui/core/models/app_models.dart';
+import 'package:hiext_yt_gui/core/models/license_models.dart';
 import 'package:hiext_yt_gui/core/services/auto_clip_orchestrator.dart';
 import 'package:hiext_yt_gui/core/services/database_service.dart';
 import 'package:hiext_yt_gui/core/services/local_analysis_service.dart';
@@ -283,6 +284,47 @@ void main() {
     expect(result.status, AutoClipOrchestrationStatus.skipped);
     expect(result.message, contains('video'));
   });
+
+  group('DefaultCloudClipSyncService entitlement gating', () {
+    Future<int> configLoadsFor(Entitlements Function()? provider) async {
+      final repo = _RecordingRepository();
+      final service = DefaultCloudClipSyncService(
+        repository: repo,
+        entitlementsProvider: provider,
+      );
+      await service.syncAutoClipResult(
+        asset: _asset(),
+        candidates: const [],
+        localExports: const [],
+        settings: _settings(),
+      );
+      return repo.loadConfigsCalls;
+    }
+
+    test('skips cloud sync for Free tier (no config lookup)', () async {
+      final calls =
+          await configLoadsFor(() => Entitlements.forTier(LicenseTier.free));
+      expect(calls, 0);
+    });
+
+    test('skips cloud sync for Pro tier (no config lookup)', () async {
+      final calls =
+          await configLoadsFor(() => Entitlements.forTier(LicenseTier.pro));
+      expect(calls, 0);
+    });
+
+    test('skips cloud sync when no entitlements provider (defaults to Free)',
+        () async {
+      final calls = await configLoadsFor(null);
+      expect(calls, 0);
+    });
+
+    test('executes cloud sync for Team tier (reaches config lookup)', () async {
+      final calls =
+          await configLoadsFor(() => Entitlements.forTier(LicenseTier.team));
+      expect(calls, 1);
+    });
+  });
 }
 
 DownloadTask _downloadTask() {
@@ -382,5 +424,22 @@ class _FakeCloudSyncService implements CloudClipSyncService {
     required DownloadSettings settings,
   }) async {
     syncedCandidates = candidates;
+  }
+}
+
+/// Records how many times the cloud sync path reaches the connection-config
+/// lookup. The entitlement gate returns before this call for Free/Pro, so a
+/// zero count proves the gate blocked the sync; a count of one proves Team
+/// passed the gate. Returns no configs, so Team stops cleanly at
+/// `config == null` without touching the network.
+class _RecordingRepository extends MediaAssetRepository {
+  int loadConfigsCalls = 0;
+
+  @override
+  Future<List<CloudConnectionConfig>> loadCloudConnectionConfigs({
+    bool enabledOnly = false,
+  }) async {
+    loadConfigsCalls += 1;
+    return const [];
   }
 }

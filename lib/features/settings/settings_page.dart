@@ -6,6 +6,7 @@ import '../../l10n/app_localizations.dart';
 
 import '../../core/controllers/settings_controller.dart';
 import '../../core/models/app_models.dart';
+import '../../core/models/license_models.dart';
 import '../../core/services/cookie_service.dart'
     show CookieService, CookieEntry, CookieImportResult;
 import '../../core/services/cloud_clip_client.dart';
@@ -22,12 +23,18 @@ class SettingsPage extends StatefulWidget {
     this.mediaAssetRepository,
     this.cloudClipClientFactory,
     this.filePicker,
+    this.entitlementsProvider,
   });
 
   final SettingsController controller;
   final MediaAssetRepository? mediaAssetRepository;
   final CloudClipClient Function(String baseUrl)? cloudClipClientFactory;
   final SettingsFilePicker? filePicker;
+
+  /// License entitlements accessor. Cloud sync (Personal Cloud pairing) is a
+  /// Team-only feature; when absent or non-Team we fall back to Free
+  /// (disabled) so Free/Pro users cannot pair a device.
+  final Entitlements Function()? entitlementsProvider;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -1098,9 +1105,40 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildPersonalCloudSection() {
+    final cloudSyncEnabled = widget.entitlementsProvider?.call().cloudSyncEnabled ??
+        Entitlements.forTier(LicenseTier.free).cloudSyncEnabled;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (!cloudSyncEnabled) ...[
+          Container(
+            key: const Key('personal-cloud-team-gate'),
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.secondaryContainer,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.workspace_premium_outlined,
+                  color: Theme.of(context).colorScheme.onSecondaryContainer,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    '云同步是 Team（团队版）功能。升级到 Team 后即可配对设备并启用云端切片同步。',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSecondaryContainer,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
         if (_personalCloudStatusMessage != null) ...[
           Container(
             width: double.infinity,
@@ -1226,7 +1264,9 @@ class _SettingsPageState extends State<SettingsPage> {
             final compact = constraints.maxWidth < 420;
             final pairButton = OutlinedButton(
               key: const Key('personal-cloud-pair-button'),
-              onPressed: _isPairingPersonalCloud ? null : _pairPersonalCloud,
+              onPressed: (!cloudSyncEnabled || _isPairingPersonalCloud)
+                  ? null
+                  : _pairPersonalCloud,
               child: Text(
                 _isPairingPersonalCloud ? 'Pairing...' : 'Pair device',
                 maxLines: 1,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiext_yt_gui/core/controllers/settings_controller.dart';
 import 'package:hiext_yt_gui/core/models/app_models.dart';
+import 'package:hiext_yt_gui/core/models/license_models.dart';
 import 'package:hiext_yt_gui/core/services/cloud_clip_client.dart';
 import 'package:hiext_yt_gui/core/services/media_asset_repository.dart';
 import 'package:hiext_yt_gui/features/settings/settings_page.dart';
@@ -384,6 +385,7 @@ void main() {
             controller: controller,
             mediaAssetRepository: repository,
             cloudClipClientFactory: (_) => client,
+            entitlementsProvider: () => Entitlements.forTier(LicenseTier.team),
           ),
           locale: const Locale('en'),
         ),
@@ -434,6 +436,7 @@ void main() {
             controller: controller,
             mediaAssetRepository: repository,
             cloudClipClientFactory: (_) => client,
+            entitlementsProvider: () => Entitlements.forTier(LicenseTier.team),
           ),
           locale: const Locale('en'),
         ),
@@ -515,6 +518,53 @@ void main() {
         repository.savedConfigs.single.toJson().containsKey('pairingToken'),
         isFalse,
       );
+    });
+
+    testWidgets('Free tier shows Team gate and disables pairing',
+        (tester) async {
+      final controller = SettingsController();
+      addTearDown(controller.dispose);
+      await useLargeViewport(tester);
+
+      await tester.pumpWidget(
+        _buildApp(
+          SettingsPage(
+            controller: controller,
+            entitlementsProvider: () => Entitlements.forTier(LicenseTier.free),
+          ),
+          locale: const Locale('en'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('personal-cloud-team-gate')), findsOneWidget);
+      final pairButton = tester.widget<OutlinedButton>(
+        find.byKey(const Key('personal-cloud-pair-button')),
+      );
+      expect(pairButton.onPressed, isNull);
+    });
+
+    testWidgets('Team tier hides gate and enables pairing', (tester) async {
+      final controller = SettingsController();
+      addTearDown(controller.dispose);
+      await useLargeViewport(tester);
+
+      await tester.pumpWidget(
+        _buildApp(
+          SettingsPage(
+            controller: controller,
+            entitlementsProvider: () => Entitlements.forTier(LicenseTier.team),
+          ),
+          locale: const Locale('en'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('personal-cloud-team-gate')), findsNothing);
+      final pairButton = tester.widget<OutlinedButton>(
+        find.byKey(const Key('personal-cloud-pair-button')),
+      );
+      expect(pairButton.onPressed, isNotNull);
     });
   });
 
