@@ -55,9 +55,11 @@ class _RuntimeScreenshotFlowState extends State<_RuntimeScreenshotFlow> {
   bool _capturing = false;
 
   final List<_ScreenshotScenario> _scenarios = const [
-    _ScreenshotScenario(name: 'real-home', section: AppSection.home),
-    _ScreenshotScenario(name: 'real-downloads', section: AppSection.downloads),
-    _ScreenshotScenario(name: 'real-settings', section: AppSection.settings),
+    _ScreenshotScenario(name: '01-home', section: AppSection.home),
+    _ScreenshotScenario(name: '02-downloads', section: AppSection.downloads),
+    _ScreenshotScenario(name: '03-clips', section: AppSection.clips),
+    _ScreenshotScenario(name: '04-history', section: AppSection.history),
+    _ScreenshotScenario(name: '05-settings', section: AppSection.settings),
   ];
 
   @override
