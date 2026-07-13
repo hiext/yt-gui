@@ -101,12 +101,6 @@ class LicenseClient {
       return null;
     }
   }
-
-  String _bodySummary(String responseBody) {
-    final trimmed = responseBody.trim();
-    if (trimmed.isEmpty) return 'empty response body';
-    return trimmed.length <= 200 ? trimmed : '${trimmed.substring(0, 200)}...';
-  }
 }
 
 class LicenseClientException implements Exception {
