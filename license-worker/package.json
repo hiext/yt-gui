@@ -2,6 +2,7 @@
   "name": "hiext-license-worker",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "description": "Hiext license activation Worker (Cloudflare Workers + D1)",
   "scripts": {
     "dev": "wrangler dev",

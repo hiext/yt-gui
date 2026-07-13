@@ -7,6 +7,8 @@
 import { sha256Hex, signEntitlementToken, type EntitlementClaims } from './crypto';
 import { generateCode, isValidCodeFormat, normalizeCode } from './codes';
 import { checkRateLimit, type RateLimitBinding } from './rate_limit';
+import { verifyTurnstile } from './turnstile';
+import { handleWebhookEvent, verifyLemonSqueezySignature, verifyGenericSignature } from './webhook';
 
 interface Env {
   DB: D1Database;
@@ -14,6 +16,8 @@ interface Env {
   ADMIN_TOKEN: string;
   ED25519_PRIVATE_KEY: string;
   ED25519_PUBLIC_KEY: string;
+  TURNSTILE_SECRET_KEY?: string;
+  WEBHOOK_SECRET?: string;
 }
 
 type Tier = 'pro' | 'team';
@@ -210,6 +214,17 @@ function isAdmin(request: Request, env: Env): boolean {
 
 async function handleAdminCreateLicense(request: Request, env: Env): Promise<Response> {
   const body = await readJson(request);
+
+  // Second factor: require a valid Turnstile token when a secret is configured.
+  const turnstile = await verifyTurnstile(
+    body.turnstileToken ? String(body.turnstileToken) : undefined,
+    env.TURNSTILE_SECRET_KEY,
+    clientIp(request),
+  );
+  if (!turnstile.ok) {
+    return json(403, { success: false, error: `turnstile: ${turnstile.error}` });
+  }
+
   const tier = body.tier === 'team' ? 'team' : 'pro';
   const count = Math.min(Math.max(Number(body.count ?? 1), 1), 100);
   const maxDevices = Number(body.maxDevices ?? DEFAULT_MAX_DEVICES[tier]);
@@ -245,6 +260,45 @@ async function handleAdminSetStatus(env: Env, id: string, status: string): Promi
   await env.DB.prepare('UPDATE licenses SET status = ? WHERE id = ?').bind(status, id).run();
   return json(200, { success: true, id, status });
 }
+
+  // ── Webhook dispatch ──
+
+  async function handleWebhookDispatch(request: Request, env: Env, path: string): Promise<Response> {
+    const provider = path.split('/webhooks/')[1]?.split('/')[0] ?? '';
+    const signature = request.headers.get('x-signature') ?? request.headers.get('stripe-signature');
+    const rawBody = await request.text();
+
+    const secret = env.WEBHOOK_SECRET ?? '';
+    let verified = false;
+    if (provider === 'lemonsqueezy') {
+      verified = await verifyLemonSqueezySignature(rawBody, signature, secret);
+    } else {
+      verified = verifyGenericSignature(signature, secret);
+    }
+    if (!verified) {
+      return json(401, { success: false, error: 'invalid signature' });
+    }
+
+    const body = JSON.parse(rawBody);
+    const event = {
+      provider,
+      providerEventId: body.data?.id ?? body.id ?? crypto.randomUUID(),
+      eventType: body.event_name ?? body.type ?? 'unknown',
+      email: body.data?.attributes?.user_email ?? body.data?.email ?? body.meta?.customer_email ?? '',
+      tier: (body.data?.attributes?.variant_name ?? '').toLowerCase().includes('team') ? 'team' as Tier : 'pro' as Tier,
+      amount: (body.data?.attributes?.total ?? body.amount) as number | undefined,
+      currency: (body.data?.attributes?.currency ?? body.currency) as string | undefined,
+    };
+    if (!event.email) {
+      return json(400, { success: false, error: 'missing email' });
+    }
+
+    const result = await handleWebhookEvent(env.DB, event);
+    if (!result) {
+      return json(200, { success: true, already_processed: true });
+    }
+    return json(200, { success: true, tier: event.tier, code: result.code });
+  }
 
 // ── Router ──
 
@@ -298,9 +352,9 @@ export default {
       }
     }
 
-    // P2 reserved: payment webhooks
+    // P2: payment webhooks (Lemon Squeezy / Stripe / manual)
     if (request.method === 'POST' && path.startsWith('/v1/license/webhooks/')) {
-      return json(501, { success: false, error: 'not implemented' });
+      return handleWebhookDispatch(request, env, path);
     }
 
     return json(404, { success: false, error: 'not found' });

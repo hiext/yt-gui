@@ -20,3 +20,5 @@ id = "REPLACE_WITH_KV_NAMESPACE_ID"
 #   ADMIN_TOKEN            - bearer token for /admin endpoints
 #   ED25519_PRIVATE_KEY    - base64 PKCS8 signing key for entitlement tokens
 #   ED25519_PUBLIC_KEY     - base64 SPKI public key (also embedded in the app)
+#   TURNSTILE_SECRET_KEY   - Cloudflare Turnstile secret for admin issuance
+#                            (optional; when unset the Turnstile check is skipped)

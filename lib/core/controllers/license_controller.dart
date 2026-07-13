@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart' show ChangeNotifier;
 
@@ -120,9 +121,10 @@ class LicenseController extends ChangeNotifier {
   }
 
   String _platformName() {
-    // Avoid importing dart:io Platform indirectly through many layers; the
-    // fingerprint service already reads the OS, so a coarse label suffices.
-    return const String.fromEnvironment('FLUTTER_TEST_PLATFORM', defaultValue: 'desktop');
+    if (Platform.isLinux) return 'linux';
+    if (Platform.isMacOS) return 'macos';
+    if (Platform.isWindows) return 'windows';
+    return 'desktop';
   }
 }
 
