@@ -229,11 +229,50 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            gh release upload "$RELEASE_TAG" dist/* --clobber
-          else
-            gh release create "$RELEASE_TAG" dist/* \
+          set -euo pipefail
+
+          mapfile -t ASSET_FILES < <(find dist -maxdepth 1 -type f | sort)
+          if [ "${#ASSET_FILES[@]}" -eq 0 ]; then
+            echo "::error::No release assets found in dist."
+            exit 1
+          fi
+
+          RELEASE_JSON="$(mktemp)"
+          RELEASE_VIEW_ERROR="$(mktemp)"
+
+          if gh release view "$RELEASE_TAG" --json assets,isDraft,url >"$RELEASE_JSON" 2>"$RELEASE_VIEW_ERROR"; then
+            RELEASE_IS_DRAFT="$(jq -r '.isDraft' "$RELEASE_JSON")"
+            RELEASE_URL="$(jq -r '.url' "$RELEASE_JSON")"
+
+            if [ "$RELEASE_IS_DRAFT" = "true" ]; then
+              gh release upload "$RELEASE_TAG" "${ASSET_FILES[@]}" --clobber
+              exit 0
+            fi
+
+            mapfile -t MISSING_ASSETS < <(
+              comm -23 \
+                <(printf '%s\n' "${ASSET_FILES[@]##*/}" | sort) \
+                <(jq -r '.assets[].name' "$RELEASE_JSON" | sort)
+            )
+
+            if [ "${#MISSING_ASSETS[@]}" -eq 0 ]; then
+              echo "Release $RELEASE_TAG is already published with all expected assets: $RELEASE_URL"
+              exit 0
+            fi
+
+            echo "::error::Release $RELEASE_TAG already exists and is published or immutable: $RELEASE_URL"
+            printf 'Missing release assets:\n'
+            printf ' - %s\n' "${MISSING_ASSETS[@]}"
+            echo "Create a new tag, or delete/recreate the existing release as a draft before rerunning this workflow."
+            exit 1
+          fi
+
+          if ! grep -qiE 'not found|could not find|HTTP 404' "$RELEASE_VIEW_ERROR"; then
+            cat "$RELEASE_VIEW_ERROR"
+            exit 1
+          fi
+
+          gh release create "$RELEASE_TAG" "${ASSET_FILES[@]}" \
               --title "$RELEASE_TAG" \
               --notes-file .github/RELEASE_TEMPLATE.md \
               --draft
-          fi
