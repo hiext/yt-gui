@@ -44,6 +44,135 @@ void main() {
     expect(variants.last.formatId, '140');
   });
 
+  test(
+    'inspect tries public access first when cookies are configured',
+    () async {
+      final process = _FakeProcess(exitCodeValue: 0);
+      final attempts = <List<String>>[];
+      final executor = ProcessYtDlpExecutor(
+        toolResolver: _resolver(),
+        processRunner: (_, arguments) async {
+          attempts.add(arguments);
+          return process;
+        },
+        inspectTimeout: const Duration(milliseconds: 100),
+        inspectCleanupTimeout: const Duration(milliseconds: 20),
+      );
+      final stopwatch = Stopwatch()..start();
+
+      final inspectFuture = executor.inspect(
+        Uri.parse('https://example.com/video'),
+        settings: _settingsWithCookie(),
+        localizations: lookupAppLocalizations(const Locale('en')),
+      );
+      process.addStdout(
+        '{"formats":[{"format_id":"137","height":1080,"ext":"mp4"}]}',
+      );
+      await process.close();
+
+      final variants = await inspectFuture;
+
+      expect(variants, isNotEmpty);
+      expect(attempts, hasLength(1));
+      expect(attempts.single, isNot(contains('--cookies')));
+      expect(stopwatch.elapsed, lessThan(const Duration(seconds: 1)));
+    },
+  );
+
+  test('inspect retries with cookies after a fast public failure', () async {
+    final publicProcess = _FakeProcess(exitCodeValue: 1);
+    final cookieProcess = _FakeProcess(exitCodeValue: 0);
+    final attempts = <List<String>>[];
+    var run = 0;
+    final executor = ProcessYtDlpExecutor(
+      toolResolver: _resolver(),
+      processRunner: (_, arguments) async {
+        attempts.add(arguments);
+        run += 1;
+        return run == 1 ? publicProcess : cookieProcess;
+      },
+      inspectTimeout: const Duration(milliseconds: 100),
+      inspectCleanupTimeout: const Duration(milliseconds: 20),
+    );
+    publicProcess.addStderr('ERROR: Sign in to confirm your age');
+    unawaited(publicProcess.close());
+    cookieProcess.addStdout(
+      '{"formats":[{"format_id":"137","height":1080,"ext":"mp4"}]}',
+    );
+    unawaited(cookieProcess.close());
+
+    final variants = await executor.inspect(
+      Uri.parse('https://example.com/video'),
+      settings: _settingsWithCookie(),
+      localizations: lookupAppLocalizations(const Locale('en')),
+    );
+
+    expect(variants, isNotEmpty);
+    expect(attempts, hasLength(2));
+    expect(attempts.first, isNot(contains('--cookies')));
+    expect(
+      attempts.last,
+      containsAllInOrder(['--cookies', '/tmp/cookies.txt']),
+    );
+  });
+
+  test('inspect timeout kills the process without a cookie retry', () async {
+    final process = _FakeProcess(exitCodeValue: 137, closeOnKill: true);
+    final attempts = <List<String>>[];
+    final executor = ProcessYtDlpExecutor(
+      toolResolver: _resolver(),
+      processRunner: (_, arguments) async {
+        attempts.add(arguments);
+        return process;
+      },
+      inspectTimeout: const Duration(milliseconds: 20),
+      inspectCleanupTimeout: const Duration(milliseconds: 20),
+    );
+
+    await expectLater(
+      executor.inspect(
+        Uri.parse('https://example.com/video'),
+        settings: _settingsWithCookie(),
+      ),
+      throwsA(
+        isA<YtDlpExecutorException>().having(
+          (error) => error.message,
+          'message',
+          contains('20 milliseconds'),
+        ),
+      ),
+    );
+
+    expect(attempts, hasLength(1));
+    expect(attempts.single, isNot(contains('--cookies')));
+    expect(process.killedSignals, [ProcessSignal.sigkill]);
+  });
+
+  test('inspect uses collected output after bounded stream drain', () async {
+    final process = _FakeProcess(exitCodeValue: 0);
+    addTearDown(process.closeStreams);
+    final executor = ProcessYtDlpExecutor(
+      toolResolver: _resolver(),
+      processRunner: (_, _) async => process,
+      inspectTimeout: const Duration(milliseconds: 100),
+      inspectCleanupTimeout: const Duration(milliseconds: 20),
+    );
+    process.addStdout(
+      '{"formats":[{"format_id":"137","height":1080,"ext":"mp4"}]}',
+    );
+    process.completeExit();
+    final stopwatch = Stopwatch()..start();
+
+    final variants = await executor.inspect(
+      Uri.parse('https://example.com/video'),
+      localizations: lookupAppLocalizations(const Locale('en')),
+    );
+
+    expect(variants, isNotEmpty);
+    expect(stopwatch.elapsed, lessThan(const Duration(seconds: 1)));
+    expect(process.killedSignals, isEmpty);
+  });
+
   test('inspect honors configured recommended variant count', () async {
     final process = _FakeProcess(exitCodeValue: 0);
     final executor = ProcessYtDlpExecutor(
@@ -82,9 +211,19 @@ void main() {
     final inspectFuture = executor.inspect(
       Uri.parse('https://example.com/video'),
     );
+    process.addStderr('yt-dlp failed before extraction');
     await process.close();
 
-    await expectLater(inspectFuture, throwsA(isA<YtDlpExecutorException>()));
+    await expectLater(
+      inspectFuture,
+      throwsA(
+        isA<YtDlpExecutorException>().having(
+          (error) => error.message,
+          'message',
+          contains('yt-dlp failed before extraction'),
+        ),
+      ),
+    );
   });
 
   test('inspect forwards verbose logs through callback', () async {
@@ -558,6 +697,18 @@ DownloadSettings _settings({String? ytDlpPath, String? ffmpegPath}) {
   );
 }
 
+DownloadSettings _settingsWithCookie() {
+  return DownloadSettings.defaults.copyWith(
+    cookieConfigs: const [
+      CookieConfig(
+        domain: 'example.com',
+        browser: 'chrome',
+        cookieFile: '/tmp/cookies.txt',
+      ),
+    ],
+  );
+}
+
 File _createToolFile(String name) {
   final tempDir = Directory.systemTemp.createTempSync('yt-dlp-executor-');
   addTearDown(() => tempDir.deleteSync(recursive: true));
@@ -590,9 +741,10 @@ EmbeddedToolResolver _resolver() {
 }
 
 class _FakeProcess implements Process {
-  _FakeProcess({required this.exitCodeValue});
+  _FakeProcess({required this.exitCodeValue, this.closeOnKill = false});
 
   final int exitCodeValue;
+  final bool closeOnKill;
   final List<ProcessSignal> killedSignals = [];
   final _stdout = StreamController<List<int>>();
   final _stderr = StreamController<List<int>>();
@@ -607,8 +759,16 @@ class _FakeProcess implements Process {
   }
 
   Future<void> close() async {
-    await _stdout.close();
-    await _stderr.close();
+    await closeStreams();
+    completeExit();
+  }
+
+  Future<void> closeStreams() async {
+    if (!_stdout.isClosed) await _stdout.close();
+    if (!_stderr.isClosed) await _stderr.close();
+  }
+
+  void completeExit() {
     if (!_exit.isCompleted) {
       _exit.complete(exitCodeValue);
     }
@@ -620,6 +780,10 @@ class _FakeProcess implements Process {
   @override
   bool kill([ProcessSignal signal = ProcessSignal.sigterm]) {
     killedSignals.add(signal);
+    if (closeOnKill) {
+      completeExit();
+      unawaited(closeStreams());
+    }
     return true;
   }
 
