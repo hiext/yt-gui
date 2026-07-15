@@ -854,4 +854,146 @@ class AppLocalizationsZh extends AppLocalizations {
   String settingsSavedAt(String hour, String minute) {
     return '已于 $hour:$minute 保存';
   }
+
+  @override
+  String get licenseNavLabel => '授权';
+
+  @override
+  String get licenseTitle => '授权与套餐';
+
+  @override
+  String get licenseActivate => '激活';
+
+  @override
+  String get licenseActivating => '激活中…';
+
+  @override
+  String get licenseRefresh => '刷新授权与设备';
+
+  @override
+  String get licenseRefreshing => '刷新中…';
+
+  @override
+  String get licenseRefreshSuccess => '授权和设备状态已刷新。';
+
+  @override
+  String licenseRefreshFailed(String error) {
+    return '无法在线刷新，已保留本地授权。请检查网络后重试。详情：$error';
+  }
+
+  @override
+  String get licenseCurrentDeviceReleased => '本设备已释放，应用已恢复为免费版。';
+
+  @override
+  String licenseOperationFailed(String error) {
+    return '操作失败，现有授权和设备状态均未清除。请解决问题后重试。详情：$error';
+  }
+
+  @override
+  String get licensePurchaseStepsTitle => '购买与激活';
+
+  @override
+  String get licenseTeamPlanSummary => 'Team：¥298/年 · 10 台设备 · 云同步';
+
+  @override
+  String get licensePurchaseStepChoose => '选择套餐';
+
+  @override
+  String get licensePurchaseStepChooseOnline => '打开官方购买页并完成下单。';
+
+  @override
+  String get licensePurchaseStepChooseEmail => '发送邮件到 orders@hiext.com 获取付款方式。';
+
+  @override
+  String get licensePurchaseStepChooseMixed =>
+      '已配置的套餐打开安全购买页；未配置的套餐通过 orders@hiext.com 邮件购买。';
+
+  @override
+  String get licensePurchaseStepReceive => '查收激活码';
+
+  @override
+  String get licensePurchaseStepReceiveDescription => '付款完成后，激活码会发送到下单邮箱。';
+
+  @override
+  String get licensePurchaseStepActivate => '回到这里激活';
+
+  @override
+  String get licensePurchaseStepActivateDescription =>
+      '在下方粘贴激活码，激活后刷新即可查看授权和设备状态。';
+
+  @override
+  String get licenseBuyPro => '购买 Pro';
+
+  @override
+  String get licenseBuyTeam => '购买 Team';
+
+  @override
+  String get licenseEmailBuyPro => '邮件购买 Pro';
+
+  @override
+  String get licenseEmailBuyTeam => '邮件购买 Team';
+
+  @override
+  String get licensePurchasePageOpened => '已在浏览器打开购买页。完成下单并收到激活码后，请回到这里激活。';
+
+  @override
+  String get licensePurchaseEmailOpened =>
+      '已打开邮件应用并填好采购信息。发送邮件并收到激活码后，请回到这里激活。';
+
+  @override
+  String licensePurchaseOpenFailed(String url) {
+    return '无法打开购买入口，请手动访问或打开此地址：$url';
+  }
+
+  @override
+  String get licenseDevicesTitle => '已激活设备';
+
+  @override
+  String licenseDeviceUsage(int count, int max) {
+    return '已用 $count / $max 个席位';
+  }
+
+  @override
+  String get licenseNoDevices => '暂未获取到在线设备列表。';
+
+  @override
+  String get licenseNoDevicesHint => '点击刷新加载已激活设备；服务暂时不可用时，本地授权不会被清除。';
+
+  @override
+  String get licenseUnknownDevice => '未命名设备';
+
+  @override
+  String get licenseCurrentDevice => '本设备';
+
+  @override
+  String get licenseDeactivateCurrent => '释放本设备（取消激活）';
+
+  @override
+  String licensePlatform(String platform) {
+    return '平台：$platform';
+  }
+
+  @override
+  String licenseLastSeen(String date) {
+    return '最近在线：$date';
+  }
+
+  @override
+  String get licenseReleaseDeviceTitle => '释放设备席位？';
+
+  @override
+  String licenseReleaseDeviceConfirm(String name) {
+    return '确定释放“$name”吗？该设备下次校验授权时将失去付费功能。';
+  }
+
+  @override
+  String get licenseReleaseDeviceAction => '释放';
+
+  @override
+  String get licenseCancel => '取消';
+
+  @override
+  String licenseDeviceReleased(String name) {
+    return '已释放 $name，空出的席位可用于其他设备。';
+  }
 }

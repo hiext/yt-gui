@@ -1639,6 +1639,252 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'已于 {hour}:{minute} 保存'**
   String settingsSavedAt(String hour, String minute);
+
+  /// No description provided for @licenseNavLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'授权'**
+  String get licenseNavLabel;
+
+  /// No description provided for @licenseTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'授权与套餐'**
+  String get licenseTitle;
+
+  /// No description provided for @licenseActivate.
+  ///
+  /// In zh, this message translates to:
+  /// **'激活'**
+  String get licenseActivate;
+
+  /// No description provided for @licenseActivating.
+  ///
+  /// In zh, this message translates to:
+  /// **'激活中…'**
+  String get licenseActivating;
+
+  /// No description provided for @licenseRefresh.
+  ///
+  /// In zh, this message translates to:
+  /// **'刷新授权与设备'**
+  String get licenseRefresh;
+
+  /// No description provided for @licenseRefreshing.
+  ///
+  /// In zh, this message translates to:
+  /// **'刷新中…'**
+  String get licenseRefreshing;
+
+  /// No description provided for @licenseRefreshSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'授权和设备状态已刷新。'**
+  String get licenseRefreshSuccess;
+
+  /// No description provided for @licenseRefreshFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法在线刷新，已保留本地授权。请检查网络后重试。详情：{error}'**
+  String licenseRefreshFailed(String error);
+
+  /// No description provided for @licenseCurrentDeviceReleased.
+  ///
+  /// In zh, this message translates to:
+  /// **'本设备已释放，应用已恢复为免费版。'**
+  String get licenseCurrentDeviceReleased;
+
+  /// No description provided for @licenseOperationFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'操作失败，现有授权和设备状态均未清除。请解决问题后重试。详情：{error}'**
+  String licenseOperationFailed(String error);
+
+  /// No description provided for @licensePurchaseStepsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'购买与激活'**
+  String get licensePurchaseStepsTitle;
+
+  /// No description provided for @licenseTeamPlanSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'Team：¥298/年 · 10 台设备 · 云同步'**
+  String get licenseTeamPlanSummary;
+
+  /// No description provided for @licensePurchaseStepChoose.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择套餐'**
+  String get licensePurchaseStepChoose;
+
+  /// No description provided for @licensePurchaseStepChooseOnline.
+  ///
+  /// In zh, this message translates to:
+  /// **'打开官方购买页并完成下单。'**
+  String get licensePurchaseStepChooseOnline;
+
+  /// No description provided for @licensePurchaseStepChooseEmail.
+  ///
+  /// In zh, this message translates to:
+  /// **'发送邮件到 orders@hiext.com 获取付款方式。'**
+  String get licensePurchaseStepChooseEmail;
+
+  /// No description provided for @licensePurchaseStepChooseMixed.
+  ///
+  /// In zh, this message translates to:
+  /// **'已配置的套餐打开安全购买页；未配置的套餐通过 orders@hiext.com 邮件购买。'**
+  String get licensePurchaseStepChooseMixed;
+
+  /// No description provided for @licensePurchaseStepReceive.
+  ///
+  /// In zh, this message translates to:
+  /// **'查收激活码'**
+  String get licensePurchaseStepReceive;
+
+  /// No description provided for @licensePurchaseStepReceiveDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'付款完成后，激活码会发送到下单邮箱。'**
+  String get licensePurchaseStepReceiveDescription;
+
+  /// No description provided for @licensePurchaseStepActivate.
+  ///
+  /// In zh, this message translates to:
+  /// **'回到这里激活'**
+  String get licensePurchaseStepActivate;
+
+  /// No description provided for @licensePurchaseStepActivateDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'在下方粘贴激活码，激活后刷新即可查看授权和设备状态。'**
+  String get licensePurchaseStepActivateDescription;
+
+  /// No description provided for @licenseBuyPro.
+  ///
+  /// In zh, this message translates to:
+  /// **'购买 Pro'**
+  String get licenseBuyPro;
+
+  /// No description provided for @licenseBuyTeam.
+  ///
+  /// In zh, this message translates to:
+  /// **'购买 Team'**
+  String get licenseBuyTeam;
+
+  /// No description provided for @licenseEmailBuyPro.
+  ///
+  /// In zh, this message translates to:
+  /// **'邮件购买 Pro'**
+  String get licenseEmailBuyPro;
+
+  /// No description provided for @licenseEmailBuyTeam.
+  ///
+  /// In zh, this message translates to:
+  /// **'邮件购买 Team'**
+  String get licenseEmailBuyTeam;
+
+  /// No description provided for @licensePurchasePageOpened.
+  ///
+  /// In zh, this message translates to:
+  /// **'已在浏览器打开购买页。完成下单并收到激活码后，请回到这里激活。'**
+  String get licensePurchasePageOpened;
+
+  /// No description provided for @licensePurchaseEmailOpened.
+  ///
+  /// In zh, this message translates to:
+  /// **'已打开邮件应用并填好采购信息。发送邮件并收到激活码后，请回到这里激活。'**
+  String get licensePurchaseEmailOpened;
+
+  /// No description provided for @licensePurchaseOpenFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法打开购买入口，请手动访问或打开此地址：{url}'**
+  String licensePurchaseOpenFailed(String url);
+
+  /// No description provided for @licenseDevicesTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'已激活设备'**
+  String get licenseDevicesTitle;
+
+  /// No description provided for @licenseDeviceUsage.
+  ///
+  /// In zh, this message translates to:
+  /// **'已用 {count} / {max} 个席位'**
+  String licenseDeviceUsage(int count, int max);
+
+  /// No description provided for @licenseNoDevices.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂未获取到在线设备列表。'**
+  String get licenseNoDevices;
+
+  /// No description provided for @licenseNoDevicesHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'点击刷新加载已激活设备；服务暂时不可用时，本地授权不会被清除。'**
+  String get licenseNoDevicesHint;
+
+  /// No description provided for @licenseUnknownDevice.
+  ///
+  /// In zh, this message translates to:
+  /// **'未命名设备'**
+  String get licenseUnknownDevice;
+
+  /// No description provided for @licenseCurrentDevice.
+  ///
+  /// In zh, this message translates to:
+  /// **'本设备'**
+  String get licenseCurrentDevice;
+
+  /// No description provided for @licenseDeactivateCurrent.
+  ///
+  /// In zh, this message translates to:
+  /// **'释放本设备（取消激活）'**
+  String get licenseDeactivateCurrent;
+
+  /// No description provided for @licensePlatform.
+  ///
+  /// In zh, this message translates to:
+  /// **'平台：{platform}'**
+  String licensePlatform(String platform);
+
+  /// No description provided for @licenseLastSeen.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近在线：{date}'**
+  String licenseLastSeen(String date);
+
+  /// No description provided for @licenseReleaseDeviceTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'释放设备席位？'**
+  String get licenseReleaseDeviceTitle;
+
+  /// No description provided for @licenseReleaseDeviceConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'确定释放“{name}”吗？该设备下次校验授权时将失去付费功能。'**
+  String licenseReleaseDeviceConfirm(String name);
+
+  /// No description provided for @licenseReleaseDeviceAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'释放'**
+  String get licenseReleaseDeviceAction;
+
+  /// No description provided for @licenseCancel.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消'**
+  String get licenseCancel;
+
+  /// No description provided for @licenseDeviceReleased.
+  ///
+  /// In zh, this message translates to:
+  /// **'已释放 {name}，空出的席位可用于其他设备。'**
+  String licenseDeviceReleased(String name);
 }
 
 class _AppLocalizationsDelegate

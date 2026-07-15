@@ -291,8 +291,14 @@
                   <li>最多 3 台设备</li>
                   <li>Cookie 工作流与失败恢复</li>
                 </ul>
-                <a class="button button-primary button-block" href="#buy">
-                  购买 Pro
+                <a
+                  class="button button-primary button-block"
+                  href="mailto:orders@hiext.com?subject=HiExt%20YT%20GUI%20Pro%20人工采购"
+                  data-purchase-tier="pro"
+                  data-checkout-label="购买 Pro"
+                  data-fallback-label="联系人工采购 Pro"
+                >
+                  联系人工采购 Pro
                 </a>
               </article>
 
@@ -309,15 +315,20 @@
                   <li>最多 10 台设备</li>
                   <li>优先支持</li>
                 </ul>
-                <a class="button button-secondary button-block" href="#buy">
-                  购买 Team
+                <a
+                  class="button button-secondary button-block"
+                  href="mailto:orders@hiext.com?subject=HiExt%20YT%20GUI%20Team%20人工采购"
+                  data-purchase-tier="team"
+                  data-fallback-label="联系人工采购 Team"
+                >
+                  联系人工采购 Team
                 </a>
               </article>
             </div>
 
             <div id="buy" class="pricing-note">
-              <p>
-                当前支付通道对接中：下单后我们会通过邮件发放激活码（明文仅展示一次），在 App 内「设置 · 激活」输入即可在线激活并绑定设备。如需团队批量采购，请通过页脚仓库 Issue 联系。
+              <p id="purchase-status">
+                正式支付链接尚未配置：购买按钮会打开给 orders@hiext.com 的人工采购邮件。请在收到人工确认的支付方式后再付款；确认到账后由人工发放激活码。
               </p>
             </div>
           </div>
@@ -350,7 +361,7 @@
               </details>
               <details class="faq-item">
                 <summary>付款后怎么拿到激活码？</summary>
-                <p>下单后通过邮件收到明文激活码（仅展示一次，请妥善保存），在 App 内输入即可激活。</p>
+                <p>正式支付链接可用时，付款成功且邮件服务正常后会自动发码；页面显示“联系人工采购”时，请先通过邮件确认支付方式，到账后由人工发码。激活码不会在支付 webhook 响应中展示，请妥善保存收码邮件。</p>
               </details>
             </div>
           </div>
@@ -406,6 +417,7 @@
       </footer>
     </div>
 
+    <script src="purchase-config.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

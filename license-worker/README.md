@@ -17,11 +17,13 @@
 | POST | `/v1/license/activate` | `{code, fingerprint, deviceName?, platform?}` → 签名 token |
 | POST | `/v1/license/validate` | `{code, fingerprint}` → 复检 + 滚动续期 token |
 | POST | `/v1/license/deactivate` | `{code, fingerprint}` → 释放席位 |
+| POST | `/v1/license/devices/list` | `{code, currentFingerprint?}` → 仅列出当前 active 设备，不返回 fingerprint |
+| POST | `/v1/license/devices/deactivate` | `{code, deviceId}` → 按设备 ID 幂等释放席位 |
 | POST | `/v1/license/admin/licenses` | 生成码（Bearer ADMIN_TOKEN，明文仅返回一次） |
 | GET | `/v1/license/admin/licenses/:id` | 查询状态 + 已绑定设备 |
 | POST | `/v1/license/admin/licenses/:id/revoke` | 吊销 |
 | POST | `/v1/license/admin/licenses/:id/refund` | 标记退款 |
-| POST | `/v1/license/webhooks/:provider` | P2 预留（当前 501） |
+| POST | `/v1/license/webhooks/lemonsqueezy` | 验签并仅处理已付款 `order_created`，仅按 Pro variant ID 白名单发码并通过 Resend 投递，Team 自动订单返回 503 |
 
 ## 部署步骤
 
@@ -46,6 +48,12 @@ wrangler secret put ADMIN_TOKEN
 wrangler secret put ED25519_PRIVATE_KEY
 wrangler secret put ED25519_PUBLIC_KEY
 
+# 自动购买发码启用时额外设置；缺任一项时 webhook 返回 503，不签发
+wrangler secret put WEBHOOK_SECRET
+wrangler secret put LICENSE_CODE_SECRET
+wrangler secret put RESEND_API_KEY
+# 另配置 LEMONSQUEEZY_PRO_VARIANT_IDS；Team variant 必须保持未配置
+
 # 6. 绑定域名路由（在 wrangler.toml 解开 routes 注释），部署
 wrangler deploy
 ```
@@ -58,10 +66,19 @@ curl -X POST https://dp-api.hiext.com/v1/license/admin/licenses \
   -H "Content-Type: application/json" \
   -d '{"tier":"pro","maxDevices":3,"email":"buyer@example.com"}'
 # 响应 licenses[].code 是明文码，人工发给买家（只返回这一次）
+# Team 人工签发必须额外传入未来的 ISO-8601 expiresAt；缺失、无效或已过期会返回 400。
 ```
+
+## 自动发码边界
+
+- 当前只实现 Lemon Squeezy；Stripe、微信、支付宝和 Email Routing 未实现，不能只改路径名冒充支持。
+- 只有验签通过、`meta.event_name=order_created`、订单状态为 `paid` 且 variant ID 命中 Pro 显式白名单时才签发；Team 自动订单固定返回 503。
+- Webhook 响应不返回激活码。明文码仅发送到买家邮箱，D1 只存 hash。
+- Resend 暂时失败时订单标记为 `email_failed` 并返回 503；支付商重试会派生同一个码再次投递，不重复创建授权。
+- Pro 正式 checkout URL、支付商密钥、域名和 Resend 发信域名都属于外部上线配置，仓库默认不代表已开通。
 
 ## 测试
 
 ```bash
-npm test   # node --experimental-strip-types --test，验证码格式/hash/Ed25519 签名
+npm test   # 包含设备管理、付款事件过滤、幂等发码、邮件失败重试和响应防泄漏
 ```

@@ -5,6 +5,8 @@ const reserveForm = document.querySelector('#reserve-form');
 const reserveCopy = document.querySelector('#reserve-copy');
 const reserveNote = document.querySelector('#reserve-note');
 const reserveSubmit = document.querySelector('#reserve-submit');
+const purchaseLinks = document.querySelectorAll('[data-purchase-tier]');
+const purchaseStatus = document.querySelector('#purchase-status');
 
 const defaultReserveNote = reserveNote?.textContent?.trim() || '';
 const reserveMessages = {
@@ -14,6 +16,58 @@ const reserveMessages = {
   copied: '登记内容已复制。即使当前私有通道暂未配置，你也可以先保存这份登记信息。',
   copyFailed: '浏览器未允许剪贴板写入，请手动复制或稍后重试。',
 };
+
+function validCheckoutUrl(value) {
+  try {
+    const url = new URL(String(value || '').trim());
+    return url.protocol === 'https:' ? url.toString() : '';
+  } catch {
+    return '';
+  }
+}
+
+function validSalesEmail(value) {
+  const email = String(value || '').trim();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : 'orders@hiext.com';
+}
+
+function configurePurchaseLinks() {
+  if (!purchaseLinks.length) return;
+
+  const config = window.HIEXT_PURCHASE_CONFIG || {};
+  const salesEmail = validSalesEmail(config.salesEmail);
+  let configuredCheckouts = 0;
+
+  purchaseLinks.forEach((link) => {
+    const tier = link.dataset.purchaseTier === 'team' ? 'team' : 'pro';
+    // Team 的续费、取消与退款生命周期尚未闭环，必须固定走人工采购。
+    const checkoutUrl = tier === 'team' ? '' : validCheckoutUrl(config.proCheckoutUrl);
+    if (checkoutUrl) {
+      link.href = checkoutUrl;
+      link.target = '_blank';
+      link.rel = 'noreferrer';
+      link.textContent = link.dataset.checkoutLabel || '购买 Pro';
+      configuredCheckouts += 1;
+      return;
+    }
+
+    const plan = tier === 'team' ? 'Team（¥298/年）' : 'Pro（¥128 买断）';
+    const subject = `HiExt YT GUI ${plan} 人工采购`;
+    const body = `你好，我希望采购 ${plan}。\n\n请回复可用支付方式和发码流程。`;
+    link.href = `mailto:${salesEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    link.removeAttribute('target');
+    link.removeAttribute('rel');
+    link.textContent = link.dataset.fallbackLabel || `联系人工采购 ${tier === 'team' ? 'Team' : 'Pro'}`;
+  });
+
+  if (purchaseStatus) {
+    purchaseStatus.textContent = configuredCheckouts === purchaseLinks.length
+      ? '正式支付链接已配置：点击对应套餐进入支付页。付款成功且邮件服务正常时，激活码会发送到下单邮箱。'
+      : `部分或全部正式支付链接尚未配置：对应按钮会打开给 ${salesEmail} 的人工采购邮件。请在收到人工确认的支付方式后再付款。`;
+  }
+}
+
+configurePurchaseLinks();
 
 function buildReservePayload(form) {
   const formData = new FormData(form);
