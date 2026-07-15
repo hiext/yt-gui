@@ -70,14 +70,16 @@ yt-dlp 可视化桌面下载器，面向普通用户的图形化视频/音频下
 
    ```bash
    mkdir -p ~/.local/share/applications
-   cat > ~/.local/share/applications/hiext-yt-gui.desktop << 'EOF'
+   cat > ~/.local/share/applications/com.hiext.ytgui.desktop << 'EOF'
    [Desktop Entry]
+   Type=Application
    Name=Hiext YT GUI
    Comment=yt-dlp visual downloader
    Exec=/path/to/hiext-yt-gui/hiext_yt_gui
    Icon=/path/to/hiext-yt-gui/data/flutter_assets/assets/branding/hiext-yt-logo-mark.png
-   Type=Application
-   Categories=Utility;Video;
+   Terminal=false
+   Categories=AudioVideo;
+   StartupWMClass=com.hiext.ytgui
    EOF
    ```
 

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Hiext YT GUI
+Comment=yt-dlp visual downloader
+GenericName=Video Downloader
+Exec=/opt/hiext-yt-gui/hiext_yt_gui
+Icon=com.hiext.ytgui
+Terminal=false
+Categories=AudioVideo;
+Keywords=video;download;youtube;bilibili;yt-dlp;clip;ffmpeg;
+StartupWMClass=com.hiext.ytgui
