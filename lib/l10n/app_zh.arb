@@ -86,15 +86,21 @@
   "cutAllClips": "一键切割 ({count})",
   "@cutAllClips": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "allClipsCut": "全部已切割",
   "cuttingProgress": "切割中 {completed}/{total}",
   "@cuttingProgress": {
     "placeholders": {
-      "completed": {"type": "int"},
-      "total": {"type": "int"}
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "reCut": "重新切割",
@@ -488,8 +494,12 @@
   "settingsSavedAt": "已于 {hour}:{minute} 保存",
   "@settingsSavedAt": {
     "placeholders": {
-      "hour": { "type": "String" },
-      "minute": { "type": "String" }
+      "hour": {
+        "type": "String"
+      },
+      "minute": {
+        "type": "String"
+      }
     }
   },
   "licenseNavLabel": "授权",
@@ -501,12 +511,20 @@
   "licenseRefreshSuccess": "授权和设备状态已刷新。",
   "licenseRefreshFailed": "无法在线刷新，已保留本地授权。请检查网络后重试。详情：{error}",
   "@licenseRefreshFailed": {
-    "placeholders": { "error": { "type": "String" } }
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "licenseCurrentDeviceReleased": "本设备已释放，应用已恢复为免费版。",
   "licenseOperationFailed": "操作失败，现有授权和设备状态均未清除。请解决问题后重试。详情：{error}",
   "@licenseOperationFailed": {
-    "placeholders": { "error": { "type": "String" } }
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "licensePurchaseStepsTitle": "购买与激活",
   "licenseTeamPlanSummary": "Team：¥298/年 · 10 台设备 · 云同步",
@@ -526,14 +544,22 @@
   "licensePurchaseEmailOpened": "已打开邮件应用并填好采购信息。发送邮件并收到激活码后，请回到这里激活。",
   "licensePurchaseOpenFailed": "无法打开购买入口，请手动访问或打开此地址：{url}",
   "@licensePurchaseOpenFailed": {
-    "placeholders": { "url": { "type": "String" } }
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
   },
   "licenseDevicesTitle": "已激活设备",
   "licenseDeviceUsage": "已用 {count} / {max} 个席位",
   "@licenseDeviceUsage": {
     "placeholders": {
-      "count": { "type": "int" },
-      "max": { "type": "int" }
+      "count": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
     }
   },
   "licenseNoDevices": "暂未获取到在线设备列表。",
@@ -543,21 +569,68 @@
   "licenseDeactivateCurrent": "释放本设备（取消激活）",
   "licensePlatform": "平台：{platform}",
   "@licensePlatform": {
-    "placeholders": { "platform": { "type": "String" } }
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
   },
   "licenseLastSeen": "最近在线：{date}",
   "@licenseLastSeen": {
-    "placeholders": { "date": { "type": "String" } }
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
   },
   "licenseReleaseDeviceTitle": "释放设备席位？",
   "licenseReleaseDeviceConfirm": "确定释放“{name}”吗？该设备下次校验授权时将失去付费功能。",
   "@licenseReleaseDeviceConfirm": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "licenseReleaseDeviceAction": "释放",
   "licenseCancel": "取消",
   "licenseDeviceReleased": "已释放 {name}，空出的席位可用于其他设备。",
   "@licenseDeviceReleased": {
-    "placeholders": { "name": { "type": "String" } }
-  }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "voiceSwap": "换声",
+  "voiceSwapTitle": "一键换声",
+  "voiceSwapDesc": "全程离线。替换视频人声为目标音色，背景音乐完整保留，不上传任何数据。",
+  "voiceSwapFirstRunNote": "首次使用需下载约 325MB 模型（仅一次），随后全程本地可用。",
+  "voiceSwapPickVideo": "选择视频",
+  "voiceSwapPresetVoiceLabel": "目标音色（内置预设）",
+  "voiceSwapStart": "开始换声",
+  "voiceSwapCancel": "取消",
+  "voiceSwapRunning": "处理中…",
+  "voiceSwapDoneTitle": "换声完成",
+  "voiceSwapOpenOutputFolder": "打开输出目录",
+  "voiceSwapReset": "换一个视频",
+  "voiceSwapPresetFemale": "女声",
+  "voiceSwapPresetMale": "男声",
+  "voiceSwapPresetZfXiaobei": "小北",
+  "voiceSwapPresetZfXiaoni": "小妮",
+  "voiceSwapPresetZfXiaoxiao": "小晓",
+  "voiceSwapPresetZfXiaoyi": "小艺",
+  "voiceSwapPresetZmYunjian": "云健",
+  "voiceSwapPresetZmYunxi": "云希",
+  "voiceSwapPresetZmYunxia": "云夏",
+  "voiceSwapPresetZmYunyang": "云扬",
+  "voiceSwapSettingsTitle": "换声设置",
+  "voiceSwapSettingsModelDir": "换声模型目录",
+  "voiceSwapSettingsModelDirHint": "留空使用默认目录（应用数据目录，模型在其下 models/）；模型只存本地、不随安装包分发",
+  "voiceSwapSettingsPresetVoice": "默认音色",
+  "voiceSwapSettingsAutoDownload": "自动下载模型",
+  "voiceSwapSettingsAutoDownloadHint": "首次使用时自动下载约 325MB 模型；关闭后模型缺失会直接报错",
+  "voiceSwapSettingsSeparationBin": "分离 CLI 路径（可选）",
+  "voiceSwapSettingsSeparationBinHint": "最高优先级，须指向 sherpa-onnx-offline-source-separation 可执行文件",
+  "voiceSwapSettingsLicenseNote": "模型许可：UVR（MIT，保留署名）、SenseVoice（FunASR，保留模型名）、Kokoro（Apache-2.0）"
 }

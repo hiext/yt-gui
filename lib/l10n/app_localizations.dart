@@ -1885,6 +1885,192 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'已释放 {name}，空出的席位可用于其他设备。'**
   String licenseDeviceReleased(String name);
+
+  /// No description provided for @voiceSwap.
+  ///
+  /// In zh, this message translates to:
+  /// **'换声'**
+  String get voiceSwap;
+
+  /// No description provided for @voiceSwapTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'一键换声'**
+  String get voiceSwapTitle;
+
+  /// No description provided for @voiceSwapDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'全程离线。替换视频人声为目标音色，背景音乐完整保留，不上传任何数据。'**
+  String get voiceSwapDesc;
+
+  /// No description provided for @voiceSwapFirstRunNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'首次使用需下载约 325MB 模型（仅一次），随后全程本地可用。'**
+  String get voiceSwapFirstRunNote;
+
+  /// No description provided for @voiceSwapPickVideo.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择视频'**
+  String get voiceSwapPickVideo;
+
+  /// No description provided for @voiceSwapPresetVoiceLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标音色（内置预设）'**
+  String get voiceSwapPresetVoiceLabel;
+
+  /// No description provided for @voiceSwapStart.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始换声'**
+  String get voiceSwapStart;
+
+  /// No description provided for @voiceSwapCancel.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消'**
+  String get voiceSwapCancel;
+
+  /// No description provided for @voiceSwapRunning.
+  ///
+  /// In zh, this message translates to:
+  /// **'处理中…'**
+  String get voiceSwapRunning;
+
+  /// No description provided for @voiceSwapDoneTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'换声完成'**
+  String get voiceSwapDoneTitle;
+
+  /// No description provided for @voiceSwapOpenOutputFolder.
+  ///
+  /// In zh, this message translates to:
+  /// **'打开输出目录'**
+  String get voiceSwapOpenOutputFolder;
+
+  /// No description provided for @voiceSwapReset.
+  ///
+  /// In zh, this message translates to:
+  /// **'换一个视频'**
+  String get voiceSwapReset;
+
+  /// No description provided for @voiceSwapPresetFemale.
+  ///
+  /// In zh, this message translates to:
+  /// **'女声'**
+  String get voiceSwapPresetFemale;
+
+  /// No description provided for @voiceSwapPresetMale.
+  ///
+  /// In zh, this message translates to:
+  /// **'男声'**
+  String get voiceSwapPresetMale;
+
+  /// No description provided for @voiceSwapPresetZfXiaobei.
+  ///
+  /// In zh, this message translates to:
+  /// **'小北'**
+  String get voiceSwapPresetZfXiaobei;
+
+  /// No description provided for @voiceSwapPresetZfXiaoni.
+  ///
+  /// In zh, this message translates to:
+  /// **'小妮'**
+  String get voiceSwapPresetZfXiaoni;
+
+  /// No description provided for @voiceSwapPresetZfXiaoxiao.
+  ///
+  /// In zh, this message translates to:
+  /// **'小晓'**
+  String get voiceSwapPresetZfXiaoxiao;
+
+  /// No description provided for @voiceSwapPresetZfXiaoyi.
+  ///
+  /// In zh, this message translates to:
+  /// **'小艺'**
+  String get voiceSwapPresetZfXiaoyi;
+
+  /// No description provided for @voiceSwapPresetZmYunjian.
+  ///
+  /// In zh, this message translates to:
+  /// **'云健'**
+  String get voiceSwapPresetZmYunjian;
+
+  /// No description provided for @voiceSwapPresetZmYunxi.
+  ///
+  /// In zh, this message translates to:
+  /// **'云希'**
+  String get voiceSwapPresetZmYunxi;
+
+  /// No description provided for @voiceSwapPresetZmYunxia.
+  ///
+  /// In zh, this message translates to:
+  /// **'云夏'**
+  String get voiceSwapPresetZmYunxia;
+
+  /// No description provided for @voiceSwapPresetZmYunyang.
+  ///
+  /// In zh, this message translates to:
+  /// **'云扬'**
+  String get voiceSwapPresetZmYunyang;
+
+  /// No description provided for @voiceSwapSettingsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'换声设置'**
+  String get voiceSwapSettingsTitle;
+
+  /// No description provided for @voiceSwapSettingsModelDir.
+  ///
+  /// In zh, this message translates to:
+  /// **'换声模型目录'**
+  String get voiceSwapSettingsModelDir;
+
+  /// No description provided for @voiceSwapSettingsModelDirHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'留空使用默认目录（应用数据目录，模型在其下 models/）；模型只存本地、不随安装包分发'**
+  String get voiceSwapSettingsModelDirHint;
+
+  /// No description provided for @voiceSwapSettingsPresetVoice.
+  ///
+  /// In zh, this message translates to:
+  /// **'默认音色'**
+  String get voiceSwapSettingsPresetVoice;
+
+  /// No description provided for @voiceSwapSettingsAutoDownload.
+  ///
+  /// In zh, this message translates to:
+  /// **'自动下载模型'**
+  String get voiceSwapSettingsAutoDownload;
+
+  /// No description provided for @voiceSwapSettingsAutoDownloadHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'首次使用时自动下载约 325MB 模型；关闭后模型缺失会直接报错'**
+  String get voiceSwapSettingsAutoDownloadHint;
+
+  /// No description provided for @voiceSwapSettingsSeparationBin.
+  ///
+  /// In zh, this message translates to:
+  /// **'分离 CLI 路径（可选）'**
+  String get voiceSwapSettingsSeparationBin;
+
+  /// No description provided for @voiceSwapSettingsSeparationBinHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'最高优先级，须指向 sherpa-onnx-offline-source-separation 可执行文件'**
+  String get voiceSwapSettingsSeparationBinHint;
+
+  /// No description provided for @voiceSwapSettingsLicenseNote.
+  ///
+  /// In zh, this message translates to:
+  /// **'模型许可：UVR（MIT，保留署名）、SenseVoice（FunASR，保留模型名）、Kokoro（Apache-2.0）'**
+  String get voiceSwapSettingsLicenseNote;
 }
 
 class _AppLocalizationsDelegate

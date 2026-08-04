@@ -996,4 +996,101 @@ class AppLocalizationsZh extends AppLocalizations {
   String licenseDeviceReleased(String name) {
     return '已释放 $name，空出的席位可用于其他设备。';
   }
+
+  @override
+  String get voiceSwap => '换声';
+
+  @override
+  String get voiceSwapTitle => '一键换声';
+
+  @override
+  String get voiceSwapDesc => '全程离线。替换视频人声为目标音色，背景音乐完整保留，不上传任何数据。';
+
+  @override
+  String get voiceSwapFirstRunNote => '首次使用需下载约 325MB 模型（仅一次），随后全程本地可用。';
+
+  @override
+  String get voiceSwapPickVideo => '选择视频';
+
+  @override
+  String get voiceSwapPresetVoiceLabel => '目标音色（内置预设）';
+
+  @override
+  String get voiceSwapStart => '开始换声';
+
+  @override
+  String get voiceSwapCancel => '取消';
+
+  @override
+  String get voiceSwapRunning => '处理中…';
+
+  @override
+  String get voiceSwapDoneTitle => '换声完成';
+
+  @override
+  String get voiceSwapOpenOutputFolder => '打开输出目录';
+
+  @override
+  String get voiceSwapReset => '换一个视频';
+
+  @override
+  String get voiceSwapPresetFemale => '女声';
+
+  @override
+  String get voiceSwapPresetMale => '男声';
+
+  @override
+  String get voiceSwapPresetZfXiaobei => '小北';
+
+  @override
+  String get voiceSwapPresetZfXiaoni => '小妮';
+
+  @override
+  String get voiceSwapPresetZfXiaoxiao => '小晓';
+
+  @override
+  String get voiceSwapPresetZfXiaoyi => '小艺';
+
+  @override
+  String get voiceSwapPresetZmYunjian => '云健';
+
+  @override
+  String get voiceSwapPresetZmYunxi => '云希';
+
+  @override
+  String get voiceSwapPresetZmYunxia => '云夏';
+
+  @override
+  String get voiceSwapPresetZmYunyang => '云扬';
+
+  @override
+  String get voiceSwapSettingsTitle => '换声设置';
+
+  @override
+  String get voiceSwapSettingsModelDir => '换声模型目录';
+
+  @override
+  String get voiceSwapSettingsModelDirHint =>
+      '留空使用默认目录（应用数据目录，模型在其下 models/）；模型只存本地、不随安装包分发';
+
+  @override
+  String get voiceSwapSettingsPresetVoice => '默认音色';
+
+  @override
+  String get voiceSwapSettingsAutoDownload => '自动下载模型';
+
+  @override
+  String get voiceSwapSettingsAutoDownloadHint =>
+      '首次使用时自动下载约 325MB 模型；关闭后模型缺失会直接报错';
+
+  @override
+  String get voiceSwapSettingsSeparationBin => '分离 CLI 路径（可选）';
+
+  @override
+  String get voiceSwapSettingsSeparationBinHint =>
+      '最高优先级，须指向 sherpa-onnx-offline-source-separation 可执行文件';
+
+  @override
+  String get voiceSwapSettingsLicenseNote =>
+      '模型许可：UVR（MIT，保留署名）、SenseVoice（FunASR，保留模型名）、Kokoro（Apache-2.0）';
 }

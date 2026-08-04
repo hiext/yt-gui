@@ -1040,4 +1040,103 @@ class AppLocalizationsEn extends AppLocalizations {
   String licenseDeviceReleased(String name) {
     return 'Released $name. The seat can now be used on another device.';
   }
+
+  @override
+  String get voiceSwap => 'Voice Swap';
+
+  @override
+  String get voiceSwapTitle => 'One-Click Voice Swap';
+
+  @override
+  String get voiceSwapDesc =>
+      'Fully offline. Replace the video voice with a target voice while keeping the background music intact. Nothing is uploaded.';
+
+  @override
+  String get voiceSwapFirstRunNote =>
+      'First run downloads ~325MB of models (once). Afterwards everything works offline.';
+
+  @override
+  String get voiceSwapPickVideo => 'Pick Video';
+
+  @override
+  String get voiceSwapPresetVoiceLabel => 'Target Voice (Preset)';
+
+  @override
+  String get voiceSwapStart => 'Start Voice Swap';
+
+  @override
+  String get voiceSwapCancel => 'Cancel';
+
+  @override
+  String get voiceSwapRunning => 'Processing…';
+
+  @override
+  String get voiceSwapDoneTitle => 'Voice Swap Complete';
+
+  @override
+  String get voiceSwapOpenOutputFolder => 'Open Output Folder';
+
+  @override
+  String get voiceSwapReset => 'Swap Another Video';
+
+  @override
+  String get voiceSwapPresetFemale => 'Female';
+
+  @override
+  String get voiceSwapPresetMale => 'Male';
+
+  @override
+  String get voiceSwapPresetZfXiaobei => 'Xiaobei';
+
+  @override
+  String get voiceSwapPresetZfXiaoni => 'Xiaoni';
+
+  @override
+  String get voiceSwapPresetZfXiaoxiao => 'Xiaoxiao';
+
+  @override
+  String get voiceSwapPresetZfXiaoyi => 'Xiaoyi';
+
+  @override
+  String get voiceSwapPresetZmYunjian => 'Yunjian';
+
+  @override
+  String get voiceSwapPresetZmYunxi => 'Yunxi';
+
+  @override
+  String get voiceSwapPresetZmYunxia => 'Yunxia';
+
+  @override
+  String get voiceSwapPresetZmYunyang => 'Yunyang';
+
+  @override
+  String get voiceSwapSettingsTitle => 'Voice Swap Settings';
+
+  @override
+  String get voiceSwapSettingsModelDir => 'Voice Swap Model Directory';
+
+  @override
+  String get voiceSwapSettingsModelDirHint =>
+      'Leave empty for the default app-data directory (models live under models/). Models stay local and are not bundled with the app.';
+
+  @override
+  String get voiceSwapSettingsPresetVoice => 'Default Voice';
+
+  @override
+  String get voiceSwapSettingsAutoDownload => 'Auto-download Models';
+
+  @override
+  String get voiceSwapSettingsAutoDownloadHint =>
+      'Downloads ~325MB of models on first use. If disabled, missing models fail fast.';
+
+  @override
+  String get voiceSwapSettingsSeparationBin => 'Separation CLI Path (optional)';
+
+  @override
+  String get voiceSwapSettingsSeparationBinHint =>
+      'Highest priority. Must point to the sherpa-onnx-offline-source-separation executable.';
+
+  @override
+  String get voiceSwapSettingsLicenseNote =>
+      'Model licenses: UVR (MIT, keep attribution), SenseVoice (FunASR, keep model name), Kokoro (Apache-2.0).';
 }

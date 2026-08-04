@@ -86,15 +86,21 @@
   "cutAllClips": "Cut All ({count} uncut)",
   "@cutAllClips": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "allClipsCut": "All clips cut",
   "cuttingProgress": "Cutting {completed}/{total}",
   "@cuttingProgress": {
     "placeholders": {
-      "completed": {"type": "int"},
-      "total": {"type": "int"}
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "reCut": "Re-Cut",
@@ -488,8 +494,12 @@
   "settingsSavedAt": "Saved at {hour}:{minute}",
   "@settingsSavedAt": {
     "placeholders": {
-      "hour": { "type": "String" },
-      "minute": { "type": "String" }
+      "hour": {
+        "type": "String"
+      },
+      "minute": {
+        "type": "String"
+      }
     }
   },
   "licenseNavLabel": "License",
@@ -501,12 +511,20 @@
   "licenseRefreshSuccess": "License and device status refreshed.",
   "licenseRefreshFailed": "Could not refresh online. Your cached license is kept; check the network and retry. Details: {error}",
   "@licenseRefreshFailed": {
-    "placeholders": { "error": { "type": "String" } }
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "licenseCurrentDeviceReleased": "This device was released and the app is now on Free.",
   "licenseOperationFailed": "The operation failed. Nothing was cleared; retry after resolving the issue. Details: {error}",
   "@licenseOperationFailed": {
-    "placeholders": { "error": { "type": "String" } }
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "licensePurchaseStepsTitle": "Purchase and activation",
   "licenseTeamPlanSummary": "Team: ¥298/year · 10 devices · Cloud sync",
@@ -526,14 +544,22 @@
   "licensePurchaseEmailOpened": "Your mail app opened with purchase details. Send the email, then return here with the activation code you receive.",
   "licensePurchaseOpenFailed": "Could not open the purchase destination. Open this address manually: {url}",
   "@licensePurchaseOpenFailed": {
-    "placeholders": { "url": { "type": "String" } }
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
   },
   "licenseDevicesTitle": "Active devices",
   "licenseDeviceUsage": "{count} / {max} seats",
   "@licenseDeviceUsage": {
     "placeholders": {
-      "count": { "type": "int" },
-      "max": { "type": "int" }
+      "count": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
     }
   },
   "licenseNoDevices": "No online device list is available yet.",
@@ -543,21 +569,68 @@
   "licenseDeactivateCurrent": "Release this device (deactivate)",
   "licensePlatform": "Platform: {platform}",
   "@licensePlatform": {
-    "placeholders": { "platform": { "type": "String" } }
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
   },
   "licenseLastSeen": "Last seen: {date}",
   "@licenseLastSeen": {
-    "placeholders": { "date": { "type": "String" } }
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
   },
   "licenseReleaseDeviceTitle": "Release device seat?",
   "licenseReleaseDeviceConfirm": "Release “{name}”? That device will lose paid features on its next validation.",
   "@licenseReleaseDeviceConfirm": {
-    "placeholders": { "name": { "type": "String" } }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
   },
   "licenseReleaseDeviceAction": "Release",
   "licenseCancel": "Cancel",
   "licenseDeviceReleased": "Released {name}. The seat can now be used on another device.",
   "@licenseDeviceReleased": {
-    "placeholders": { "name": { "type": "String" } }
-  }
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "voiceSwap": "Voice Swap",
+  "voiceSwapTitle": "One-Click Voice Swap",
+  "voiceSwapDesc": "Fully offline. Replace the video voice with a target voice while keeping the background music intact. Nothing is uploaded.",
+  "voiceSwapFirstRunNote": "First run downloads ~325MB of models (once). Afterwards everything works offline.",
+  "voiceSwapPickVideo": "Pick Video",
+  "voiceSwapPresetVoiceLabel": "Target Voice (Preset)",
+  "voiceSwapStart": "Start Voice Swap",
+  "voiceSwapCancel": "Cancel",
+  "voiceSwapRunning": "Processing…",
+  "voiceSwapDoneTitle": "Voice Swap Complete",
+  "voiceSwapOpenOutputFolder": "Open Output Folder",
+  "voiceSwapReset": "Swap Another Video",
+  "voiceSwapPresetFemale": "Female",
+  "voiceSwapPresetMale": "Male",
+  "voiceSwapPresetZfXiaobei": "Xiaobei",
+  "voiceSwapPresetZfXiaoni": "Xiaoni",
+  "voiceSwapPresetZfXiaoxiao": "Xiaoxiao",
+  "voiceSwapPresetZfXiaoyi": "Xiaoyi",
+  "voiceSwapPresetZmYunjian": "Yunjian",
+  "voiceSwapPresetZmYunxi": "Yunxi",
+  "voiceSwapPresetZmYunxia": "Yunxia",
+  "voiceSwapPresetZmYunyang": "Yunyang",
+  "voiceSwapSettingsTitle": "Voice Swap Settings",
+  "voiceSwapSettingsModelDir": "Voice Swap Model Directory",
+  "voiceSwapSettingsModelDirHint": "Leave empty for the default app-data directory (models live under models/). Models stay local and are not bundled with the app.",
+  "voiceSwapSettingsPresetVoice": "Default Voice",
+  "voiceSwapSettingsAutoDownload": "Auto-download Models",
+  "voiceSwapSettingsAutoDownloadHint": "Downloads ~325MB of models on first use. If disabled, missing models fail fast.",
+  "voiceSwapSettingsSeparationBin": "Separation CLI Path (optional)",
+  "voiceSwapSettingsSeparationBinHint": "Highest priority. Must point to the sherpa-onnx-offline-source-separation executable.",
+  "voiceSwapSettingsLicenseNote": "Model licenses: UVR (MIT, keep attribution), SenseVoice (FunASR, keep model name), Kokoro (Apache-2.0)."
 }

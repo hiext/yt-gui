@@ -95,6 +95,11 @@ assets/bin/macos/ffprobe
 assets/bin/windows/yt-dlp.exe
 assets/bin/windows/ffmpeg.exe
 assets/bin/windows/ffprobe.exe
+# sherpa-onnx 分离 CLI（同 yt-dlp/ffmpeg 策略，发布前用 fetch_embedded_tools 物化）
+assets/bin/*/sherpa-sep/bin/*
+!assets/bin/*/sherpa-sep/bin/.gitkeep
+assets/bin/*/sherpa-sep/lib/*
+!assets/bin/*/sherpa-sep/lib/.gitkeep
 
 # Runtime cookie data
 .cookies/

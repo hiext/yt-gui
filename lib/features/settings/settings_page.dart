@@ -14,6 +14,9 @@ import '../../core/services/embedded_tool_executable.dart';
 import '../../core/services/embedded_tool_resolver.dart';
 import '../../core/services/log_service.dart';
 import '../../core/services/media_asset_repository.dart';
+import '../../core/models/voice_swap_models.dart';
+import '../../core/services/voice_swap/voice_swap_model_catalog.dart';
+import '../../features/voice_swap/voice_swap_preset_labels.dart';
 import '../../shared/widgets/section_card.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -50,6 +53,8 @@ class _SettingsPageState extends State<SettingsPage> {
   late final TextEditingController _aiCloudEndpointCtrl;
   late final TextEditingController _aiCloudApiKeyCtrl;
   late final TextEditingController _aiCloudModelCtrl;
+  late final TextEditingController _voiceSwapModelDirCtrl;
+  late final TextEditingController _voiceSwapSeparationBinCtrl;
   late final TextEditingController _personalCloudUrlCtrl;
   late final TextEditingController _personalCloudDeviceCtrl;
   late final TextEditingController _personalCloudPairingTokenCtrl;
@@ -78,6 +83,12 @@ class _SettingsPageState extends State<SettingsPage> {
     _ytDlpCtrl = TextEditingController(text: s.ytDlpPath ?? '');
     _ffmpegCtrl = TextEditingController(text: s.ffmpegPath ?? '');
     _aiAnalyzerCtrl = TextEditingController(text: s.aiAnalyzerCommand ?? '');
+    _voiceSwapModelDirCtrl = TextEditingController(
+      text: s.voiceSwap.modelDir ?? '',
+    );
+    _voiceSwapSeparationBinCtrl = TextEditingController(
+      text: s.voiceSwap.separationBinPath ?? '',
+    );
     final cloudConfig = s.selectedAiCloudConfig;
     _aiCloudNameCtrl = TextEditingController(text: cloudConfig?.name ?? '');
     _aiCloudEndpointCtrl = TextEditingController(
@@ -122,9 +133,18 @@ class _SettingsPageState extends State<SettingsPage> {
     changed |= _updateCtrlIfChanged(_aiAnalyzerCtrl, s.aiAnalyzerCommand ?? '');
     final cloudConfig = s.selectedAiCloudConfig;
     changed |= _updateCtrlIfChanged(_aiCloudNameCtrl, cloudConfig?.name ?? '');
-    changed |= _updateCtrlIfChanged(_aiCloudEndpointCtrl, cloudConfig?.endpoint ?? '');
-    changed |= _updateCtrlIfChanged(_aiCloudApiKeyCtrl, cloudConfig?.apiKey ?? '');
-    changed |= _updateCtrlIfChanged(_aiCloudModelCtrl, cloudConfig?.model ?? '');
+    changed |= _updateCtrlIfChanged(
+      _aiCloudEndpointCtrl,
+      cloudConfig?.endpoint ?? '',
+    );
+    changed |= _updateCtrlIfChanged(
+      _aiCloudApiKeyCtrl,
+      cloudConfig?.apiKey ?? '',
+    );
+    changed |= _updateCtrlIfChanged(
+      _aiCloudModelCtrl,
+      cloudConfig?.model ?? '',
+    );
     if (changed) _markDirty();
   }
 
@@ -427,6 +447,8 @@ class _SettingsPageState extends State<SettingsPage> {
                     ],
                   ),
                 ),
+                const SizedBox(height: 16),
+                _buildVoiceSwapSection(l10n, settings),
                 const SizedBox(height: 16),
                 SectionCard(
                   title: l10n.aiClipAnalysis,
@@ -869,6 +891,140 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  Widget _buildVoiceSwapSection(
+    AppLocalizations l10n,
+    DownloadSettings settings,
+  ) {
+    final voiceSwap = settings.voiceSwap;
+    // 持久化的音色 id 可能来自旧版本，不在清单内时回退到第一个预设。
+    final presets = VoiceSwapModelCatalog.presetVoices;
+    final presetValue = presets.any((v) => v.id == voiceSwap.presetVoice)
+        ? voiceSwap.presetVoice
+        : presets.first.id;
+    return SectionCard(
+      title: l10n.voiceSwapSettingsTitle,
+      subtitle: l10n.voiceSwapFirstRunNote,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextFormField(
+            key: const Key('voice-swap-model-dir-field'),
+            controller: _voiceSwapModelDirCtrl,
+            decoration: InputDecoration(
+              labelText: l10n.voiceSwapSettingsModelDir,
+              helperText: l10n.voiceSwapSettingsModelDirHint,
+              border: const OutlineInputBorder(),
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.folder_open_outlined),
+                tooltip: l10n.browseFile,
+                onPressed: () => _browseInto(
+                  _voiceSwapModelDirCtrl,
+                  (path) =>
+                      _updateVoiceSwap(voiceSwap.copyWith(modelDir: path)),
+                ),
+              ),
+            ),
+            onChanged: (v) => _updateVoiceSwap(
+              voiceSwap.copyWith(modelDir: v.trim().isEmpty ? null : v.trim()),
+            ),
+          ),
+          const SizedBox(height: 16),
+          DropdownButtonFormField<String>(
+            key: const Key('voice-swap-preset-field'),
+            initialValue: presetValue,
+            isExpanded: true,
+            decoration: InputDecoration(
+              labelText: l10n.voiceSwapSettingsPresetVoice,
+              border: const OutlineInputBorder(),
+            ),
+            items: [
+              for (final voice in presets)
+                DropdownMenuItem(
+                  value: voice.id,
+                  child: Text(
+                    '${voiceSwapPresetLabel(l10n, voice)}'
+                    '（${voiceSwapPresetGender(l10n, voice)}）',
+                  ),
+                ),
+            ],
+            onChanged: (v) {
+              if (v != null) {
+                _updateVoiceSwap(voiceSwap.copyWith(presetVoice: v));
+              }
+            },
+          ),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            key: const Key('voice-swap-auto-download-switch'),
+            contentPadding: EdgeInsets.zero,
+            title: Text(l10n.voiceSwapSettingsAutoDownload),
+            subtitle: Text(l10n.voiceSwapSettingsAutoDownloadHint),
+            value: voiceSwap.autoDownloadModels,
+            onChanged: (v) =>
+                _updateVoiceSwap(voiceSwap.copyWith(autoDownloadModels: v)),
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            key: const Key('voice-swap-separation-bin-field'),
+            controller: _voiceSwapSeparationBinCtrl,
+            decoration: InputDecoration(
+              labelText: l10n.voiceSwapSettingsSeparationBin,
+              helperText: l10n.voiceSwapSettingsSeparationBinHint,
+              border: const OutlineInputBorder(),
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.folder_open_outlined),
+                tooltip: l10n.browseFile,
+                onPressed: () => _browseInto(
+                  _voiceSwapSeparationBinCtrl,
+                  (path) => _updateVoiceSwap(
+                    voiceSwap.copyWith(separationBinPath: path),
+                  ),
+                ),
+              ),
+            ),
+            onChanged: (v) => _updateVoiceSwap(
+              voiceSwap.copyWith(
+                separationBinPath: v.trim().isEmpty ? null : v.trim(),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            l10n.voiceSwapSettingsLicenseNote,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _updateVoiceSwap(VoiceSwapSettings voiceSwap) {
+    _markDirty();
+    widget.controller.updateSettings(
+      widget.controller.settings.copyWith(voiceSwap: voiceSwap),
+    );
+  }
+
+  Future<void> _browseInto(
+    TextEditingController ctrl,
+    void Function(String path) apply,
+  ) async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final path = await _filePicker.pickFile(
+        title: l10n.filePickerExecutableTitle,
+      );
+      if (path != null && path.isNotEmpty) {
+        ctrl.text = path;
+        apply(path);
+      }
+    } on FilePickerUnavailableException {
+      _showFilePickerUnavailable();
+    }
+  }
+
   void _markDirty() {
     if (_saved) setState(() => _saved = false);
   }
@@ -1105,7 +1261,8 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildPersonalCloudSection() {
-    final cloudSyncEnabled = widget.entitlementsProvider?.call().cloudSyncEnabled ??
+    final cloudSyncEnabled =
+        widget.entitlementsProvider?.call().cloudSyncEnabled ??
         Entitlements.forTier(LicenseTier.free).cloudSyncEnabled;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1335,9 +1492,9 @@ class _SettingsPageState extends State<SettingsPage> {
         _personalCloudStatusMessage = 'Pair device failed: $error';
         _personalCloudStatusIsError = true;
       });
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        SnackBar(content: Text('Pair device failed: $error')),
-      );
+      ScaffoldMessenger.maybeOf(
+        context,
+      )?.showSnackBar(SnackBar(content: Text('Pair device failed: $error')));
     } finally {
       if (mounted) {
         setState(() => _isPairingPersonalCloud = false);
@@ -1388,8 +1545,9 @@ class _SettingsPageState extends State<SettingsPage> {
       final bundle = const EmbeddedToolResolver().resolveBundle(
         settings: settings,
       );
-      final ytDlpPath = await EmbeddedToolExecutableResolver()
-          .ensureExecutable(bundle.ytDlp);
+      final ytDlpPath = await EmbeddedToolExecutableResolver().ensureExecutable(
+        bundle.ytDlp,
+      );
       final result = await service.importFromBrowser(
         browser: browser,
         domain: domain,
@@ -1411,10 +1569,7 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  Future<void> _importCookieFile(
-    String domain,
-    String browser,
-  ) async {
+  Future<void> _importCookieFile(String domain, String browser) async {
     final l10n = AppLocalizations.of(context)!;
     final path = await _filePicker.pickFile(title: l10n.cookieFilePickerTitle);
     if (path == null) return;
@@ -1591,9 +1746,9 @@ class _SettingsPageState extends State<SettingsPage> {
 
   void _showFilePickerUnavailable() {
     final l10n = AppLocalizations.of(context)!;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.filePickerUnavailable)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.filePickerUnavailable)));
   }
 }
 

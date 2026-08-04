@@ -6,6 +6,8 @@ import '../core/controllers/download_controller.dart';
 import '../core/controllers/post_process_controller.dart';
 import '../core/controllers/license_controller.dart';
 import '../core/controllers/settings_controller.dart';
+import '../core/controllers/voice_swap_controller.dart';
+import '../core/models/voice_swap_models.dart';
 import '../core/services/ai_clip_analyzer_executor.dart';
 import '../core/services/auto_clip_service.dart';
 import '../core/services/auto_clip_orchestrator.dart';
@@ -15,6 +17,11 @@ import '../core/services/post_process_repository.dart';
 import '../core/services/process_yt_dlp_executor.dart';
 import '../core/services/settings_repository.dart';
 import '../core/services/task_repository.dart';
+import '../core/services/voice_swap/sherpa_onnx_engine.dart';
+import '../core/services/voice_swap/source_separation_executor.dart';
+import '../core/services/voice_swap/voice_swap_audio_assembler.dart';
+import '../core/services/voice_swap/voice_swap_model_manager.dart';
+import '../core/services/voice_swap/voice_swap_pipeline.dart';
 import '../features/clips/clip_library_page.dart';
 import '../l10n/app_localizations.dart';
 import '../features/downloads/downloads_page.dart';
@@ -23,11 +30,21 @@ import '../features/history/history_page.dart';
 import '../features/license/license_page.dart';
 import '../features/home/home_page.dart';
 import '../features/settings/settings_page.dart';
+import '../features/voice_swap/voice_swap_page.dart';
 import '../shared/widgets/debug_log_overlay.dart';
 import '../shared/widgets/section_card.dart';
 import '../core/services/log_service.dart';
 
-enum AppSection { home, downloads, clips, history, license, settings, help }
+enum AppSection {
+  home,
+  downloads,
+  voiceSwap,
+  clips,
+  history,
+  license,
+  settings,
+  help,
+}
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key, this.settingsController, this.downloadController});
@@ -43,6 +60,7 @@ class _AppShellState extends State<AppShell> {
   AppSection _section = AppSection.home;
   late final SettingsController _settingsController;
   late final DownloadController _downloadController;
+  late final VoiceSwapController _voiceSwapController;
   late final PostProcessController _postProcessController;
   late final LicenseController _licenseController;
   bool _startupDisclaimerHandled = false;
@@ -63,6 +81,10 @@ class _AppShellState extends State<AppShell> {
     }
     _settingsController.addListener(_handleSettingsChanged);
     _syncLogLevel();
+    _voiceSwapController = VoiceSwapController(
+      pipelineFactory: _buildVoiceSwapPipeline,
+      settingsProvider: () => _settingsController.settings.voiceSwap,
+    );
     _licenseController = LicenseController();
     unawaited(_licenseController.load());
     LogService.instance.info(
@@ -105,10 +127,22 @@ class _AppShellState extends State<AppShell> {
     _settingsController.updateSettings(updated);
   }
 
+  VoiceSwapPipeline _buildVoiceSwapPipeline(VoiceSwapSettings settings) {
+    return VoiceSwapPipeline(
+      modelManager: VoiceSwapModelManager(settings: settings),
+      separationExecutor: SourceSeparationExecutor(),
+      engine: SherpaOnnxEngine(),
+      assembler: VoiceSwapAudioAssembler(),
+      downloadSettings: _settingsController.settings,
+      voiceSwapSettings: settings,
+    );
+  }
+
   @override
   void dispose() {
     _settingsController.removeListener(_handleSettingsChanged);
     _downloadController.dispose();
+    _voiceSwapController.dispose();
     _postProcessController.dispose();
     _settingsController.dispose();
     _licenseController.dispose();
@@ -127,6 +161,7 @@ class _AppShellState extends State<AppShell> {
         licenseController: _licenseController,
         onUpgrade: () => _selectSection(AppSection.license),
       ),
+      VoiceSwapPage(controller: _voiceSwapController),
       ClipLibraryPage(controller: _postProcessController),
       HistoryPage(controller: _downloadController),
       LicenseStatusPage(controller: _licenseController),
@@ -154,6 +189,7 @@ class _AppShellState extends State<AppShell> {
                   });
                 },
                 labelType: NavigationRailLabelType.all,
+                scrollable: true,
                 leading: Padding(
                   padding: const EdgeInsets.only(top: 16),
                   child: GestureDetector(
@@ -175,6 +211,11 @@ class _AppShellState extends State<AppShell> {
                     icon: const Icon(Icons.downloading_outlined),
                     selectedIcon: const Icon(Icons.downloading),
                     label: Text(l10n.downloading),
+                  ),
+                  NavigationRailDestination(
+                    icon: const Icon(Icons.record_voice_over_outlined),
+                    selectedIcon: const Icon(Icons.record_voice_over),
+                    label: Text(l10n.voiceSwap),
                   ),
                   NavigationRailDestination(
                     icon: const Icon(Icons.auto_awesome_motion_outlined),

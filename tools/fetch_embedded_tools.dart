@@ -168,6 +168,8 @@ class _ToolArtifact {
     this.mirrors = const <String>[],
     this.sha256,
     this.extract,
+    this.extractPaths = const <String>[],
+    this.outputDir,
     this.manual = false,
     this.manualReason,
   });
@@ -182,6 +184,8 @@ class _ToolArtifact {
   final List<String> mirrors;
   final String? sha256;
   final String? extract;
+  final List<String> extractPaths;
+  final String? outputDir;
   final bool manual;
   final String? manualReason;
 
@@ -227,13 +231,15 @@ class _ToolArtifact {
       id: requiredString('id'),
       tool: requiredString('tool'),
       platform: requiredString('platform'),
-      output: requiredString('output'),
+      output: optionalString('output') ?? '',
       archiveType: optionalString('archiveType') ?? 'file',
       chmod: json['chmod'] == true,
       url: optionalString('url'),
       mirrors: optionalStringList('mirrors'),
       sha256: optionalString('sha256'),
       extract: optionalString('extract'),
+      extractPaths: optionalStringList('extractPaths'),
+      outputDir: optionalString('outputDir'),
       manual: json['manual'] == true,
       manualReason: optionalString('manualReason'),
     );
@@ -247,18 +253,29 @@ class _ToolArtifact {
     final downloadFile = File('${tempDir.path}${Platform.pathSeparator}$id');
     await _downloadVerified(downloadFile, lockPath: lockPath, updateLock: updateLock);
 
+    if ((output.isEmpty) &&
+        !(archiveType != 'file' && outputDir != null && extractPaths.isNotEmpty)) {
+      throw _ToolException(
+        '$id is missing "output" (or "outputDir" + "extractPaths" for archives)',
+      );
+    }
+
     final outputFile = File(output);
     outputFile.parent.createSync(recursive: true);
 
     if (archiveType == 'file') {
       await downloadFile.copy(outputFile.path);
+      if (chmod && !Platform.isWindows) {
+        await _run('chmod', ['+x', outputFile.path]);
+      }
+    } else if (outputDir != null && extractPaths.isNotEmpty) {
+      await _extractDir(downloadFile, tempDir);
     } else {
       final extracted = await _extract(downloadFile, tempDir);
       await extracted.copy(outputFile.path);
-    }
-
-    if (chmod && !Platform.isWindows) {
-      await _run('chmod', ['+x', outputFile.path]);
+      if (chmod && !Platform.isWindows) {
+        await _run('chmod', ['+x', outputFile.path]);
+      }
     }
   }
 
@@ -318,6 +335,46 @@ class _ToolArtifact {
     );
   }
 
+    Future<void> _extractDir(File archive, Directory tempDir) async {
+    final extractDir = Directory(
+      '${tempDir.path}${Platform.pathSeparator}${archive.uri.pathSegments.last}_extract',
+    )..createSync(recursive: true);
+
+    if (archiveType == 'tar.bz2') {
+      await _run('tar', ['-xjf', archive.path, '-C', extractDir.path]);
+    } else {
+      throw _ToolException('$id only supports archiveType tar.bz2 in directory mode');
+    }
+
+    final outputRoot = Directory(outputDir!);
+    for (final rawPath in extractPaths) {
+      final normalized = rawPath.replaceAll(r'\', '/');
+      final candidates = extractDir
+          .listSync(recursive: true)
+          .whereType<File>()
+          .where((file) {
+            final normalizedPath = file.path.replaceAll(r'\', '/');
+            return normalizedPath.endsWith('/$normalized') ||
+                normalizedPath.endsWith(normalized);
+          })
+          .toList(growable: false);
+      if (candidates.isEmpty) {
+        throw _ToolException('$id did not contain expected path: $rawPath');
+      }
+      final source = candidates.first;
+      final destPath =
+          '${outputRoot.path}${Platform.pathSeparator}${normalized.replaceAll('/', Platform.pathSeparator)}';
+      final dest = File(destPath);
+      dest.parent.createSync(recursive: true);
+      source.copySync(dest.path);
+      if (chmod && !Platform.isWindows && normalized.startsWith('bin/')) {
+        await _run('chmod', ['+x', dest.path]);
+      }
+      stdout.writeln('  extracted $rawPath -> ${dest.path}');
+    }
+  }
+
+
   Future<File> _extract(File archive, Directory tempDir) async {
     if (extract == null) {
       throw _ToolException('$id archive is missing extract path');
@@ -340,6 +397,8 @@ class _ToolArtifact {
       }
     } else if (archiveType == 'tar.xz') {
       await _run('tar', ['-xJf', archive.path, '-C', extractDir.path]);
+    } else if (archiveType == 'tar.bz2') {
+      await _run('tar', ['-xjf', archive.path, '-C', extractDir.path]);
     } else {
       throw _ToolException('$id has unsupported archiveType: $archiveType');
     }
@@ -419,14 +478,14 @@ Future<void> _run(String executable, List<String> arguments) async {
 
 void _printHelp() {
   stdout.writeln('''
-Fetch locked yt-dlp/ffmpeg binaries into assets/bin/<platform>/.
+Fetch locked yt-dlp/ffmpeg/sherpa-onnx binaries into assets/bin/<platform>/.
 
 Usage:
   dart run tools/fetch_embedded_tools.dart [options]
 
 Options:
   --platform=linux,macos,windows  Limit platforms.
-  --tool=yt-dlp,ffmpeg            Limit tools.
+  --tool=yt-dlp,ffmpeg,sherpa-onnx-separation  Limit tools.
   --lock=PATH                     Lock file path.
   --dry-run                       Show planned downloads only.
   --keep-temp                     Keep downloaded archives for debugging.
