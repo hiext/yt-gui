@@ -854,4 +854,243 @@ class AppLocalizationsZh extends AppLocalizations {
   String settingsSavedAt(String hour, String minute) {
     return '已于 $hour:$minute 保存';
   }
+
+  @override
+  String get licenseNavLabel => '授权';
+
+  @override
+  String get licenseTitle => '授权与套餐';
+
+  @override
+  String get licenseActivate => '激活';
+
+  @override
+  String get licenseActivating => '激活中…';
+
+  @override
+  String get licenseRefresh => '刷新授权与设备';
+
+  @override
+  String get licenseRefreshing => '刷新中…';
+
+  @override
+  String get licenseRefreshSuccess => '授权和设备状态已刷新。';
+
+  @override
+  String licenseRefreshFailed(String error) {
+    return '无法在线刷新，已保留本地授权。请检查网络后重试。详情：$error';
+  }
+
+  @override
+  String get licenseCurrentDeviceReleased => '本设备已释放，应用已恢复为免费版。';
+
+  @override
+  String licenseOperationFailed(String error) {
+    return '操作失败，现有授权和设备状态均未清除。请解决问题后重试。详情：$error';
+  }
+
+  @override
+  String get licensePurchaseStepsTitle => '购买与激活';
+
+  @override
+  String get licenseTeamPlanSummary => 'Team：¥298/年 · 10 台设备 · 云同步';
+
+  @override
+  String get licensePurchaseStepChoose => '选择套餐';
+
+  @override
+  String get licensePurchaseStepChooseOnline => '打开官方购买页并完成下单。';
+
+  @override
+  String get licensePurchaseStepChooseEmail => '发送邮件到 orders@hiext.com 获取付款方式。';
+
+  @override
+  String get licensePurchaseStepChooseMixed =>
+      '已配置的套餐打开安全购买页；未配置的套餐通过 orders@hiext.com 邮件购买。';
+
+  @override
+  String get licensePurchaseStepReceive => '查收激活码';
+
+  @override
+  String get licensePurchaseStepReceiveDescription => '付款完成后，激活码会发送到下单邮箱。';
+
+  @override
+  String get licensePurchaseStepActivate => '回到这里激活';
+
+  @override
+  String get licensePurchaseStepActivateDescription =>
+      '在下方粘贴激活码，激活后刷新即可查看授权和设备状态。';
+
+  @override
+  String get licenseBuyPro => '购买 Pro';
+
+  @override
+  String get licenseBuyTeam => '购买 Team';
+
+  @override
+  String get licenseEmailBuyPro => '邮件购买 Pro';
+
+  @override
+  String get licenseEmailBuyTeam => '邮件购买 Team';
+
+  @override
+  String get licensePurchasePageOpened => '已在浏览器打开购买页。完成下单并收到激活码后，请回到这里激活。';
+
+  @override
+  String get licensePurchaseEmailOpened =>
+      '已打开邮件应用并填好采购信息。发送邮件并收到激活码后，请回到这里激活。';
+
+  @override
+  String licensePurchaseOpenFailed(String url) {
+    return '无法打开购买入口，请手动访问或打开此地址：$url';
+  }
+
+  @override
+  String get licenseDevicesTitle => '已激活设备';
+
+  @override
+  String licenseDeviceUsage(int count, int max) {
+    return '已用 $count / $max 个席位';
+  }
+
+  @override
+  String get licenseNoDevices => '暂未获取到在线设备列表。';
+
+  @override
+  String get licenseNoDevicesHint => '点击刷新加载已激活设备；服务暂时不可用时，本地授权不会被清除。';
+
+  @override
+  String get licenseUnknownDevice => '未命名设备';
+
+  @override
+  String get licenseCurrentDevice => '本设备';
+
+  @override
+  String get licenseDeactivateCurrent => '释放本设备（取消激活）';
+
+  @override
+  String licensePlatform(String platform) {
+    return '平台：$platform';
+  }
+
+  @override
+  String licenseLastSeen(String date) {
+    return '最近在线：$date';
+  }
+
+  @override
+  String get licenseReleaseDeviceTitle => '释放设备席位？';
+
+  @override
+  String licenseReleaseDeviceConfirm(String name) {
+    return '确定释放“$name”吗？该设备下次校验授权时将失去付费功能。';
+  }
+
+  @override
+  String get licenseReleaseDeviceAction => '释放';
+
+  @override
+  String get licenseCancel => '取消';
+
+  @override
+  String licenseDeviceReleased(String name) {
+    return '已释放 $name，空出的席位可用于其他设备。';
+  }
+
+  @override
+  String get voiceSwap => '换声';
+
+  @override
+  String get voiceSwapTitle => '一键换声';
+
+  @override
+  String get voiceSwapDesc => '全程离线。替换视频人声为目标音色，背景音乐完整保留，不上传任何数据。';
+
+  @override
+  String get voiceSwapFirstRunNote => '首次使用需下载约 325MB 模型（仅一次），随后全程本地可用。';
+
+  @override
+  String get voiceSwapPickVideo => '选择视频';
+
+  @override
+  String get voiceSwapPresetVoiceLabel => '目标音色（内置预设）';
+
+  @override
+  String get voiceSwapStart => '开始换声';
+
+  @override
+  String get voiceSwapCancel => '取消';
+
+  @override
+  String get voiceSwapRunning => '处理中…';
+
+  @override
+  String get voiceSwapDoneTitle => '换声完成';
+
+  @override
+  String get voiceSwapOpenOutputFolder => '打开输出目录';
+
+  @override
+  String get voiceSwapReset => '换一个视频';
+
+  @override
+  String get voiceSwapPresetFemale => '女声';
+
+  @override
+  String get voiceSwapPresetMale => '男声';
+
+  @override
+  String get voiceSwapPresetZfXiaobei => '小北';
+
+  @override
+  String get voiceSwapPresetZfXiaoni => '小妮';
+
+  @override
+  String get voiceSwapPresetZfXiaoxiao => '小晓';
+
+  @override
+  String get voiceSwapPresetZfXiaoyi => '小艺';
+
+  @override
+  String get voiceSwapPresetZmYunjian => '云健';
+
+  @override
+  String get voiceSwapPresetZmYunxi => '云希';
+
+  @override
+  String get voiceSwapPresetZmYunxia => '云夏';
+
+  @override
+  String get voiceSwapPresetZmYunyang => '云扬';
+
+  @override
+  String get voiceSwapSettingsTitle => '换声设置';
+
+  @override
+  String get voiceSwapSettingsModelDir => '换声模型目录';
+
+  @override
+  String get voiceSwapSettingsModelDirHint =>
+      '留空使用默认目录（应用数据目录，模型在其下 models/）；模型只存本地、不随安装包分发';
+
+  @override
+  String get voiceSwapSettingsPresetVoice => '默认音色';
+
+  @override
+  String get voiceSwapSettingsAutoDownload => '自动下载模型';
+
+  @override
+  String get voiceSwapSettingsAutoDownloadHint =>
+      '首次使用时自动下载约 325MB 模型；关闭后模型缺失会直接报错';
+
+  @override
+  String get voiceSwapSettingsSeparationBin => '分离 CLI 路径（可选）';
+
+  @override
+  String get voiceSwapSettingsSeparationBinHint =>
+      '最高优先级，须指向 sherpa-onnx-offline-source-separation 可执行文件';
+
+  @override
+  String get voiceSwapSettingsLicenseNote =>
+      '模型许可：UVR（MIT，保留署名）、SenseVoice（FunASR，保留模型名）、Kokoro（Apache-2.0）';
 }

@@ -45,6 +45,10 @@ dependencies:
     sdk: flutter
   intl: ^0.20.2
   ffi: ^2.2.0
+  sherpa_onnx: ^1.13.4
+  file_picker: ^11.0.3
+  record: ^7.1.1
+  archive: ^4.0.9
 
 dev_dependencies:
   flutter_test:
@@ -76,6 +80,13 @@ flutter:
     - assets/bin/linux/
     - assets/bin/macos/
     - assets/bin/windows/
+    # sherpa-sep 子目录需显式声明（Flutter 目录资产不递归）。
+    - assets/bin/linux/sherpa-sep/bin/
+    - assets/bin/linux/sherpa-sep/lib/
+    - assets/bin/macos/sherpa-sep/bin/
+    - assets/bin/macos/sherpa-sep/lib/
+    - assets/bin/windows/sherpa-sep/bin/
+    - assets/bin/windows/sherpa-sep/lib/
     - assets/branding/hiext-yt-logo-mark.png
 
   # To add assets to your application, add an assets section, like this:

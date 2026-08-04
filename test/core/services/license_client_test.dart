@@ -1,31 +1,91 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hiext_yt_gui/core/models/license_models.dart';
 import 'package:hiext_yt_gui/core/services/license_client.dart';
 
 void main() {
-  test('activate sends code + fingerprint via curl and parses tier/token', () async {
-    // Provide a fake curl via path override that writes a valid JSON response.
-    // The test writes a small shell script to /tmp that emulates curl.
+  test('activate sends code + fingerprint and parses tier/token', () async {
+    late List<String> arguments;
     final client = LicenseClient(
       baseUrl: 'https://dp-api.hiext.com/v1/license',
-      curlPath: '/usr/bin/curl', // real curl — integration test
+      processRunner: (executable, args) async {
+        arguments = args;
+        return ProcessResult(
+          1,
+          0,
+          jsonEncode({
+            'success': true,
+            'tier': 'pro',
+            'token': 'signed-token',
+            'maxDevices': 3,
+          }),
+          '',
+        );
+      },
     );
 
-    // This is an integration test against the live API.
-    // Skip if offline or Worker not deployed.
-    try {
-      final result = await client.activate(
-        code: 'HIEXT-G6TJ4-KQWHS-F5YDB-0ZTRH',
-        fingerprint: 'fp-test-curl-${DateTime.now().millisecondsSinceEpoch}',
-        platform: 'linux',
-      );
-      expect(result.tier, LicenseTier.pro);
-      expect(result.token.isNotEmpty, isTrue);
-      expect(result.maxDevices, 3);
-    } on LicenseClientException catch (e) {
-      // API reachable but code/device issue — still verifying curl path works
-      expect(e.message, contains('device limit'));
-    }
+    final result = await client.activate(
+      code: 'HIEXT-TEST',
+      fingerprint: 'fp-test',
+      platform: 'linux',
+    );
+
+    expect(result.tier, LicenseTier.pro);
+    expect(result.token, 'signed-token');
+    expect(result.maxDevices, 3);
+    expect(arguments.last, endsWith('/activate'));
+    final body = jsonDecode(arguments[arguments.indexOf('-d') + 1]);
+    expect(body['code'], 'HIEXT-TEST');
+    expect(body['fingerprint'], 'fp-test');
+  });
+
+  test('lists active devices and releases the selected device id', () async {
+    final requests = <List<String>>[];
+    final client = LicenseClient(
+      processRunner: (executable, args) async {
+        requests.add(args);
+        final isList = args.last.endsWith('/devices/list');
+        return ProcessResult(
+          requests.length,
+          0,
+          jsonEncode(
+            isList
+                ? {
+                    'success': true,
+                    'maxDevices': 3,
+                    'activeDevices': 1,
+                    'devices': [
+                      {
+                        'id': 'device-1',
+                        'deviceName': 'Desktop',
+                        'platform': 'linux',
+                        'lastSeenAt': '2026-07-15T10:00:00Z',
+                        'isCurrent': true,
+                      },
+                    ],
+                  }
+                : {'success': true, 'deactivatedDeviceId': 'device-1'},
+          ),
+          '',
+        );
+      },
+    );
+
+    final result = await client.listDevices(
+      code: 'HIEXT-TEST',
+      currentFingerprint: 'fp-test',
+    );
+    await client.deactivateDevice(code: 'HIEXT-TEST', deviceId: 'device-1');
+
+    expect(result.activeDevices, 1);
+    expect(result.devices.single.deviceName, 'Desktop');
+    expect(result.devices.single.isCurrent, isTrue);
+    expect(requests[0].last, endsWith('/devices/list'));
+    expect(requests[1].last, endsWith('/devices/deactivate'));
+    final releaseBody = jsonDecode(requests[1][requests[1].indexOf('-d') + 1]);
+    expect(releaseBody['deviceId'], 'device-1');
   });
 
   test('curl exits non-zero throws LicenseClientException', () async {
@@ -99,12 +159,14 @@ void main() {
         entitlementToken: 'tok',
         activatedAt: DateTime.utc(2026, 7, 4),
         graceUntil: DateTime.utc(2026, 7, 11),
+        maxDevices: 12,
       );
       final restored = LicenseState.decode(state.encode());
       expect(restored.tier, LicenseTier.team);
       expect(restored.code, 'HIEXT-ABCDE-12345-FGHIJ-67890');
       expect(restored.fingerprint, 'fp-1');
       expect(restored.graceUntil, DateTime.utc(2026, 7, 11));
+      expect(restored.maxDevices, 12);
     });
   });
 }

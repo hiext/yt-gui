@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-07-10",
+  "updatedAt": "2026-08-04",
   "policy": {
     "git": "Do not commit downloaded binaries. Keep this lock file and fetch them before release builds.",
     "ffmpeg": "Use LGPL builds by default. GPL or nonfree builds require explicit release/legal review."
@@ -96,6 +96,70 @@
       "manualReason": "No macOS FFmpeg binary is bundled by default. Use Homebrew/custom path for local testing, or add a signed/notarized supplier URL and SHA256 here before release.",
       "output": "assets/bin/macos/ffmpeg",
       "chmod": true
+    },
+    {
+      "id": "sherpa-onnx-sep-macos",
+      "tool": "sherpa-onnx-separation",
+      "platform": "macos",
+      "version": "1.13.4",
+      "source": "k2-fsa/sherpa-onnx GitHub release",
+      "license": "Apache-2.0（含 onnxruntime 第三方声明；模型权重许可另见换声功能文档）",
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.4/sherpa-onnx-v1.13.4-osx-universal2-shared.tar.bz2",
+      "mirrors": [],
+      "sha256": "02b9b0cf30819a18c6d5cf861aebf32336cb79958ab97a2b248227059678058b",
+      "size": 57473828,
+      "archiveType": "tar.bz2",
+      "extractPaths": [
+        "bin/sherpa-onnx-offline-source-separation",
+        "lib/libonnxruntime.1.27.0.dylib",
+        "lib/libsherpa-onnx-c-api.dylib",
+        "lib/libsherpa-onnx-cxx-api.dylib"
+      ],
+      "outputDir": "assets/bin/macos/sherpa-sep",
+      "chmod": true
+    },
+    {
+      "id": "sherpa-onnx-sep-linux",
+      "tool": "sherpa-onnx-separation",
+      "platform": "linux",
+      "version": "1.13.4",
+      "source": "k2-fsa/sherpa-onnx GitHub release",
+      "license": "Apache-2.0（含 onnxruntime 第三方声明；模型权重许可另见换声功能文档）",
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.4/sherpa-onnx-v1.13.4-linux-x64-shared.tar.bz2",
+      "mirrors": [],
+      "sha256": "18887dc13c7d313d0e0f6c164ed31715c27c1c2c4f71acd7c0147dc84cf02514",
+      "size": 27801563,
+      "archiveType": "tar.bz2",
+      "extractPaths": [
+        "bin/sherpa-onnx-offline-source-separation",
+        "lib/libonnxruntime.so",
+        "lib/libsherpa-onnx-c-api.so",
+        "lib/libsherpa-onnx-cxx-api.so"
+      ],
+      "outputDir": "assets/bin/linux/sherpa-sep",
+      "chmod": true
+    },
+    {
+      "id": "sherpa-onnx-sep-windows",
+      "tool": "sherpa-onnx-separation",
+      "platform": "windows",
+      "version": "1.13.4",
+      "source": "k2-fsa/sherpa-onnx GitHub release",
+      "license": "Apache-2.0（含 onnxruntime 第三方声明；模型权重许可另见换声功能文档）",
+      "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.4/sherpa-onnx-v1.13.4-win-x64-shared-MD-Release.tar.bz2",
+      "mirrors": [],
+      "sha256": "d4dacc8be5afe03f22ade4d50cfd587c03a625eaca8c41f2d99a24d3db463eab",
+      "size": 20034576,
+      "archiveType": "tar.bz2",
+      "extractPaths": [
+        "bin/sherpa-onnx-offline-source-separation.exe",
+        "lib/onnxruntime.dll",
+        "lib/onnxruntime_providers_shared.dll",
+        "lib/sherpa-onnx-c-api.dll",
+        "lib/sherpa-onnx-cxx-api.dll"
+      ],
+      "outputDir": "assets/bin/windows/sherpa-sep",
+      "chmod": false
     }
   ]
 }

@@ -40,3 +40,32 @@
 ## 免责声明
 
 这些工具仅用于用户在合法授权范围内处理可访问的媒体资源。本项目不提供受版权保护的内容，也不以下载、传播或获取盗版数字数据为目的。
+
+## sherpa-onnx（离线语音识别 / 合成 / 人声分离）
+
+换声功能使用 `k2-fsa/sherpa-onnx` 的运行时、命令行工具与模型权重，全部在首次使用时下载到用户模型目录（`VoiceSwapSettings.resolvedModelDir`），不随安装包分发、不提交仓库。
+
+### 内置 CLI（人声/伴奏分离）
+
+- 来源：`k2-fsa/sherpa-onnx` GitHub release，锁定 `v1.13.4` shared 构建
+- 锁文件条目：`sherpa-onnx-sep-macos` / `sherpa-onnx-sep-linux` / `sherpa-onnx-sep-windows`（tar.bz2 包，提取 `bin/sherpa-onnx-offline-source-separation` 与 `lib/` 动态库并保留相对路径）
+- 许可证：`Apache-2.0`
+- 解析顺序与 `yt-dlp`/`ffmpeg` 一致：设置页自定义路径最高优先，其次系统 `PATH`/常见目录，最后内置 `assets/bin/<platform>/sherpa-sep/`；macOS 需要动态库与 CLI 保持同目录（临时解压保留 bin/lib 相对结构）
+
+### 模型权重许可与署名要求
+
+| 模型 | 用途 | 许可边界 |
+|---|---|---|
+| `UVR_MDXNET_1_9703`（UVR-MDX-Net） | 人声/伴奏分离 | MIT，发布/分发需保留 UVR 署名 |
+| `silero_vad` | 语音活动检测分句 | MIT |
+| `sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8` | 语音识别（ASR） | 代码 MIT；权重遵循 FunASR 模型许可，需保留模型名 |
+| `kokoro-int8-multi-lang-v1_0` | 预设音色 TTS | Apache-2.0 |
+| `matcha-icefall-zh-baker` | 备选 TTS | baker 语料仅限非商用（默认不选） |
+| `sherpa-onnx-zipvoice-distill-int8-zh-en-emilia` | 声音克隆（v1.1） | Apache-2.0 |
+| `vocos_24khz` | 克隆 vocoder（v1.1） | Apache-2.0（按 sherpa-onnx 发行） |
+
+### 发布检查补充
+
+1. 换声模型默认在首次使用时下载（约 325MB：UVR 30MB + VAD 0.6MB + SenseVoice 163MB + Kokoro 132MB），发布说明需提示首次使用需要网络。
+2. 模型目录位于用户数据目录（macOS：`~/Library/Application Support/hiext_yt_gui/models`），签名/公证脚本不应包含模型文件。
+3. 若将来分发克隆模型（ZipVoice/v1.1），需按各自许可确认署名与再分发边界。

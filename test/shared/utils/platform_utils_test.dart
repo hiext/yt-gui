@@ -37,4 +37,32 @@ void main() {
     // The function should complete without throwing
     expect(Directory(path).existsSync(), isTrue);
   });
+
+  test('openExternalUri uses the platform opener', () async {
+    String? executable;
+    List<String>? arguments;
+
+    await openExternalUri(
+      Uri.parse('mailto:orders@hiext.com'),
+      operatingSystem: 'windows',
+      processStarter: (command, args) async {
+        executable = command;
+        arguments = args;
+      },
+    );
+
+    expect(executable, 'explorer');
+    expect(arguments, ['mailto:orders@hiext.com']);
+  });
+
+  test('openExternalUri rejects unsafe schemes', () async {
+    await expectLater(
+      openExternalUri(
+        Uri.parse('javascript:alert(1)'),
+        operatingSystem: 'linux',
+        processStarter: (_, _) async {},
+      ),
+      throwsArgumentError,
+    );
+  });
 }

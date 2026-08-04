@@ -41,8 +41,11 @@ CREATE TABLE IF NOT EXISTS orders (
   raw TEXT,
   created_at TEXT NOT NULL
 );
+CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_provider_order
+  ON orders(provider, provider_order_id)
+  WHERE provider_order_id IS NOT NULL;
 
--- P2 reserved: webhook idempotency
+-- Webhook idempotency
 CREATE TABLE IF NOT EXISTS webhook_events (
   id TEXT PRIMARY KEY,
   provider TEXT NOT NULL,

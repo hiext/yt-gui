@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'voice_swap_models.dart';
+
 enum DownloadMode { serial, queue, concurrent }
 
 enum LogLevel { debug, info, warning, error }
@@ -232,6 +234,7 @@ class DownloadSettings {
     this.cookieConfigs = const [],
     this.defaultCookieBrowser,
     this.autoClipConfig = AutoClipConfig.defaults,
+    this.voiceSwap = VoiceSwapSettings.defaults,
   });
 
   static const defaults = DownloadSettings(
@@ -277,6 +280,7 @@ class DownloadSettings {
   final List<CookieConfig> cookieConfigs;
   final String? defaultCookieBrowser;
   final AutoClipConfig autoClipConfig;
+  final VoiceSwapSettings voiceSwap;
 
   AiCloudConfig? get selectedAiCloudConfig {
     AiCloudConfig? fallback;
@@ -326,6 +330,7 @@ class DownloadSettings {
     Object? cookieConfigs = _unchanged,
     Object? defaultCookieBrowser = _unchanged,
     AutoClipConfig? autoClipConfig,
+    Object? voiceSwap = _unchanged,
   }) {
     return DownloadSettings(
       saveDirectory: saveDirectory ?? this.saveDirectory,
@@ -372,6 +377,9 @@ class DownloadSettings {
           ? this.defaultCookieBrowser
           : defaultCookieBrowser as String?,
       autoClipConfig: autoClipConfig ?? this.autoClipConfig,
+      voiceSwap: voiceSwap == _unchanged
+          ? this.voiceSwap
+          : voiceSwap as VoiceSwapSettings,
     ).normalized();
   }
 
@@ -428,6 +436,7 @@ class DownloadSettings {
       cookieConfigs: cookieConfigs,
       defaultCookieBrowser: defaultCookieBrowser,
       autoClipConfig: autoClipConfig,
+      voiceSwap: voiceSwap,
     );
   }
 
@@ -476,6 +485,7 @@ class DownloadSettings {
       map['defaultCookieBrowser'] = defaultCookieBrowser!;
     }
     map['autoClipConfig'] = autoClipConfig.toJson();
+    map['voiceSwap'] = voiceSwap.toJson();
     return map;
   }
 
@@ -553,6 +563,7 @@ class DownloadSettings {
               Map<String, Object?>.from(json['autoClipConfig'] as Map),
             )
           : AutoClipConfig.defaults,
+      voiceSwap: VoiceSwapSettings.fromJson(json['voiceSwap']),
     ).normalized();
   }
 

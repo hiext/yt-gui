@@ -891,4 +891,252 @@ class AppLocalizationsEn extends AppLocalizations {
   String settingsSavedAt(String hour, String minute) {
     return 'Saved at $hour:$minute';
   }
+
+  @override
+  String get licenseNavLabel => 'License';
+
+  @override
+  String get licenseTitle => 'License & Plans';
+
+  @override
+  String get licenseActivate => 'Activate';
+
+  @override
+  String get licenseActivating => 'Activating…';
+
+  @override
+  String get licenseRefresh => 'Refresh license & devices';
+
+  @override
+  String get licenseRefreshing => 'Refreshing…';
+
+  @override
+  String get licenseRefreshSuccess => 'License and device status refreshed.';
+
+  @override
+  String licenseRefreshFailed(String error) {
+    return 'Could not refresh online. Your cached license is kept; check the network and retry. Details: $error';
+  }
+
+  @override
+  String get licenseCurrentDeviceReleased =>
+      'This device was released and the app is now on Free.';
+
+  @override
+  String licenseOperationFailed(String error) {
+    return 'The operation failed. Nothing was cleared; retry after resolving the issue. Details: $error';
+  }
+
+  @override
+  String get licensePurchaseStepsTitle => 'Purchase and activation';
+
+  @override
+  String get licenseTeamPlanSummary =>
+      'Team: ¥298/year · 10 devices · Cloud sync';
+
+  @override
+  String get licensePurchaseStepChoose => 'Choose a plan';
+
+  @override
+  String get licensePurchaseStepChooseOnline =>
+      'Open the official purchase page and complete the order.';
+
+  @override
+  String get licensePurchaseStepChooseEmail =>
+      'Email orders@hiext.com for payment instructions.';
+
+  @override
+  String get licensePurchaseStepChooseMixed =>
+      'Configured plans open their secure checkout; plans without one use orders@hiext.com.';
+
+  @override
+  String get licensePurchaseStepReceive => 'Receive your code';
+
+  @override
+  String get licensePurchaseStepReceiveDescription =>
+      'The activation code is delivered to your order email after payment.';
+
+  @override
+  String get licensePurchaseStepActivate => 'Activate here';
+
+  @override
+  String get licensePurchaseStepActivateDescription =>
+      'Paste the code below, then refresh to see license and device status.';
+
+  @override
+  String get licenseBuyPro => 'Buy Pro';
+
+  @override
+  String get licenseBuyTeam => 'Buy Team';
+
+  @override
+  String get licenseEmailBuyPro => 'Email to buy Pro';
+
+  @override
+  String get licenseEmailBuyTeam => 'Email to buy Team';
+
+  @override
+  String get licensePurchasePageOpened =>
+      'The purchase page opened in your browser. Return here with the activation code after checkout.';
+
+  @override
+  String get licensePurchaseEmailOpened =>
+      'Your mail app opened with purchase details. Send the email, then return here with the activation code you receive.';
+
+  @override
+  String licensePurchaseOpenFailed(String url) {
+    return 'Could not open the purchase destination. Open this address manually: $url';
+  }
+
+  @override
+  String get licenseDevicesTitle => 'Active devices';
+
+  @override
+  String licenseDeviceUsage(int count, int max) {
+    return '$count / $max seats';
+  }
+
+  @override
+  String get licenseNoDevices => 'No online device list is available yet.';
+
+  @override
+  String get licenseNoDevicesHint =>
+      'Refresh to load active devices. If the service is temporarily unavailable, the cached license remains unchanged.';
+
+  @override
+  String get licenseUnknownDevice => 'Unnamed device';
+
+  @override
+  String get licenseCurrentDevice => 'This device';
+
+  @override
+  String get licenseDeactivateCurrent => 'Release this device (deactivate)';
+
+  @override
+  String licensePlatform(String platform) {
+    return 'Platform: $platform';
+  }
+
+  @override
+  String licenseLastSeen(String date) {
+    return 'Last seen: $date';
+  }
+
+  @override
+  String get licenseReleaseDeviceTitle => 'Release device seat?';
+
+  @override
+  String licenseReleaseDeviceConfirm(String name) {
+    return 'Release “$name”? That device will lose paid features on its next validation.';
+  }
+
+  @override
+  String get licenseReleaseDeviceAction => 'Release';
+
+  @override
+  String get licenseCancel => 'Cancel';
+
+  @override
+  String licenseDeviceReleased(String name) {
+    return 'Released $name. The seat can now be used on another device.';
+  }
+
+  @override
+  String get voiceSwap => 'Voice Swap';
+
+  @override
+  String get voiceSwapTitle => 'One-Click Voice Swap';
+
+  @override
+  String get voiceSwapDesc =>
+      'Fully offline. Replace the video voice with a target voice while keeping the background music intact. Nothing is uploaded.';
+
+  @override
+  String get voiceSwapFirstRunNote =>
+      'First run downloads ~325MB of models (once). Afterwards everything works offline.';
+
+  @override
+  String get voiceSwapPickVideo => 'Pick Video';
+
+  @override
+  String get voiceSwapPresetVoiceLabel => 'Target Voice (Preset)';
+
+  @override
+  String get voiceSwapStart => 'Start Voice Swap';
+
+  @override
+  String get voiceSwapCancel => 'Cancel';
+
+  @override
+  String get voiceSwapRunning => 'Processing…';
+
+  @override
+  String get voiceSwapDoneTitle => 'Voice Swap Complete';
+
+  @override
+  String get voiceSwapOpenOutputFolder => 'Open Output Folder';
+
+  @override
+  String get voiceSwapReset => 'Swap Another Video';
+
+  @override
+  String get voiceSwapPresetFemale => 'Female';
+
+  @override
+  String get voiceSwapPresetMale => 'Male';
+
+  @override
+  String get voiceSwapPresetZfXiaobei => 'Xiaobei';
+
+  @override
+  String get voiceSwapPresetZfXiaoni => 'Xiaoni';
+
+  @override
+  String get voiceSwapPresetZfXiaoxiao => 'Xiaoxiao';
+
+  @override
+  String get voiceSwapPresetZfXiaoyi => 'Xiaoyi';
+
+  @override
+  String get voiceSwapPresetZmYunjian => 'Yunjian';
+
+  @override
+  String get voiceSwapPresetZmYunxi => 'Yunxi';
+
+  @override
+  String get voiceSwapPresetZmYunxia => 'Yunxia';
+
+  @override
+  String get voiceSwapPresetZmYunyang => 'Yunyang';
+
+  @override
+  String get voiceSwapSettingsTitle => 'Voice Swap Settings';
+
+  @override
+  String get voiceSwapSettingsModelDir => 'Voice Swap Model Directory';
+
+  @override
+  String get voiceSwapSettingsModelDirHint =>
+      'Leave empty for the default app-data directory (models live under models/). Models stay local and are not bundled with the app.';
+
+  @override
+  String get voiceSwapSettingsPresetVoice => 'Default Voice';
+
+  @override
+  String get voiceSwapSettingsAutoDownload => 'Auto-download Models';
+
+  @override
+  String get voiceSwapSettingsAutoDownloadHint =>
+      'Downloads ~325MB of models on first use. If disabled, missing models fail fast.';
+
+  @override
+  String get voiceSwapSettingsSeparationBin => 'Separation CLI Path (optional)';
+
+  @override
+  String get voiceSwapSettingsSeparationBinHint =>
+      'Highest priority. Must point to the sherpa-onnx-offline-source-separation executable.';
+
+  @override
+  String get voiceSwapSettingsLicenseNote =>
+      'Model licenses: UVR (MIT, keep attribution), SenseVoice (FunASR, keep model name), Kokoro (Apache-2.0).';
 }

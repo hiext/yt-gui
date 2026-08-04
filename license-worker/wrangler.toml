@@ -3,18 +3,18 @@ main = "src/index.ts"
 compatibility_date = "2026-06-06"
 
 # License API — bind to dp-api.hiext.com/v1/license/*
-# routes = [
-#   { pattern = "dp-api.hiext.com/v1/license/*", zone_name = "hiext.com" }
-# ]
+routes = [
+  { pattern = "dp-api.hiext.com/v1/license/*", zone_name = "hiext.com" }
+]
 
 [[d1_databases]]
 binding = "DB"
 database_name = "hiext-license"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "aae564cf-b44a-4f3d-a7b1-0aaaebfe1f03"
 
 [[kv_namespaces]]
 binding = "RATE_LIMIT_KV"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "f36e464de2fa4b8d9c8029184605e30c"
 
 # Secrets (set via `wrangler secret put`, never commit):
 #   ADMIN_TOKEN            - bearer token for /admin endpoints
@@ -22,3 +22,11 @@ id = "REPLACE_WITH_KV_NAMESPACE_ID"
 #   ED25519_PUBLIC_KEY     - base64 SPKI public key (also embedded in the app)
 #   TURNSTILE_SECRET_KEY   - Cloudflare Turnstile secret for admin issuance
 #                            (optional; when unset the Turnstile check is skipped)
+#   WEBHOOK_SECRET          - Lemon Squeezy webhook HMAC secret
+#   LICENSE_CODE_SECRET     - stable HMAC key for retry-safe webhook codes
+#   RESEND_API_KEY          - Resend API key for buyer delivery
+# Required var/secret for each tier that has a public checkout:
+#   LEMONSQUEEZY_PRO_VARIANT_IDS    - comma-separated paid Pro variant IDs
+# Team 自动订阅尚未开放；LEMONSQUEEZY_TEAM_VARIANT_IDS 必须保持未配置。
+# Optional:
+#   LICENSE_FROM_EMAIL              - verified sender; defaults to license@hiext.com

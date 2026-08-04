@@ -20,14 +20,21 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     EmbeddedToolResolver? toolResolver,
     ProcessRunner? processRunner,
     Future<ByteData> Function(String path)? loadAsset,
+    Duration? inspectTimeout,
+    Duration? inspectCleanupTimeout,
   }) : _toolResolver = toolResolver ?? const EmbeddedToolResolver(),
        _processRunner = processRunner ?? _defaultProcessRunner,
+       _inspectTimeout = inspectTimeout ?? const Duration(seconds: 120),
+       _inspectCleanupTimeout =
+           inspectCleanupTimeout ?? const Duration(seconds: 10),
        _executableResolver = EmbeddedToolExecutableResolver(
          loadAsset: loadAsset ?? rootBundle.load,
        );
 
   final EmbeddedToolResolver _toolResolver;
   final ProcessRunner _processRunner;
+  final Duration _inspectTimeout;
+  final Duration _inspectCleanupTimeout;
   final EmbeddedToolExecutableResolver _executableResolver;
   final Map<String, YtDlpSession> _sessions = {};
   final Map<String, Process> _processes = {};
@@ -50,33 +57,33 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
         .normalized();
     final cookieFile = _resolveCookieFile(url, normalizedSettings);
 
-    // First attempt: with cookies (if available)
-    if (cookieFile != null) {
-      try {
-        return await _doInspect(
-          url,
-          normalizedSettings: normalizedSettings,
-          cookieFile: cookieFile,
-          localizations: localizations,
-          onLog: onLog,
-          timeoutSeconds: 120,
-        );
-      } on YtDlpExecutorException catch (e) {
-        LogService.instance.warn(
-          'inspect with cookie failed: ${e.message}, retrying without cookie',
-          'executor',
-        );
-      }
+    // 公共链接通常不需要 Cookie，先走成本最低的路径，避免过期 Cookie
+    // 让每次解析都卡到超时。
+    try {
+      return await _doInspect(
+        url,
+        normalizedSettings: normalizedSettings,
+        cookieFile: null,
+        localizations: localizations,
+        onLog: onLog,
+      );
+    } on _InspectTimeoutException {
+      // 超时表示提取器或进程已卡住；再带 Cookie 重试只会叠加一次完整超时。
+      rethrow;
+    } on YtDlpExecutorException catch (error) {
+      if (cookieFile == null) rethrow;
+      LogService.instance.warn(
+        'inspect without cookie failed: ${error.message}, retrying with cookie',
+        'executor',
+      );
     }
 
-    // Second attempt: without cookies (or first attempt if no cookie)
     return _doInspect(
       url,
       normalizedSettings: normalizedSettings,
-      cookieFile: null,
+      cookieFile: cookieFile,
       localizations: localizations,
       onLog: onLog,
-      timeoutSeconds: 120,
     );
   }
 
@@ -86,7 +93,6 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     required String? cookieFile,
     AppLocalizations? localizations,
     InspectLogSink? onLog,
-    required int timeoutSeconds,
   }) async {
     final sw = Stopwatch()..start();
     final tools = _toolResolver.resolveBundle(settings: normalizedSettings);
@@ -108,65 +114,6 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     final args = buildInspectArguments(url, cookieFile: cookieFile);
     final l10n = localizations ?? currentAppLocalizations();
 
-    // Use Process.run for production (avoids stream hang with subprocesses),
-    // use injected _processRunner when customized (for unit testing).
-    if (_processRunner == _defaultProcessRunner) {
-      try {
-        final result = await Process.run(
-          ytDlpPath,
-          args,
-          runInShell: false,
-        ).timeout(Duration(seconds: timeoutSeconds));
-        LogService.instance.info(
-          'inspect: exitCode=${result.exitCode} at ${sw.elapsedMilliseconds}ms',
-          'executor',
-        );
-
-        final stderr = result.stderr as String;
-        if (stderr.isNotEmpty && onLog != null) {
-          for (final line in stderr.split('\n')) {
-            if (line.trim().isNotEmpty) onLog(line);
-          }
-        }
-
-        if (result.exitCode != 0) {
-          final msg = stderr.trim().isNotEmpty
-              ? stderr.trim().split('\n').last
-              : 'yt-dlp exit code ${result.exitCode}';
-          LogService.instance.error(
-            'inspect failed: exit=${result.exitCode} $msg',
-            'executor',
-          );
-          throw YtDlpExecutorException(msg);
-        }
-
-        final stdout = result.stdout as String;
-        final outputLines = stdout
-            .split('\n')
-            .where((l) => l.trim().isNotEmpty)
-            .toList();
-        final variants = _parseInspectVariants(
-          outputLines,
-          l10n,
-          recommendedVariantCount: normalizedSettings.recommendedVariantCount,
-        );
-        LogService.instance.info(
-          'inspect: found ${variants.length} variants at ${sw.elapsedMilliseconds}ms',
-          'executor',
-        );
-        return variants;
-      } on TimeoutException {
-        LogService.instance.error(
-          'inspect timed out after ${timeoutSeconds}s',
-          'executor',
-        );
-        throw YtDlpExecutorException(
-          'Parse timed out after $timeoutSeconds seconds',
-        );
-      }
-    }
-
-    // Custom process runner path (for tests with _FakeProcess)
     final process = await _processRunner(ytDlpPath, args);
     LogService.instance.info(
       'inspect: process started at ${sw.elapsedMilliseconds}ms, pid=${process.pid}',
@@ -174,6 +121,7 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     );
 
     final outputLines = <String>[];
+    final errorLines = <String>[];
     final session = YtDlpSession.forTesting(
       task: DownloadTask(
         id: 'inspect:${url.toString()}',
@@ -193,16 +141,21 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
     final stderrFuture = _consumeLines(
       process.stderr,
       session,
-      collectedLines: outputLines,
+      collectedLines: errorLines,
       onLog: onLog,
     );
-    final exitCode = await process.exitCode.timeout(
-      Duration(seconds: timeoutSeconds),
-      onTimeout: () {
-        process.kill(ProcessSignal.sigkill);
-        return -1;
-      },
-    );
+    var timedOut = false;
+    late final int exitCode;
+    try {
+      exitCode = await process.exitCode.timeout(_inspectTimeout);
+    } on TimeoutException {
+      timedOut = true;
+      process.kill(ProcessSignal.sigkill);
+      exitCode = await process.exitCode.timeout(
+        _inspectCleanupTimeout,
+        onTimeout: () => -1,
+      );
+    }
     LogService.instance.info(
       'inspect: exitCode=$exitCode at ${sw.elapsedMilliseconds}ms',
       'executor',
@@ -212,22 +165,26 @@ class ProcessYtDlpExecutor implements YtDlpExecutor {
       await Future.wait([
         stdoutFuture,
         stderrFuture,
-      ]).timeout(const Duration(seconds: 10));
+      ]).timeout(_inspectCleanupTimeout);
     } on TimeoutException {
       LogService.instance.warn('inspect: stream drain timed out', 'executor');
     }
 
-    if (exitCode == -1) {
+    if (timedOut) {
+      final timeoutDescription = _formatTimeout(_inspectTimeout);
       LogService.instance.error(
-        'inspect timed out after ${timeoutSeconds}s',
+        'inspect timed out after $timeoutDescription',
         'executor',
       );
-      throw YtDlpExecutorException(
-        'Parse timed out after $timeoutSeconds seconds',
-      );
+      throw _InspectTimeoutException(_inspectTimeout);
     }
     if (exitCode != 0) {
-      final message = session.errorMessage ?? l10n.ytDlpNonZeroExit;
+      final stderrMessage = errorLines.reversed
+          .map((line) => line.trim())
+          .firstWhere((line) => line.isNotEmpty, orElse: () => '');
+      final message =
+          session.errorMessage ??
+          (stderrMessage.isNotEmpty ? stderrMessage : l10n.ytDlpNonZeroExit);
       throw YtDlpExecutorException(message);
     }
 
@@ -783,6 +740,13 @@ String _formatFileSize(int bytes) {
   return '$bytes B';
 }
 
+String _formatTimeout(Duration timeout) {
+  if (timeout.inMilliseconds % Duration.millisecondsPerSecond == 0) {
+    return '${timeout.inSeconds} seconds';
+  }
+  return '${timeout.inMilliseconds} milliseconds';
+}
+
 typedef ProcessRunner =
     Future<Process> Function(String executable, List<String> arguments);
 
@@ -813,6 +777,11 @@ class YtDlpExecutorException implements Exception {
 
   @override
   String toString() => message;
+}
+
+class _InspectTimeoutException extends YtDlpExecutorException {
+  _InspectTimeoutException(Duration timeout)
+    : super('Parse timed out after ${_formatTimeout(timeout)}');
 }
 
 Future<Process> _defaultProcessRunner(

@@ -8,7 +8,7 @@ if (!globalThis.crypto) {
   globalThis.crypto = webcrypto;
 }
 
-const { generateCode, isValidCodeFormat, normalizeCode } = await import('../src/codes.ts');
+const { deriveCode, generateCode, isValidCodeFormat, normalizeCode } = await import('../src/codes.ts');
 const { sha256Hex, signEntitlementToken } = await import('../src/crypto.ts');
 
 test('generateCode produces valid HIEXT format', () => {
@@ -28,6 +28,16 @@ test('isValidCodeFormat rejects bad codes', () => {
 
 test('normalizeCode uppercases and trims', () => {
   assert.equal(normalizeCode('  hiext-abcde-12345-fghij-67890  '), 'HIEXT-ABCDE-12345-FGHIJ-67890');
+});
+
+test('deriveCode is stable per order and keeps the public code format', async () => {
+  const secret = '0123456789abcdef0123456789abcdef';
+  const first = await deriveCode(secret, 'lemonsqueezy:order_created:1001');
+  const retry = await deriveCode(secret, 'lemonsqueezy:order_created:1001');
+  const other = await deriveCode(secret, 'lemonsqueezy:order_created:1002');
+  assert.equal(first, retry);
+  assert.notEqual(first, other);
+  assert.ok(isValidCodeFormat(first));
 });
 
 test('sha256Hex is deterministic and 64 hex chars', async () => {

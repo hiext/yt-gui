@@ -4,11 +4,16 @@
  * so the desktop app can verify offline during a grace window.
  */
 
-import { sha256Hex, signEntitlementToken, type EntitlementClaims } from './crypto';
-import { generateCode, isValidCodeFormat, normalizeCode } from './codes';
-import { checkRateLimit, type RateLimitBinding } from './rate_limit';
-import { verifyTurnstile } from './turnstile';
-import { handleWebhookEvent, verifyLemonSqueezySignature, verifyGenericSignature } from './webhook';
+import { sha256Hex, signEntitlementToken, type EntitlementClaims } from './crypto.ts';
+import { deriveCode, generateCode, isValidCodeFormat, normalizeCode } from './codes.ts';
+import { checkRateLimit, type RateLimitBinding } from './rate_limit.ts';
+import { verifyTurnstile } from './turnstile.ts';
+import { sendLicenseEmail } from './email.ts';
+import {
+  handleWebhookEvent,
+  parseLemonSqueezyPaidOrder,
+  verifyLemonSqueezySignature,
+} from './webhook.ts';
 
 interface Env {
   DB: D1Database;
@@ -18,6 +23,11 @@ interface Env {
   ED25519_PUBLIC_KEY: string;
   TURNSTILE_SECRET_KEY?: string;
   WEBHOOK_SECRET?: string;
+  LICENSE_CODE_SECRET?: string;
+  RESEND_API_KEY?: string;
+  LICENSE_FROM_EMAIL?: string;
+  LEMONSQUEEZY_PRO_VARIANT_IDS?: string;
+  LEMONSQUEEZY_TEAM_VARIANT_IDS?: string;
 }
 
 type Tier = 'pro' | 'team';
@@ -34,6 +44,15 @@ interface LicenseRow {
   issued_at: string;
   expires_at: string | null;
   meta: string | null;
+}
+
+interface DeviceRow {
+  id: string;
+  fingerprint: string;
+  device_name: string | null;
+  platform: string | null;
+  activated_at: string;
+  last_seen_at: string | null;
 }
 
 // Token lifetime: how long an offline app may trust a cached entitlement.
@@ -204,6 +223,71 @@ async function handleDeactivate(request: Request, env: Env): Promise<Response> {
   return json(200, { success: true });
 }
 
+async function findManageableLicense(env: Env, code: string): Promise<LicenseRow | Response> {
+  if (!isValidCodeFormat(code)) {
+    return json(400, { success: false, error: 'invalid code format' });
+  }
+  const license = await findLicenseByCode(env, code);
+  if (!license || license.status !== 'active' || isExpired(license)) {
+    return json(403, { success: false, error: 'license not active' });
+  }
+  return license;
+}
+
+async function handleListDevices(request: Request, env: Env): Promise<Response> {
+  const body = await readJson(request);
+  const code = String(body.code ?? '');
+  const currentFingerprint = String(body.currentFingerprint ?? '');
+  const license = await findManageableLicense(env, code);
+  if (license instanceof Response) return license;
+
+  const result = await env.DB.prepare(
+    'SELECT id, fingerprint, device_name, platform, activated_at, last_seen_at FROM devices WHERE license_id = ? AND deactivated_at IS NULL ORDER BY activated_at ASC',
+  )
+    .bind(license.id)
+    .all<DeviceRow>();
+  const devices = result.results.map((device) => ({
+    id: device.id,
+    deviceName: device.device_name,
+    platform: device.platform,
+    activatedAt: device.activated_at,
+    lastSeenAt: device.last_seen_at,
+    isCurrent: currentFingerprint.length > 0 && device.fingerprint === currentFingerprint,
+  }));
+  return json(200, {
+    success: true,
+    maxDevices: license.max_devices,
+    activeDevices: devices.length,
+    devices,
+  });
+}
+
+async function handleDeactivateDevice(request: Request, env: Env): Promise<Response> {
+  const body = await readJson(request);
+  const code = String(body.code ?? '');
+  const deviceId = String(body.deviceId ?? '').trim();
+  if (!deviceId) {
+    return json(400, { success: false, error: 'missing device id' });
+  }
+  const license = await findManageableLicense(env, code);
+  if (license instanceof Response) return license;
+
+  const device = await env.DB.prepare(
+    'SELECT id FROM devices WHERE id = ? AND license_id = ?',
+  )
+    .bind(deviceId, license.id)
+    .first<{ id: string }>();
+  if (!device) {
+    return json(404, { success: false, error: 'device not found' });
+  }
+  await env.DB.prepare(
+    'UPDATE devices SET deactivated_at = COALESCE(deactivated_at, ?) WHERE id = ? AND license_id = ?',
+  )
+    .bind(nowIso(), deviceId, license.id)
+    .run();
+  return json(200, { success: true, deactivatedDeviceId: deviceId });
+}
+
 // ── Admin endpoints ──
 
 function isAdmin(request: Request, env: Env): boolean {
@@ -230,6 +314,15 @@ async function handleAdminCreateLicense(request: Request, env: Env): Promise<Res
   const maxDevices = Number(body.maxDevices ?? DEFAULT_MAX_DEVICES[tier]);
   const email = body.email ? String(body.email) : null;
   const expiresAt = body.expiresAt ? String(body.expiresAt) : null;
+  if (tier === 'team') {
+    const expiresAtMillis = expiresAt == null ? Number.NaN : Date.parse(expiresAt);
+    if (!Number.isFinite(expiresAtMillis) || expiresAtMillis <= Date.now()) {
+      return json(400, {
+        success: false,
+        error: 'team expiresAt must be a future ISO-8601 timestamp',
+      });
+    }
+  }
 
   const created: Array<{ id: string; code: string }> = [];
   for (let i = 0; i < count; i++) {
@@ -261,44 +354,74 @@ async function handleAdminSetStatus(env: Env, id: string, status: string): Promi
   return json(200, { success: true, id, status });
 }
 
-  // ── Webhook dispatch ──
+// ── Webhook 分发 ──
 
-  async function handleWebhookDispatch(request: Request, env: Env, path: string): Promise<Response> {
+async function handleWebhookDispatch(request: Request, env: Env, path: string): Promise<Response> {
     const provider = path.split('/webhooks/')[1]?.split('/')[0] ?? '';
-    const signature = request.headers.get('x-signature') ?? request.headers.get('stripe-signature');
-    const rawBody = await request.text();
-
-    const secret = env.WEBHOOK_SECRET ?? '';
-    let verified = false;
-    if (provider === 'lemonsqueezy') {
-      verified = await verifyLemonSqueezySignature(rawBody, signature, secret);
-    } else {
-      verified = verifyGenericSignature(signature, secret);
+    if (provider !== 'lemonsqueezy') {
+      return json(404, { success: false, error: 'unsupported webhook provider' });
     }
+    if (
+      !env.WEBHOOK_SECRET
+      || !env.LICENSE_CODE_SECRET
+      || env.LICENSE_CODE_SECRET.trim().length < 32
+      || !env.RESEND_API_KEY
+    ) {
+      return json(503, { success: false, error: 'webhook delivery not configured' });
+    }
+
+    const signature = request.headers.get('x-signature');
+    const rawBody = await request.text();
+    const verified = await verifyLemonSqueezySignature(rawBody, signature, env.WEBHOOK_SECRET);
     if (!verified) {
       return json(401, { success: false, error: 'invalid signature' });
     }
 
-    const body = JSON.parse(rawBody);
-    const event = {
-      provider,
-      providerEventId: body.data?.id ?? body.id ?? crypto.randomUUID(),
-      eventType: body.event_name ?? body.type ?? 'unknown',
-      email: body.data?.attributes?.user_email ?? body.data?.email ?? body.meta?.customer_email ?? '',
-      tier: (body.data?.attributes?.variant_name ?? '').toLowerCase().includes('team') ? 'team' as Tier : 'pro' as Tier,
-      amount: (body.data?.attributes?.total ?? body.amount) as number | undefined,
-      currency: (body.data?.attributes?.currency ?? body.currency) as string | undefined,
-    };
-    if (!event.email) {
-      return json(400, { success: false, error: 'missing email' });
+    const parsed = parseLemonSqueezyPaidOrder(
+      rawBody,
+      env.LEMONSQUEEZY_PRO_VARIANT_IDS,
+      env.LEMONSQUEEZY_TEAM_VARIANT_IDS,
+    );
+    if (parsed.kind === 'ignored') {
+      return json(200, { success: true, ignored: true, eventType: parsed.eventType });
+    }
+    if (parsed.kind === 'error') {
+      return json(parsed.status, { success: false, error: parsed.error });
     }
 
-    const result = await handleWebhookEvent(env.DB, event);
-    if (!result) {
-      return json(200, { success: true, already_processed: true });
+    const event = parsed.event;
+    const code = await deriveCode(
+      env.LICENSE_CODE_SECRET,
+      `${event.provider}:${event.providerEventId}`,
+    );
+    const result = await handleWebhookEvent(env.DB, event, code);
+    if (!result.code && result.orderStatus === 'fulfilled') {
+      return json(200, { success: true, alreadyProcessed: true, emailDelivered: true });
     }
-    return json(200, { success: true, tier: event.tier, code: result.code });
-  }
+
+    const delivery = await sendLicenseEmail(
+      {
+        RESEND_API_KEY: env.RESEND_API_KEY,
+        LICENSE_FROM_EMAIL: env.LICENSE_FROM_EMAIL,
+      },
+      event.email,
+      result.code ?? code,
+      event.tier,
+    );
+    await env.DB.prepare('UPDATE orders SET status = ? WHERE id = ?')
+      .bind(delivery.ok ? 'fulfilled' : 'email_failed', result.orderId)
+      .run();
+    if (!delivery.ok) {
+      console.error('license email delivery failed', result.orderId, delivery.error);
+      return json(503, { success: false, error: 'license email delivery failed' });
+    }
+    return json(200, {
+      success: true,
+      tier: event.tier,
+      emailDelivered: true,
+      alreadyProcessed: !result.created,
+    });
+}
 
 // ── Router ──
 
@@ -329,6 +452,12 @@ export default {
     if (request.method === 'POST' && path === '/v1/license/deactivate') {
       return handleDeactivate(request, env);
     }
+    if (request.method === 'POST' && path === '/v1/license/devices/list') {
+      return handleListDevices(request, env);
+    }
+    if (request.method === 'POST' && path === '/v1/license/devices/deactivate') {
+      return handleDeactivateDevice(request, env);
+    }
 
     // Admin
     if (path.startsWith('/v1/license/admin/')) {
@@ -352,7 +481,7 @@ export default {
       }
     }
 
-    // P2: payment webhooks (Lemon Squeezy / Stripe / manual)
+    // 支付 webhook：目前仅支持 Lemon Squeezy。
     if (request.method === 'POST' && path.startsWith('/v1/license/webhooks/')) {
       return handleWebhookDispatch(request, env, path);
     }
